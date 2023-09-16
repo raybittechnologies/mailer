@@ -1,0 +1,104 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} {% endblock title %}
+
+Specific CSS goes HERE
+{% block stylesheets %}
+    <style>
+        .image_style {
+        {#position: absolute; /* Position the image absolutely within the container */#} top: 0;
+            left: 0;
+            width: 100%; /* Stretch the image to cover the container width */
+            height: 200px; /* Stretch the image to cover the container height */
+            object-fit: cover; /* Maintain aspect ratio and cover the entire container */
+        }
+    </style>
+
+{% endblock stylesheets %}
+{% block content %}
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12 mt-4">
+                <div class="card-header pb-0 p-3">
+                    <h3 class="mb-1">Notification</h3>
+                    {#                        <p class="text-sm">Architects design houses</p>#}
+                </div>
+
+                {% if not data %}
+                    <p>No Notifications to display</p>
+                {% endif %}
+
+                <div class="row">
+                    {% for row in data %}
+                        <div class="col-xl-3 col-md-6 mb-xl-0 mb-4 mt-4">
+                            <div class="card mb-4">
+                                <div class="card-body p-3">
+
+                                    <div class="card card-blog card-plain">
+                                        <div class="position-relative">
+                                            <a class="d-block shadow-xl border-radius-xl">
+                                                <img src="{{ row.image }}"
+                                                     alt="img-blur-shadow"
+                                                     class="image_style img-fluid shadow border-radius-xl"
+
+                                                >
+                                            </a>
+                                        </div>
+                                        <div class="card-body px-1 pb-0">
+                                            <p class="text-gradient text-dark mb-2 text-sm">
+                                                {{ row.price }}
+                                            </p>
+                                            <p class="text-gradient text-dark mb-2 text-sm">
+                                                {{ row.published }}
+                                            </p>
+                                            <a href="javascript:;">
+                                                <h5>
+                                                    {{ row.category }}
+                                                </h5>
+                                            </a>
+                                            <p class="text-gradient text-dark mb-2 text-sm">
+                                                Seller : {{ row.seller }}
+                                            </p>
+                                            <p class="text-gradient text-dark mb-2 text-sm">
+                                                Location : {{ row.location }}
+                                            </p>
+
+                                            <p class="mb-4 text-sm">
+                                                {{ row.title }}
+                                            </p>
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div class="row">
+                                                    <div class="col col-md-6 col-sm-12">
+                                                        <a href="{{ row.link }}" type="button"
+                                                           class="btn btn-success btn-sm mb-2">
+                                                            View
+                                                        </a>
+                                                    </div>
+                                                    <div class="col col-md-6 col-sm-12">
+                                                        <a href="/notification/delete/{{ row.id }}" type="button"
+                                                           class="btn btn-primary btn-sm mb-2">
+                                                            Delete
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+            </div>
+        </div>
+        {% include "includes/footer.html" %}
+
+    </div>
+
+{% endblock content %}
+
+{% block javascripts %}
+
+{% endblock javascripts %}

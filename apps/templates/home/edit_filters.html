@@ -1,0 +1,331 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}  {% endblock title %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}
+
+<div class="container-fluid py-4">
+
+    <div class="row">
+        <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
+            <div class="card">
+                <div class="card-body p-3">
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="numbers">
+                                <p class="text-sm mb-0 text-capitalize font-weight-bold">Total Urls</p>
+                                <h5 class="font-weight-bolder mb-0">
+                                    0
+                                    <!--                      <span class="text-success text-sm font-weight-bolder">0</span>-->
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="col-4 text-end">
+                            <div class="icon icon-shape bg-gradient-primary shadow text-center border-radius-md">
+                                <i class="ni ni-world-2 text-lg opacity-10" aria-hidden="true"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
+            <div class="card">
+                <div class="card-body p-3">
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="numbers">
+                                <p class="text-sm mb-0 text-capitalize font-weight-bold">Total Addresses</p>
+                                <h5 class="font-weight-bolder mb-0">
+                                    0
+                                    <!--                      <span class="text-success text-sm font-weight-bolder">0</span>-->
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="col-4 text-end">
+                            <div class="icon icon-shape bg-gradient-primary shadow text-center border-radius-md">
+                                <i class="ni ni-world text-lg opacity-10" aria-hidden="true"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
+            <div class="card">
+                <div class="card-body p-3">
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="numbers">
+                                <p class="text-sm mb-0 text-capitalize font-weight-bold">Total Phone Numbers</p>
+                                <h5 class="font-weight-bolder mb-0">
+                                    0
+                                    <!--                      <span class="text-danger text-sm font-weight-bolder">0</span>-->
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="col-4 text-end">
+                            <div class="icon icon-shape bg-gradient-primary shadow text-center border-radius-md">
+                                <i class="ni ni-mobile-button text-lg opacity-10" aria-hidden="true"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-sm-6">
+            <div class="card">
+                <div class="card-body p-3">
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="numbers">
+                                <p class="text-sm mb-0 text-capitalize font-weight-bold">Total Email Found</p>
+                                <h5 class="font-weight-bolder mb-0">
+                                    0
+                                    <!--                      <span class="text-success text-sm font-weight-bolder">0</span>-->
+                                </h5>
+                            </div>
+                        </div>
+                        <div class="col-4 text-end">
+                            <div class="icon icon-shape bg-gradient-primary shadow text-center border-radius-md">
+                                <i class="ni ni-email-83 text-lg opacity-10" aria-hidden="true"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container mt-5">
+        <div class="card shadow-lg border-0 rounded-lg">
+            <div class="card-header"><h3 class="text-center font-weight-light my-1">Filters Form</h3></div>
+            <div class="card-body">
+                <form method="POST" action="/filters/edit/{{ data.id }}">
+{#                    <div class="form-group">#}
+{#                        <label class="small mb-1" for="username">Username</label>#}
+{#                        <input value="{{ data.username }}" class="form-control py-1" id="username" name="username" type="text"#}
+{#                               placeholder="Enter username" required/>#}
+{#                    </div>#}
+                    <div class="form-group">
+                        <label class="small mb-1" for="category">Category</label>
+                        <input value="{{ data.category }}" class="form-control py-1" id="category" name="category" type="text"
+                               placeholder="Enter category" required/>
+                    </div>
+                    <div class="form-group">
+                        <label class="small mb-1" for="location">Location</label>
+                        <input value="{{ data.location }}" class="form-control py-1" id="location" name="location" type="text"
+                               placeholder="Enter location" required/>
+                    </div>
+{#                    <div class="form-group">#}
+{#                        <label class="small mb-1" for="email">Email</label>#}
+{#                        <input value="{{ data.email }}" class="form-control py-1" id="email" name="email" type="email" placeholder="Enter email"#}
+{#                               required/>#}
+{#                    </div>#}
+                    <div class="form-group">
+                        <label class="small mb-1" for="chat_id">Chat ID</label>
+                        <input value="{{ data.chat_id }}" class="form-control py-1" id="chat_id" name="chat_id" type="number"
+                               placeholder="Enter chat ID"/>
+                    </div>
+                    <div class="form-group">
+                        <label class="small mb-1" for="min_price">Min Price</label>
+                        <input value="{{ data.min_price }}" class="form-control py-1" id="min_price" name="min_price" type="number"
+                               placeholder="Enter min price"/>
+                    </div>
+                    <div class="form-group">
+                        <label class="small mb-1" for="max_price">Max Price</label>
+                        <input value="{{ data.max_price }}" class="form-control py-1" id="max_price" name="max_price" type="number"
+                               placeholder="Enter max price"/>
+                    </div>
+                    <div class="form-group d-flex align-items-center justify-content-between mt-4 mb-0">
+                        <button class="btn btn-primary" type="submit">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% include "includes/footer.html" %}
+
+</div>
+
+{% endblock content %}
+
+<!-- Specific JS goes HERE -->
+{% block javascripts %}
+
+<script src="{{ config.ASSETS_ROOT }}/js/plugins/chartjs.min.js"></script>
+<script>
+    var ctx = document.getElementById("chart-bars").getContext("2d");
+
+    new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+            datasets: [{
+                label: "Sales",
+                tension: 0.4,
+                borderWidth: 0,
+                borderRadius: 4,
+                borderSkipped: false,
+                backgroundColor: "#fff",
+                data: [450, 200, 100, 220, 500, 100, 400, 230, 500],
+                maxBarThickness: 6
+            },],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false,
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index',
+            },
+            scales: {
+                y: {
+                    grid: {
+                        drawBorder: false,
+                        display: false,
+                        drawOnChartArea: false,
+                        drawTicks: false,
+                    },
+                    ticks: {
+                        suggestedMin: 0,
+                        suggestedMax: 500,
+                        beginAtZero: true,
+                        padding: 15,
+                        font: {
+                            size: 14,
+                            family: "Open Sans",
+                            style: 'normal',
+                            lineHeight: 2
+                        },
+                        color: "#fff"
+                    },
+                },
+                x: {
+                    grid: {
+                        drawBorder: false,
+                        display: false,
+                        drawOnChartArea: false,
+                        drawTicks: false
+                    },
+                    ticks: {
+                        display: false
+                    },
+                },
+            },
+        },
+    });
+
+
+    var ctx2 = document.getElementById("chart-line").getContext("2d");
+
+    var gradientStroke1 = ctx2.createLinearGradient(0, 230, 0, 50);
+
+    gradientStroke1.addColorStop(1, 'rgba(203,12,159,0.2)');
+    gradientStroke1.addColorStop(0.2, 'rgba(72,72,176,0.0)');
+    gradientStroke1.addColorStop(0, 'rgba(203,12,159,0)'); //purple colors
+
+    var gradientStroke2 = ctx2.createLinearGradient(0, 230, 0, 50);
+
+    gradientStroke2.addColorStop(1, 'rgba(20,23,39,0.2)');
+    gradientStroke2.addColorStop(0.2, 'rgba(72,72,176,0.0)');
+    gradientStroke2.addColorStop(0, 'rgba(20,23,39,0)'); //purple colors
+
+    new Chart(ctx2, {
+        type: "line",
+        data: {
+            labels: ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+            datasets: [{
+                label: "Mobile apps",
+                tension: 0.4,
+                borderWidth: 0,
+                pointRadius: 0,
+                borderColor: "#cb0c9f",
+                borderWidth: 3,
+                backgroundColor: gradientStroke1,
+                fill: true,
+                data: [50, 40, 300, 220, 500, 250, 400, 230, 500],
+                maxBarThickness: 6
+
+            },
+                {
+                    label: "Websites",
+                    tension: 0.4,
+                    borderWidth: 0,
+                    pointRadius: 0,
+                    borderColor: "#575f9a",
+                    borderWidth: 3,
+                    backgroundColor: gradientStroke2,
+                    fill: true,
+                    data: [30, 90, 40, 140, 290, 290, 340, 230, 400],
+                    maxBarThickness: 6
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false,
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index',
+            },
+            scales: {
+                y: {
+                    grid: {
+                        drawBorder: false,
+                        display: true,
+                        drawOnChartArea: true,
+                        drawTicks: false,
+                        borderDash: [5, 5]
+                    },
+                    ticks: {
+                        display: true,
+                        padding: 10,
+                        color: '#b2b9bf',
+                        font: {
+                            size: 11,
+                            family: "Open Sans",
+                            style: 'normal',
+                            lineHeight: 2
+                        },
+                    }
+                },
+                x: {
+                    grid: {
+                        drawBorder: false,
+                        display: false,
+                        drawOnChartArea: false,
+                        drawTicks: false,
+                        borderDash: [5, 5]
+                    },
+                    ticks: {
+                        display: true,
+                        color: '#b2b9bf',
+                        padding: 20,
+                        font: {
+                            size: 11,
+                            family: "Open Sans",
+                            style: 'normal',
+                            lineHeight: 2
+                        },
+                    }
+                },
+            },
+        },
+    });
+</script>
+
+{% endblock javascripts %}
