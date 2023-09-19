@@ -17,6 +17,8 @@ proxies={
         "https": "http://cef7b4ee6daa4bc4810c42be269431fe:@proxy.crawlera.com:8011/",
     }
 verify='zyte-proxy-ca.crt'
+zyte_api_url = "https://api.zyte.com/v1/extract"
+    
 
 
 def main(url):
@@ -25,27 +27,12 @@ def main(url):
     find_desc = url.split("find_desc=")[1].split("&")[0]
     find_loc = url.split("find_loc=")[1].split("&")[0]
     
-    session = requests.session()
-    headers = {
-        "User-Agent" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
-    }
-    session.headers = headers
-    zyte_api_url = "https://api.zyte.com/v1/extract"
-    
     start = 0
     page = 0
     
     while True:
         search_data = []
         start = page * 10 # 10 business per page
-        # params = {
-        #     "find_desc" : find_desc,
-        #     "find_loc" : find_loc,
-        #     "start" : start,
-        #     "parent_request_id" : "df4e47308c3b7a1b",
-        #     "request_origin" : "user"
-        # }
-        
         print("page", page)
         
         #ZYTE API 
@@ -56,14 +43,18 @@ def main(url):
         }
         
         try:
-            response = session.post(zyte_api_url, auth=("be8e0737c3664421a37adc8e0a48d9cf", ""), json=payload, timeout=10)
+            response = requests.post(zyte_api_url, auth=("be8e0737c3664421a37adc8e0a48d9cf", ""), json=payload)
         except Exception as e:
             print(str(e))
-            continue
+            break
         
         # "venue	city	phone	Venue Type	Website	email	email 2	Email (facebook)	Facebook Link"
         if response.json()['statusCode'] == 200:
-            response_json = json.loads(b64decode(response.json()["httpResponseBody"]))
+            try:
+                response_json = json.loads(b64decode(response.json()["httpResponseBody"]))
+            except Exception as e:
+                print(str(e), base_url)
+                break
             
             if "searchExceptionProps" in response_json['searchPageProps']:
                 break
@@ -72,11 +63,13 @@ def main(url):
                 if "bizId" in business:
                     bizId = business['bizId']
                     venue_name = business['searchResultBusiness']['name']
-                    venue_type = ", ".join(i['title'] for i in business['searchResultBusiness']['categories'])
+                    venue_type = ", ".join([i['title'] for i in business['searchResultBusiness']['categories']])
                     phone = business['searchResultBusiness']['phone']
                     
                     if business['searchResultBusiness']['website']:
                         website = business['searchResultBusiness']['website']['href']
+                        if "http" != website[:4]:
+                            website = ""
                     else:
                         website = ""
                         
@@ -86,18 +79,24 @@ def main(url):
                             address = " ".join(location['addressLines'])
                     
                     data = dict()
-                    data['Venue'] = venue_name
+                    data['url'] = url,
+                    data['venue'] = venue_name,
+                    data['venuetype'] = venue_type,
+                    data['website'] = website
                     data['Phone'] = phone
-                    data['VenueType'] = venue_type
-                    data['Website'] = website
-                    data['Address'] = address
+                    data['address'] = address
+                    data['facebook'] = ""
+                    data['instagram'] = ""
+                    data['twitter'] = ""
                     data['Email1'] = ""
                     data['Email2'] = ""
                     data['Email3'] = ""
                     data['Email4'] = ""
-                    data['FacebookLink'] = ""
                     data['FacebookEmail1'] = ""
                     data['FacebookEmail2'] = ""
+                    # data['url_id'] = id
+                    # data['user_id'] = user_id
+                    data['bizId'] = bizId
                     
                     search_data.append(data)
                     
@@ -116,7 +115,7 @@ def main(url):
             continue
         
         else:
-            print(response.status_code)
+            print(response.status_code, base_url)
             break
         
         page += 1
@@ -128,12 +127,12 @@ def main(url):
 
 
 def thread_runner(data):
-    website = data['Website']
+    website = data['website']
     
     if website:
         fb_link, emails, fb_emails = get_fb_info(website)
         if fb_link:
-            data['FacebookLink'] = fb_link
+            data['facebook'] = fb_link
         if fb_emails:
             try:
                 data['FacebookEmail1'] = fb_emails[0]
@@ -166,13 +165,13 @@ def get_fb_info(url):
     try:
         if url == "http://www.whiskyagogo.com":
             url = "https://www.whiskyagogo.com/calendar/"
-            response = scraper.get(url, timeout=10)
+            response = scraper.get(url, timeout=30)
         
         elif url == "http://www.musictunnelktv.com/":
-            response = scraper.get("https://www.musictunnelktv.com/home", timeout=10)
+            response = scraper.get("https://www.musictunnelktv.com/home", timeout=30)
             
         elif url == "https://www.musictunnelktv.com":
-            response = scraper.get("https://www.musictunnelktv.com/home", timeout=10)
+            response = scraper.get("https://www.musictunnelktv.com/home", timeout=30)
         
         else:
             response = scraper.get(url, proxies=proxies, verify=verify, timeout=30)
@@ -236,9 +235,17 @@ def get_fb_info(url):
             
     if FB_link :
         # Some FB page can not access without login
-        # TODO : Using ZYTE API instead of smart proxy
         while True:
-            response = scraper.get(FB_link, proxies=proxies, verify=verify)
+            payload = {
+                "url" : FB_link,
+                "browserHtml" : True
+            }
+            try:
+                response = requests.post(zyte_api_url, auth=("be8e0737c3664421a37adc8e0a48d9cf", ""), json=payload)
+            except Exception as e:
+                print(str(e))
+                break
+            # response = scraper.get(FB_link, proxies=proxies, verify=verify)
             
             if response.status_code == 200:
                 html = response.text.replace(r"\u0040", "@")
@@ -268,7 +275,7 @@ def get_fb_info(url):
                 contact_url = base_url + "/" + contact
                 
             try:
-                response = scraper.get(contact_url, timeout=10)
+                response = scraper.get(contact_url, timeout=30)
             except Exception as e:
                 print(contact_url, str(e))
                 continue
@@ -299,5 +306,5 @@ def find_emails(html):
     
 
 if __name__ == "__main__":
-    url = "https://www.yelp.com/search?find_desc=Live+Music&find_loc=Los+Angeles%2C+CA%2C+United+States&start=0"
+    url = "https://www.yelp.com/search?find_desc=COUNTRY+CLUB&find_loc=Oklahoma+City%2C+OK&l=g%3A-96.96081162864763%2C36.20952298630416%2C-98.08416367942888%2C34.90466434642122"
     main(url)
