@@ -1,6 +1,7 @@
 # from scrapy.crawler import CrawlerProcess
 # from apps.home.script import  homes
 from functools import wraps
+import os
 
 from apps.authentication.models import Users
 from apps.authentication.util import verify_pass
@@ -15,8 +16,7 @@ from apps.models import Yelpurl
 from apps import db
 from run import socketio, emit, send
 import multiprocessing
-from apps.home.script import homes
-from scrapy.crawler import CrawlerProcess
+from apps.home.script import yelp_scraper_run
 from apps.models import Service
 
 from concurrent.futures import ThreadPoolExecutor
@@ -144,7 +144,13 @@ def viwe_url_history(url_id):
             "facebook": url_entry.facebook,
             "instagram": url_entry.instagram,
             "twitter": url_entry.twitter,
-            "email": url_entry.email,
+            "email1": url_entry.email1,
+            "email2": url_entry.email2,
+            "email3": url_entry.email3,
+            "email4": url_entry.email4,
+            "fbemail1": url_entry.fbemail1,
+            "fbemail2": url_entry.fbemail2,
+            "bademail": url_entry.bademail,
             "url_id": url_entry.url_id,
             "user_id": url_entry.user_id,
         }
@@ -228,13 +234,9 @@ def process_state(id):
 @blueprint.route('/check_state', methods=['POST'])
 def check_state():
     id = request.json['id']
-    print("Checking Process Status ----------------------------------------------------------")
-    respon = requests.post('http://192.168.0.105:8081/process_state', json={'id': id})
-    # respon = requests.post('http://146.190.51.19/process_state', json={'id': id})
-    print(respon)
-    if respon.text == "Completed":
-        print("completed")
-    return respon.text
+    yelpurl = Yelpurl.query.get(int(id))
+    print("Checking Process Status ----------------------------------------------------------", yelpurl.state)
+    return yelpurl.state
 
 
 def get_segment(request):
@@ -292,19 +294,23 @@ def lets_start(urls, user_name, user_id, id):
 
 def starting(urls, user_name, user_id, id):
     if len(urls) > 0:
-        process = CrawlerProcess({
-            'USER_AGENT': 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)'
-        })
-        process.crawl(homes, urls=urls, username=user_name, user_id=user_id, url_id=id)
-        process.start()
-
+        # process = CrawlerProcess({
+        #     'USER_AGENT': 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)'
+        # })
+        # process.crawl(homes, urls=urls, username=user_name, user_id=user_id, url_id=id)
+        # process.start()
+        
+        WEB_HOST_IP = os.getenv("WEB_HOST_IP")
+        print("starting", WEB_HOST_IP)
+        for url in urls:
+            yelp_scraper_run(url, user_name, user_id, id)
+        
         print("process has completed")
-        response = requests.post('http://localhost:8081/complete', json={'id': id})
-        # response = requests.post('http://146.190.51.19/complete', json={'id': id})
-        print(response)
-        response = requests.post('http://localhost:8081/msg', json={'result': "completed"})
+        response = requests.post(f'http://{WEB_HOST_IP}/complete', json={'id': id})
+        print(response.text)
+        response = requests.post(f'http://{WEB_HOST_IP}/msg', json={'result': "completed"})
         # response = requests.post('http://146.190.51.19/msg', json={'result': "completed"})
-        print(response)
+        print(response.text)
 
 
 @blueprint.route('/admin/register', methods=['POST'])

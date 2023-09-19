@@ -4,7 +4,7 @@ Copyright (c) 2019 - present AppSeed.us
 """
 
 import os
-from flask import request, jsonify, render_template
+from flask import request
 from flask_login import current_user
 from flask_migrate import Migrate
 from flask_minify import Minify
@@ -15,12 +15,9 @@ from flask_cors import CORS
 from apps.config import config_dict
 from apps import create_app, db
 from apps.models import Service, Yelpurl
-import string
-import secrets
+from dotenv import load_dotenv
 
-from apps.authentication.models import Users
-from apps.authentication.util import hash_pass
-from apps.home.emailler import send_email
+load_dotenv()
 
 # WARNING: Don't run with debug turned on in production!
 DEBUG = (os.getenv('DEBUG', 'False') == 'True')
@@ -54,72 +51,10 @@ socketio = SocketIO(app)
 CORS(app)
 
 
-def generate_random_password(length=8):
-    # Define the set of characters to choose from
-    characters = string.ascii_letters + string.digits + string.punctuation
-
-    # Generate a secure random password
-    password = ''.join(secrets.choice(characters) for _ in range(length))
-
-    return password
-
-
 @socketio.on('message')
 def handle_message(data):
     message = data['message']
     send({'message': message}, broadcast=True)
-
-
-@app.route('/forget_password', methods=['POST', 'GET'])
-def check_email():
-    if request.method == "POST":
-        data = request.form
-        email_to_check = data.get('email')
-
-        if not email_to_check:
-            response_msg = {
-                'class': 'alert-danger',
-                'message': 'Email not provided'
-            }
-        else:
-            # Query the database to check if the email exists
-            user = Users.query.filter_by(email=email_to_check).first()
-
-            if user:
-                try:
-                    password = generate_random_password()
-                    user.password = hash_pass(password)
-                    print(password)
-                    db.session.commit()
-                    user_email = user.email
-                    subject = "Reset password for robotic booking agent"
-                    message = "your new password is : " + password
-                    resp = send_email(user_email, subject, message)
-                    if resp['status'] == 'successful':
-                        msg = "Updated Password send to your email"
-                        response_msg = {
-                            'class': 'alert-success',
-                            'message': msg
-                        }
-                    else:
-                        msg = 'something went wrong, Please try again later...'
-                        response_msg = {
-                            'class': 'alert-danger',
-                            'message': msg
-                        }
-                except Exception as e:
-                    response_msg = {
-                        'class': 'alert-success',
-                        'message': str(e)
-                    }
-            else:
-                response_msg = {
-                    'class': 'alert-danger',
-                    'message': 'Email not found in the database'
-                }
-    else:
-        response_msg = None
-    return render_template('home/forget_password.html', response_msg=response_msg)
 
 
 @app.route('/msg', methods=['POST'])
@@ -129,26 +64,31 @@ def msg1():
         socketio.emit('message', {'message': "completed"})
         s="completed"
     else:
-        print(data)
         try:
             yelpurl = Yelpurl.query.get(int(data['url_id']))
-            print(yelpurl.state)
             s = yelpurl.state
             if s == "completed":
-                return
-            existing_url = Service.query.filter_by(url=data['Url'], user_id=data['url_id']).first()
+                return s
+            url = data['url'] if type(data) == 'str' else data['url'][0]
+            print("=========", data['venue'] if type(data) == 'str' else data['venue'][0],  "=========")
+            existing_url = Service.query.filter_by(url=url, user_id=data['url_id']).first()
             if not existing_url:
                 new_service = Service(
-                    url=data['Url'],
-                    name=data['Venue'],
-                    venue_type=data['Type'],
+                    url= url,
+                    name= data['venue'] if type(data) == 'str' else data['venue'][0],
+                    venue_type= data['venuetype'] if type(data) == 'str' else data['venuetype'][0],
                     website=data['website'],
                     phone=data['Phone'],
                     address=data['address'],
                     facebook=data['facebook'],
                     instagram=data['instagram'],
                     twitter=data['twitter'],
-                    email=data['email'],
+                    email1=data['Email1'],
+                    email2=data['Email2'],
+                    email3=data['Email3'],
+                    email4=data['Email4'],
+                    fbemail1=data['FacebookEmail1'],
+                    fbemail2=data['FacebookEmail2'],
                     url_id=data['url_id'],
                     user_id=data['user_id']
                 )
@@ -160,7 +100,6 @@ def msg1():
             print("Not Saved in db", e)
         socketio.emit('message', {'message': data})
         yelpurl = Yelpurl.query.get(int(data['url_id']))
-        print(yelpurl.state)
         s = yelpurl.state
     return s
 

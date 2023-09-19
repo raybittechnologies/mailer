@@ -55,8 +55,14 @@
                         <th>address</th>
                         <th>type</th>
                         <th>website</th>
-                        <th>email</th>
+                        <th>email1</th>
+                        <th>email2</th>
+                        <th>email3</th>
+                        <th>email4</th>
                         <th>facebook</th>
+                        <th>facebookemail1</th>
+                        <th>facebookemail2</th>
+                        <th>bademail</th>
 
                     </tr>
                     </thead>
@@ -122,23 +128,29 @@
                 {#btnstop_.style.display = "none";#}
 
                 paraElement.textContent = "Process Completed";
-            } else if (data['message']['Venue'] === "" &&
+            } else if (data['message']['venue'] === "" &&
                 data['message']['Phone'] === "" &&
                 data['message']['address'] === "" &&
                 data['message']['website'] === "" &&
-                data['message']['email'] === "" &&
+                data['message']['email1'] === "" &&
                 data['message']['facebook'] === "") {
                 console.log("empty")
             } else {
                 var rowNode = dataTable.row.add(
                     [
-                        data['message']['Venue'],
+                        data['message']['venue'],
                         data['message']['Phone'],
                         data['message']['address'],
-                        data['message']['Type'],
+                        data['message']['venuetype'],
                         data['message']['website'],
-                        data['message']['email'],
+                        data['message']['Email1'],
+                        data['message']['Email2'],
+                        data['message']['Email3'],
+                        data['message']['Email4'],
                         data['message']['facebook'],
+                        data['message']['FacebookEmail1'],
+                        data['message']['FacebookEmail2'],
+                        ""
                     ]).draw().node();
             }
         });

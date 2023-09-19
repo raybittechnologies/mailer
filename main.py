@@ -1,105 +1,115 @@
-import requests
-import pandas as pd
+import json
+from base64 import b64decode
+import time
 import re
 import urllib.parse
+
+import requests
+import pandas as pd
 from bs4 import BeautifulSoup as BS
-
-import time
-
 import cloudscraper
 
+from threading import Thread
+
+#ZYTE Smart Proxy : https://app.zyte.com
 proxies={
         "http": "http://cef7b4ee6daa4bc4810c42be269431fe:@proxy.crawlera.com:8011/",
         "https": "http://cef7b4ee6daa4bc4810c42be269431fe:@proxy.crawlera.com:8011/",
     }
-
 verify='zyte-proxy-ca.crt'
 
-def main():
 
-    url = "https://www.yelp.com/search?find_desc=live+music&find_loc=Oklahoma+City%2C+OK%2C+United+States"
-    url = urllib.parse.unquote(url).replace("+", " ")
+def main(url):
     
+    # url = urllib.parse.unquote(url).replace("+", " ") # Needed when using pure request query string
     find_desc = url.split("find_desc=")[1].split("&")[0]
     find_loc = url.split("find_loc=")[1].split("&")[0]
-    
-    base_url = "https://www.yelp.com/search/snippet"
     
     session = requests.session()
     headers = {
         "User-Agent" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
     }
-
     session.headers = headers
+    zyte_api_url = "https://api.zyte.com/v1/extract"
     
     start = 0
     page = 0
     
-    search_data = []
-    
     while True:
+        search_data = []
+        start = page * 10 # 10 business per page
+        # params = {
+        #     "find_desc" : find_desc,
+        #     "find_loc" : find_loc,
+        #     "start" : start,
+        #     "parent_request_id" : "df4e47308c3b7a1b",
+        #     "request_origin" : "user"
+        # }
         
-        start = page * 10
-        params = {
-            "find_desc" : find_desc,
-            "find_loc" : find_loc,
-            "start" : start,
-            "parent_request_id" : "df4e47308c3b7a1b",
-            "request_origin" : "user"
-        }
         print("page", page)
-        try:
-            response = session.get(base_url, params=params, timeout=10, proxies=proxies, verify=verify)
-        except Exception as e:
-            print(repr(e))
-            continue
-        # "venue	city	phone	Venue Type	Website	email	email 2	Email (facebook)	Facebook Link"
         
-        if response.status_code == 200:
+        #ZYTE API 
+        base_url = f"https://www.yelp.com/search/snippet?find_desc={find_desc}&find_loc={find_loc}&start={start}&parent_request_id=cff2259236faa40b&request_origin=user"
+        payload = {
+            "url" : base_url,
+            "httpResponseBody" : True
+        }
+        
+        try:
+            response = session.post(zyte_api_url, auth=("be8e0737c3664421a37adc8e0a48d9cf", ""), json=payload, timeout=10)
+        except Exception as e:
+            print(str(e))
+            continue
+        
+        # "venue	city	phone	Venue Type	Website	email	email 2	Email (facebook)	Facebook Link"
+        if response.json()['statusCode'] == 200:
+            response_json = json.loads(b64decode(response.json()["httpResponseBody"]))
             
-            if "searchExceptionProps" in response.json()['searchPageProps']:
+            if "searchExceptionProps" in response_json['searchPageProps']:
                 break
             
-            for business in response.json()['searchPageProps']['mainContentComponentsListProps']:
-                
+            for business in response_json['searchPageProps']['mainContentComponentsListProps']:
                 if "bizId" in business:
-                    
                     bizId = business['bizId']
                     venue_name = business['searchResultBusiness']['name']
                     venue_type = ", ".join(i['title'] for i in business['searchResultBusiness']['categories'])
                     phone = business['searchResultBusiness']['phone']
+                    
                     if business['searchResultBusiness']['website']:
                         website = business['searchResultBusiness']['website']['href']
                     else:
                         website = ""
                         
                     address = ""
-                    for location in response.json()['searchPageProps']['rightRailProps']['searchMapProps']['hovercardData'].values():
-                        
+                    for location in response_json['searchPageProps']['rightRailProps']['searchMapProps']['hovercardData'].values():
                         if bizId == location['bizId']:
                             address = " ".join(location['addressLines'])
-                            
+                    
                     data = dict()
                     data['Venue'] = venue_name
                     data['Phone'] = phone
                     data['VenueType'] = venue_type
                     data['Website'] = website
                     data['Address'] = address
-                    data['Email'] = ""
+                    data['Email1'] = ""
+                    data['Email2'] = ""
+                    data['Email3'] = ""
+                    data['Email4'] = ""
                     data['FacebookLink'] = ""
-                    data['FacebookEmail'] = ""
+                    data['FacebookEmail1'] = ""
+                    data['FacebookEmail2'] = ""
                     
-                    if website:
-                        fb_link, emails, fb_emails = get_fb_info(website)
-                        if fb_link:
-                            data['FacebookLink'] = fb_link
-                        if fb_emails:
-                            data['FacebookEmail'] = ",".join(fb_emails)
-                        if emails:
-                            data['Email'] = ",".join(emails)
-                            
                     search_data.append(data)
                     
+            threads = []
+            for data in search_data:
+                thread = Thread(target=thread_runner, daemon=True, args=(data, ))
+                thread.start()
+                threads.append(thread)
+                
+            for th in threads:
+                th.join()
+            
         elif response.status_code in [429, 503]:
             print("Rate limited")
             time.sleep(1)
@@ -115,6 +125,31 @@ def main():
     df.to_csv(f"{find_loc}.csv", index=None)
     
     print("finished")
+
+
+def thread_runner(data):
+    website = data['Website']
+    
+    if website:
+        fb_link, emails, fb_emails = get_fb_info(website)
+        if fb_link:
+            data['FacebookLink'] = fb_link
+        if fb_emails:
+            try:
+                data['FacebookEmail1'] = fb_emails[0]
+                data['FacebookEmail2'] = fb_emails[1]
+            except:
+                pass
+        if emails:
+            try:
+                data['Email1'] = emails[0]
+                data['Email2'] = emails[1]
+                data['Email3'] = emails[2]
+                data['Email4'] = emails[3]
+            except:
+                pass
+    
+    print(data)
     
     
 def get_fb_info(url):
@@ -128,21 +163,23 @@ def get_fb_info(url):
     emails = []
     fb_emails = []
     
-    # if url != "http://www.losthighwaybar.com":
-    #     return FB_link, emails, fb_emails
-    
-    if url == "http://www.whiskyagogo.com":
-        url = "https://www.whiskyagogo.com/calendar/"
-        response = scraper.get(url)
-    
-    elif url == "http://www.musictunnelktv.com/":
-        response = scraper.get("https://www.musictunnelktv.com/home")
+    try:
+        if url == "http://www.whiskyagogo.com":
+            url = "https://www.whiskyagogo.com/calendar/"
+            response = scraper.get(url, timeout=10)
         
-    elif url == "https://www.musictunnelktv.com":
-        response = scraper.get("https://www.musictunnelktv.com/home")
-    
-    else:
-        response = scraper.get(url, proxies=proxies, verify=verify)
+        elif url == "http://www.musictunnelktv.com/":
+            response = scraper.get("https://www.musictunnelktv.com/home", timeout=10)
+            
+        elif url == "https://www.musictunnelktv.com":
+            response = scraper.get("https://www.musictunnelktv.com/home", timeout=10)
+        
+        else:
+            response = scraper.get(url, proxies=proxies, verify=verify, timeout=30)
+            
+    except Exception as e:
+        print(url , str(e))
+        return FB_link, emails, fb_emails 
         
     #Fetch data
     if response.status_code == 200:
@@ -198,7 +235,8 @@ def get_fb_info(url):
             FB_link = ""
             
     if FB_link :
-        # Some FB page can access without login
+        # Some FB page can not access without login
+        # TODO : Using ZYTE API instead of smart proxy
         while True:
             response = scraper.get(FB_link, proxies=proxies, verify=verify)
             
@@ -219,7 +257,7 @@ def get_fb_info(url):
                 break
             
     if len(emails) == 0 and len(fb_emails) == 0:
-        # Possible page which might have emails
+        # Possible pages which might have emails
         possible_contact_pages = ['contact', 'contact-us', 'info', 'barmenu']
         base_url = url.split(":")[0] + "://" + urllib.parse.urlparse(url).netloc
         
@@ -230,9 +268,9 @@ def get_fb_info(url):
                 contact_url = base_url + "/" + contact
                 
             try:
-                response = scraper.get(contact_url,  proxies=proxies, verify=verify)
+                response = scraper.get(contact_url, timeout=10)
             except Exception as e:
-                print(contact_url, repr(e))
+                print(contact_url, str(e))
                 continue
                 
             if response.status_code == 200:
@@ -247,7 +285,7 @@ def get_fb_info(url):
             # else:
                 # print(contact_url, response.status_code)
             
-    print(url, FB_link, emails, fb_emails)
+    # print(url, FB_link, emails, fb_emails)
     return FB_link, emails, fb_emails
         
         
@@ -261,4 +299,5 @@ def find_emails(html):
     
 
 if __name__ == "__main__":
-    main()
+    url = "https://www.yelp.com/search?find_desc=Live+Music&find_loc=Los+Angeles%2C+CA%2C+United+States&start=0"
+    main(url)

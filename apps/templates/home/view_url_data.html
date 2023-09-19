@@ -37,8 +37,14 @@
                         <th>address</th>
                         <th>type</th>
                         <th>website</th>
-                        <th>email</th>
+                        <th>email1</th>
+                        <th>email2</th>
+                        <th>email3</th>
+                        <th>email4</th>
                         <th>facebook</th>
+                        <th>facebookemail1</th>
+                        <th>facebookemail2</th>
+                        <th>bademail</th>
 
                     </tr>
                     </thead>
@@ -110,23 +116,29 @@
                         dataSrc: ''
                     },
                     columns: [
-                        {data: 'name'},
-                        {data: 'phone'},
-                        {data: 'address'},
-                        {data: 'venue_type'},
+                        {data: 'name', defaultContent : ""},
+                        {data: 'phone', defaultContent : ""},
+                        {data: 'address', defaultContent : ""},
+                        {data: 'venue_type', defaultContent : ""},
                         {
                             data: 'website',
                             render: function (website, type, row) {
                                 return '<a href="' + website + '" >' + website + ' </a>'
                             },
                         },
-                        {data: 'email'},
+                        {data: 'email1', defaultContent : ""},
+                        {data: 'email2', defaultContent : ""},
+                        {data: 'email3', defaultContent : ""},
+                        {data: 'email4', defaultContent : ""},
                         {
                             data: 'facebook',
                             render: function (facebook, type, row) {
                                 return '<a href="' + facebook + '" >' + facebook + ' </a>'
                             },
                         },
+                        {data: 'fbemail1', defaultContent : ""},
+                        {data: 'fbemail2', defaultContent : ""},
+                        {data: 'bademail', defaultContent : ""},
                     ]
                 },
             );
