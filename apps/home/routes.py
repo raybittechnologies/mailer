@@ -129,8 +129,8 @@ def url_history():
 @blueprint.route('/viwe_url_history/<int:url_id>')
 @login_required
 def viwe_url_history(url_id):
-    user_urls = Service.query.filter_by(user_id=current_user.id, url_id=url_id).all()
-    print(user_urls)
+    user_urls = Service.query.filter_by(url_id=url_id, user_id=current_user.id).all()
+    # print(user_urls)
     url_list = []
     for url_entry in user_urls:
         url_data = {
@@ -301,7 +301,6 @@ def starting(urls, user_name, user_id, id):
         # process.start()
         
         WEB_HOST_IP = os.getenv("WEB_HOST_IP")
-        print("starting", WEB_HOST_IP)
         for url in urls:
             yelp_scraper_run(url, user_name, user_id, id)
         

@@ -47,6 +47,7 @@ class Service(db.Model):
     bademail = db.Column(db.String(255))
     url_id = db.Column(db.String(255))
     user_id = db.Column(db.String(255))
+    biz_id = db.Column(db.String(255))
 
 
 class Admin(db.Model, UserMixin):

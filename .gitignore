@@ -4,3 +4,4 @@ info.txt
 *.csv
 *.zip
 __pycache__/
+apps_origin/

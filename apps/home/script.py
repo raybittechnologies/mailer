@@ -28,7 +28,6 @@ done_links = list()
 
 def pass_data(item):
     WEB_HOST_IP = os.getenv("WEB_HOST_IP")
-    print("pass_data", WEB_HOST_IP)
     response = requests.post(f'http://{WEB_HOST_IP}/msg', json={'result': item})
     # response = requests.post('http://146.190.51.19/msg', json={'result': item})
     print(response.text)
@@ -37,7 +36,6 @@ def pass_data(item):
 
 def yelp_scraper_run(url, user_name, user_id, id):
     WEB_HOST_IP = os.getenv("WEB_HOST_IP")
-    print("yelp_scraper_run", WEB_HOST_IP)
     # url = urllib.parse.unquote(url).replace("+", " ") # Needed when using pure request query string
     find_desc = url.split("find_desc=")[1].split("&")[0]
     find_loc = url.split("find_loc=")[1].split("&")[0]

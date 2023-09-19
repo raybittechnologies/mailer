@@ -38,11 +38,11 @@ Migrate(app, db)
 if not DEBUG:
     Minify(app=app, html=True, js=False, cssless=False)
 
-if DEBUG:
-    app.logger.info('DEBUG            = ' + str(DEBUG))
-    app.logger.info('Page Compression = ' + 'FALSE' if DEBUG else 'TRUE')
-    app.logger.info('DBMS             = ' + app_config.SQLALCHEMY_DATABASE_URI)
-    app.logger.info('ASSETS_ROOT      = ' + app_config.ASSETS_ROOT)
+# if DEBUG:
+#     app.logger.info('DEBUG            = ' + str(DEBUG))
+#     app.logger.info('Page Compression = ' + 'FALSE' if DEBUG else 'TRUE')
+#     app.logger.info('DBMS             = ' + app_config.SQLALCHEMY_DATABASE_URI)
+#     app.logger.info('ASSETS_ROOT      = ' + app_config.ASSETS_ROOT)
 
 for command in [gen_api, ]:
     app.cli.add_command(command)
@@ -71,8 +71,8 @@ def msg1():
                 return s
             url = data['url'] if type(data) == 'str' else data['url'][0]
             print("=========", data['venue'] if type(data) == 'str' else data['venue'][0],  "=========")
-            existing_url = Service.query.filter_by(url=url, user_id=data['url_id']).first()
-            if not existing_url:
+            existing_url = Service.query.filter_by(url_id=data['url_id'], user_id=data['user_id'], biz_id=data['bizId']).first()
+            if existing_url is None:
                 new_service = Service(
                     url= url,
                     name= data['venue'] if type(data) == 'str' else data['venue'][0],
@@ -90,14 +90,15 @@ def msg1():
                     fbemail1=data['FacebookEmail1'],
                     fbemail2=data['FacebookEmail2'],
                     url_id=data['url_id'],
-                    user_id=data['user_id']
+                    user_id=data['user_id'],
+                    biz_id=data['bizId']
                 )
                 db.session.add(new_service)
                 db.session.commit()
             else:
                 print("Already present in db")
         except Exception as e:
-            print("Not Saved in db", e)
+            print("Not Saved in db", str(e))
         socketio.emit('message', {'message': data})
         yelpurl = Yelpurl.query.get(int(data['url_id']))
         s = yelpurl.state
