@@ -14,7 +14,6 @@ import requests
 from datetime import datetime
 from apps.models import Yelpurl
 from apps import db
-from run import socketio, emit, send
 import multiprocessing
 from apps.home.script import yelp_scraper_run
 from apps.models import Service
@@ -44,11 +43,6 @@ def role_required(role):
         return wrapper
     return decorator
 
-
-@socketio.on('message')
-def handle_message(data):
-    message = data['message']
-    socketio.send({'message': message}, broadcast=True)
 
 
 @blueprint.route('/home')
@@ -211,7 +205,22 @@ def url_view(id):
                            page_data=page_data,
                            current_url=yelpurl
                            )
-
+    
+@blueprint.route('/url/delete', methods=['POST'])
+@login_required
+def url_delete():
+    url_id = int(request.form['urlid'])
+    yelpurl = Yelpurl.query.get(url_id)
+    sevices = Service.query.filter_by(url_id=url_id)
+    for service in sevices:
+        db.session.delete(service)
+    db.session.delete(yelpurl)
+    
+    db.session.commit()
+    page_data = get_page_data()
+    return render_template('home/view_urls.html', segment='history', API_GENERATOR=len(API_GENERATOR),
+                           page_data=page_data)
+    
 
 @blueprint.route('/profile')
 @login_required
@@ -305,10 +314,9 @@ def starting(urls, user_name, user_id, id):
             yelp_scraper_run(url, user_name, user_id, id)
         
         print("process has completed")
-        response = requests.post(f'http://{WEB_HOST_IP}/complete', json={'id': id})
+        response = requests.post(f'{WEB_HOST_IP}/complete', json={'id': id})
         print(response.text)
-        response = requests.post(f'http://{WEB_HOST_IP}/msg', json={'result': "completed"})
-        # response = requests.post('http://146.190.51.19/msg', json={'result': "completed"})
+        response = requests.post(f'{WEB_HOST_IP}/msg', json={'result': "completed"})
         print(response.text)
 
 

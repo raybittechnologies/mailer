@@ -80,7 +80,7 @@
                                 // Create action buttons HTML
                                 var buttons = '<a class="btn btn-success btn-sm" href="/scrapper/' + id + '">Start Scraper</a> ' +
                                     '<a class="btn btn-facebook btn-sm" href="/url/view/' + id + '">View Scraped Data</a> ' +
-                                    '<a class="btn btn-danger btn-sm"  href="">Delete</a>';
+                                    '<form action="/url/delete" style="display: contents" method="post"> <input type="hidden" name="urlid" value="' + id + '"/><input class="btn btn-danger btn-sm" type="submit" value="Delete"></form>';
                                 return buttons;
                             }
                         }

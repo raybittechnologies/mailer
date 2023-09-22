@@ -24,8 +24,7 @@ zyte_api_url = "https://api.zyte.com/v1/extract"
 
 def pass_data(item):
     WEB_HOST_IP = os.getenv("WEB_HOST_IP")
-    response = requests.post(f'http://{WEB_HOST_IP}/msg', json={'result': item})
-    # response = requests.post('http://146.190.51.19/msg', json={'result': item})
+    response = requests.post(f'{WEB_HOST_IP}/msg', json={'result': item})
     print(response.text)
     
 
@@ -44,7 +43,7 @@ def yelp_scraper_run(url, user_name, user_id, id):
         search_data = []
         start = page * 10 # 10 business per page
         
-        response = requests.post(f'http://{WEB_HOST_IP}/check_state', json={'id': id})
+        response = requests.post(f'{WEB_HOST_IP}/check_state', json={'id': id})
         if response.text == "completed":
             return
         
@@ -284,7 +283,7 @@ def get_fb_info(url):
                 contact_url = base_url + "/" + contact
                 
             try:
-                response = scraper.get(contact_url, timeout=30)
+                response = scraper.get(contact_url, timeout=10)
             except Exception as e:
                 print(contact_url, str(e))
                 continue
