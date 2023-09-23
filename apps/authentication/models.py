@@ -20,11 +20,12 @@ class Users(db.Model, UserMixin):
     username      = db.Column(db.String(64), unique=True)
     email         = db.Column(db.String(64), unique=True)
     password      = db.Column(db.LargeBinary)
-    role = db.Column(db.String(64), unique=True)
+    role          = db.Column(db.String(64), unique=True)
     oauth_github  = db.Column(db.String(100), nullable=True)
 
     api_token     = db.Column(db.String(100))
-    api_token_ts  = db.Column(db.Integer)    
+    api_token_ts  = db.Column(db.Integer)   
+    state         = db.Column(db.String(10)) 
 
     def __init__(self, **kwargs):
         for property, value in kwargs.items():

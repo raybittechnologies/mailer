@@ -20,7 +20,7 @@
                         <h2 id="para">Completed</h2>
 
                         <a style="display: block" id="btnview" href="/url/view/{{ current_url.id }}"
-                           class="btn btn-danger btn-sm">View Scraped Data</a>
+                           class="btn btn-danger btn-sm">View Data</a>
                     </div>
                 {% else %}
                     <div>
@@ -31,7 +31,7 @@
                         {#                        <a id="btnstop" href="" class="btn btn-danger btn-sm">Stop</a>#}
                         <h2 id="para"></h2>
                         <a style="display: none" id="btnview" href="/url/view/{{ current_url.id }}"
-                           class="btn btn-danger btn-sm">View Scraped Data</a>
+                           class="btn btn-danger btn-sm">View Data</a>
                         <a style="display: block" id="btnstop" href="/process_stop/{{ current_url.id }}"
                                class="btn btn-danger btn-sm">Stop Process</a>
                     </div>
@@ -94,7 +94,7 @@
 
     <script>
         Swal.fire(
-            'Scraping Started!',
+            'Processes Started!',
             'We will email when your results are ready to be downloaded!',
             'success'
         );
@@ -109,6 +109,7 @@
     <script>
         var socket = io.connect('http://' + document.domain + ':' + location.port);
 
+        var alarm = new Audio("static/assets/sounds/Twinkle.mp3");
         socket.on('connect', function () {
             console.log('Connected to WebSocket');
         });
@@ -116,6 +117,7 @@
         socket.on('message', function (data) {
             console.log(data)
             var dataTable = $('#filtersTable').DataTable();
+            
             if (data['message'] === "completed") {
                 var loaderImage = document.getElementById("loader");
                 var paraElement = document.getElementById("para");
@@ -126,8 +128,8 @@
                 btnStop.style.display = "none";
                 btnView.style.display = "block";
                 {#btnstop_.style.display = "none";#}
-
                 paraElement.textContent = "Process Completed";
+                alarm.play()
             } else if (data['message']['venue'] === "" &&
                 data['message']['Phone'] === "" &&
                 data['message']['address'] === "" &&

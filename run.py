@@ -15,7 +15,9 @@ from flask_cors import CORS
 from apps.config import config_dict
 from apps import create_app, db
 from apps.models import Service, Yelpurl
+from apps.authentication.models import Users
 from dotenv import load_dotenv
+import mailtrap as mt
 
 load_dotenv()
 
@@ -31,7 +33,6 @@ try:
 
 except KeyError:
     exit('Error: Invalid <config_mode>. Expected values [Debug, Production] ')
-
 app = create_app(app_config)
 Migrate(app, db)
 
@@ -62,19 +63,30 @@ def msg1():
     data = request.json['result']
     if data == "completed":
         socketio.emit('message', {'message': "completed"})
+        #Send email here
+        user_id = request.json['user_id']
+        url_id = request.json['id']
+        user = Users.query.get(int(user_id))
+        user_email = user.email
+        print("Send email here", user_email, app.config['SENDER_MAIL'])
+        send_email(app.config['SENDER_MAIL'], user_email, url_id)
         s="completed"
     else:
         try:
-            yelpurl = Yelpurl.query.get(int(data['url_id']))
-            s = yelpurl.state
-            if s == "completed":
-                return s
-            url = data['url'] if type(data) == 'str' else data['url'][0]
+            # yelpurl = Yelpurl.query.get(int(data['url_id']))
+            # s = yelpurl.state
+            # if s == "completed":
+            #     #Send email here
+            #     user = Users.query.get(int(data['user_id']))
+            #     user_email = user.email
+            #     print("Send email here", user_email, app_config['SENDER_MAIL'])
+            #     send_email(app_config['SENDER_MAIL'], user_email)
+            #     return s
+            
             print("=========", data['venue'] if type(data) == 'str' else data['venue'][0],  "=========")
             existing_url = Service.query.filter_by(url_id=data['url_id'], user_id=data['user_id'], biz_id=data['bizId']).first()
             if existing_url is None:
                 new_service = Service(
-                    url= url,
                     name= data['venue'] if type(data) == 'str' else data['venue'][0],
                     venue_type= data['venuetype'] if type(data) == 'str' else data['venuetype'][0],
                     website=data['website'],
@@ -104,6 +116,26 @@ def msg1():
         s = yelpurl.state
     return s
 
+def send_email(sender_email, receiver_email, url_id):
+    # create mail object
+    view_data_link = app.config['WEB_HOST_IP'] + "/url/view/" + str(url_id)
+    mail = mt.Mail(
+        sender=mt.Address(email=sender_email, name="Robotic Booking Agent"),
+        to=[mt.Address(email=receiver_email)],
+        template_uuid="eba046d2-f2d5-490c-9b87-7c5ecf558925",
+        template_variables={
+        "view_data_link": view_data_link,
+        "user_email": "Test_User_email",
+        "pass_reset_link": "Test_Pass_reset_link"
+        }
+    )
+
+    # create client and send
+    try:
+        client = mt.MailtrapClient(token=app.config['MAILTRAP_API_KEY'])
+        client.send(mail)
+    except Exception as e:
+        print(str(e))
 
 if __name__ == "__main__":
     socketio.run(app, debug=True, host='0.0.0.0', port=8081)

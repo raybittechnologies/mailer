@@ -119,8 +119,11 @@
                                         <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                             Email
                                         </th>
-                                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                             Status
+                                        </th>
+                                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                                            Action
                                         </th>
                                     </tr>
                                     </thead>
@@ -141,8 +144,19 @@
                                             <td>
                                                 <p class="text-xs font-weight-bold mb-0">{{ user.email }}</p>
                                             </td>
+                                            <td>
+                                                {% if user.state == 'pending' %}
+                                                    <span class="badge badge-sm bg-gradient-secondary">Pending</span>
+                                                {% else %}
+                                                    <span class="badge badge-sm bg-gradient-success">Active</span>
+                                                {% endif %}
+                                            </td>
                                             <td class="align-middle text-center text-sm">
-{#                                                <span class="badge badge-sm bg-gradient-success">Online</span>#}
+                                                {% if user.state == 'pending' %}
+                                                    <a href="/admin/users/approve/{{ user.id }}" class="btn btn-sm btn-success">Approve</a>
+                                                {% else %}
+                                                    <a href="/admin/users/inactive/{{ user.id }}" class="btn btn-sm btn-secondary">Inactive</a>
+                                                {% endif %}
                                                 <a href="/admin/users/delete/{{ user.id }}" class="btn btn-sm btn-danger">Delete</a>
                                             </td>
                                         </tr>

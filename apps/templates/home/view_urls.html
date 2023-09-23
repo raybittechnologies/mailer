@@ -60,26 +60,32 @@
             // Initialize DataTable
             $('#filtersTable').DataTable({
                     responsive: true,
+                    order : [],
                     ajax: {
                         url: '/url_history',
                         dataSrc: ''
                     },
                     columns: [
-                        {#{data: 'id'},#}
+                        //{#{data: 'id'},#}
                         {data: 'name'},
                         {
                             data: 'product_url',
                             render: function (product_url, type, row) {
-
-                                return '<a href="' + product_url + '" >' + product_url.split('?')[1] + ' </a>'
+                                var text = ''
+                                for (let i = 0; i < product_url.split(',').length; i++) {
+                                    text += '<a href="' + product_url.split(',')[i] + '" target="_blank" >' + product_url.split(',')[i].split('?')[1] + ' </a>' + "<br>";
+                                }
+                                return text
                             }
                         },
                         {
                             data: 'id', // Assuming the id property is present in your data
                             render: function (id, type, row) {
                                 // Create action buttons HTML
-                                var buttons = '<a class="btn btn-success btn-sm" href="/scrapper/' + id + '">Start Scraper</a> ' +
-                                    '<a class="btn btn-facebook btn-sm" href="/url/view/' + id + '">View Scraped Data</a> ' +
+                                var state_text = ''
+                                state_text = row.state === "running" ? 'View Processes' : 'Start Processes';
+                                var buttons = '<a class="btn btn-success btn-sm" href="/scrapper/' + id + '">' + state_text + '</a> ' +
+                                    '<a class="btn btn-facebook btn-sm" href="/url/view/' + id + '">View Data</a> ' +
                                     '<form action="/url/delete" style="display: contents" method="post"> <input type="hidden" name="urlid" value="' + id + '"/><input class="btn btn-danger btn-sm" type="submit" value="Delete"></form>';
                                 return buttons;
                             }

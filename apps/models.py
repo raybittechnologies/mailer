@@ -2,12 +2,12 @@
 """
 Copyright (c) 2019 - present AppSeed.us
 """
-from flask_login import UserMixin
+import datetime
 
+from flask_login import UserMixin
 from apps import db
 from sqlalchemy import create_engine, Column, Integer, String, orm
 from flask_bcrypt import generate_password_hash, check_password_hash
-
 '''
 Add your models below
 '''
@@ -25,11 +25,11 @@ class Yelpurl(db.Model):
     product_url = db.Column(db.String(254))
     userid = db.Column(db.String(254))
     state = db.Column(db.String(20))
+    create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
 
 
 class Service(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    url = db.Column(db.String(255))
     name = db.Column(db.String(255))
     venue_type = db.Column(db.String(255))
     website = db.Column(db.String(255))

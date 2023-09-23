@@ -64,6 +64,9 @@ class Config(object):
     if USE_SQLITE:
         # This will create a file in <app> FOLDER
         SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'db.sqlite3')
+        
+    SENDER_MAIL = os.environ.get('SENDER_MAIL')
+    MAILTRAP_API_KEY = os.environ.get('MAILTRAP_API_KEY')
 
 
 class ProductionConfig(Config):

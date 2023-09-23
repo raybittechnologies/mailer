@@ -17,6 +17,7 @@ from apps import db
 import multiprocessing
 from apps.home.script import yelp_scraper_run
 from apps.models import Service
+from sqlalchemy import desc, asc
 
 from concurrent.futures import ThreadPoolExecutor
 from apps.authentication.forms import LoginForm, CreateAccountForm
@@ -75,19 +76,27 @@ def url():
             'url': url
         }
         existing_url = Yelpurl.query.filter_by(product_url=url, userid=current_user.id).first()
-        if not existing_url:
+        if existing_url is None:
             new_url = Yelpurl(product_url=url, userid=current_user.id, state="idle", name=name)
             db.session.add(new_url)
             db.session.commit()
+            
+            existing_url = Yelpurl.query.filter_by(product_url=url, userid=current_user.id).first()
+            url_id = existing_url.id
+            
+            return redirect(url_for('home_blueprint.scrapper', id=url_id))
+            
         else:
+            
             print("already present in db")
-
-        return render_template('home/view_urls.html',
-                               segment='history',
-                               API_GENERATOR=len(API_GENERATOR),
-                               page_data=page_data,
-                               data=data
-                               )
+            message = "This url is already reistered."
+            return render_template('home/view_urls.html',
+                                segment='history',
+                                API_GENERATOR=len(API_GENERATOR),
+                                page_data=page_data,
+                                data=data,
+                                message=message
+                                )
     else:
         page_data = get_page_data()
         data = {
@@ -105,7 +114,7 @@ def url():
 @blueprint.route('/url_history')
 @login_required
 def url_history():
-    user_urls = Yelpurl.query.filter_by(userid=current_user.id).all()
+    user_urls = Yelpurl.query.filter_by(userid=current_user.id).order_by(Yelpurl.create_datetime.desc()).all()
     url_list = []
 
     for url_entry in user_urls:
@@ -113,7 +122,8 @@ def url_history():
             'url_id': url_entry.userid,
             'product_url': url_entry.product_url,
             'id': url_entry.id,
-            'name': url_entry.name
+            'name': url_entry.name,
+            'state' : url_entry.state
         }
         url_list.append(url_data)
 
@@ -129,7 +139,6 @@ def viwe_url_history(url_id):
     for url_entry in user_urls:
         url_data = {
             "id": url_entry.id,
-            "url": url_entry.url,
             "name": url_entry.name,
             "venue_type": url_entry.venue_type,
             "website": url_entry.website,
@@ -164,13 +173,15 @@ def history():
 @login_required
 def scrapper(id):
     obj = Yelpurl.query.get(id)
-    obj.state = "running"
-    db.session.commit()
-    urls = obj.product_url.split(',')
-    try:
-        executor.submit(lets_start, urls, current_user.username, current_user.id, id)
-    except:
-        print("something went wrong")
+    if obj.state != "running":
+        obj.state = "running"
+        db.session.commit()
+        urls = obj.product_url.split(',')
+        try:
+            executor.submit(lets_start, urls, current_user.username, current_user.id, id)
+        except:
+            print("something went wrong")
+        
     return redirect(url_for('home_blueprint.scraping', id=id))
 
 
@@ -189,10 +200,14 @@ def scraping():
     id = request.args.get('id')
     page_data = get_page_data()
     yelpurl = Yelpurl.query.get(id)
-    return render_template('home/fetch_url_data.html', segment='url', API_GENERATOR=len(API_GENERATOR),
-                           page_data=page_data,
-                           current_url=yelpurl
-                           )
+    
+    if yelpurl.state == "running":
+        return render_template('home/fetch_url_data.html', segment='url', API_GENERATOR=len(API_GENERATOR),
+                            page_data=page_data,
+                            current_url=yelpurl
+                            )
+    else:
+        return redirect(url_for('home_blueprint.url.view', id=id))
 
 
 @blueprint.route('/url/view/<int:id>', methods=['GET', 'POST'])
@@ -218,8 +233,7 @@ def url_delete():
     
     db.session.commit()
     page_data = get_page_data()
-    return render_template('home/view_urls.html', segment='history', API_GENERATOR=len(API_GENERATOR),
-                           page_data=page_data)
+    return redirect(url_for('home_blueprint.history'))
     
 
 @blueprint.route('/profile')
@@ -234,7 +248,6 @@ def profile():
 @blueprint.route('/process_stop/<int:id>')
 def process_state(id):
     yelpurl = Yelpurl.query.get(int(id))
-    print(yelpurl.state)
     yelpurl.state = "completed"
     db.session.commit()
     return redirect(url_for('home_blueprint.url_view', id=id))
@@ -244,7 +257,6 @@ def process_state(id):
 def check_state():
     id = request.json['id']
     yelpurl = Yelpurl.query.get(int(id))
-    print("Checking Process Status ----------------------------------------------------------", yelpurl.state)
     return yelpurl.state
 
 
@@ -316,8 +328,9 @@ def starting(urls, user_name, user_id, id):
         print("process has completed")
         response = requests.post(f'{WEB_HOST_IP}/complete', json={'id': id})
         print(response.text)
-        response = requests.post(f'{WEB_HOST_IP}/msg', json={'result': "completed"})
-        print(response.text)
+        
+        response = requests.post(f'{WEB_HOST_IP}/msg', json={'result': "completed", 'id' : id, 'user_id' : user_id})
+        print("Send to FE", response.text)
 
 
 @blueprint.route('/admin/register', methods=['POST'])
@@ -352,9 +365,7 @@ def admin_login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-        print(email)
         user = Users.query.filter_by(email=email).first()
-        print()
         # Check the password
         if user and verify_pass(password, user.password):
             login_user(user)
@@ -419,7 +430,38 @@ def delete_user(id):
                             page_data=page_data,
                             users=users,
                             ))
-
+    
+@blueprint.route('/admin/users/approve/<id>', methods=['POST', 'GET'])
+@login_required
+@role_required('admin')
+def approve_user(id):
+    user = Users.query.get(id)
+    user.state = "approved"
+    db.session.add(user)
+    db.session.commit()
+    page_data = get_admin_data()
+    users = Users.query.filter(Users.role != "admin").all()
+    return redirect(url_for("home_blueprint.admin_users",
+                            segment='users', API_GENERATOR=len(API_GENERATOR),
+                            page_data=page_data,
+                            users=users,
+                            ))
+    
+@blueprint.route('/admin/users/inactive/<id>', methods=['POST', 'GET'])
+@login_required
+@role_required('admin')
+def inactive_user(id):
+    user = Users.query.get(id)
+    user.state = "pending"
+    db.session.add(user)
+    db.session.commit()
+    page_data = get_admin_data()
+    users = Users.query.filter(Users.role != "admin").all()
+    return redirect(url_for("home_blueprint.admin_users",
+                            segment='users', API_GENERATOR=len(API_GENERATOR),
+                            page_data=page_data,
+                            users=users,
+                            ))
 
 @blueprint.route('/admin/add/user', methods=['POST', 'GET'])
 @login_required

@@ -25,12 +25,11 @@ zyte_api_url = "https://api.zyte.com/v1/extract"
 def pass_data(item):
     WEB_HOST_IP = os.getenv("WEB_HOST_IP")
     response = requests.post(f'{WEB_HOST_IP}/msg', json={'result': item})
-    print(response.text)
+    print("pass_data", response.text)
     
 
 
 def yelp_scraper_run(url, user_name, user_id, id):
-    WEB_HOST_IP = os.getenv("WEB_HOST_IP")
     # url = urllib.parse.unquote(url).replace("+", " ") # Needed when using pure request query string
     find_desc = url.split("find_desc=")[1].split("&")[0]
     find_loc = url.split("find_loc=")[1].split("&")[0]
@@ -42,10 +41,6 @@ def yelp_scraper_run(url, user_name, user_id, id):
     while True:
         search_data = []
         start = page * 10 # 10 business per page
-        
-        response = requests.post(f'{WEB_HOST_IP}/check_state', json={'id': id})
-        if response.text == "completed":
-            return
         
         #ZYTE API 
         base_url = f"https://www.yelp.com/search/snippet?find_desc={find_desc}&find_loc={find_loc}&start={start}&parent_request_id=cff2259236faa40b&request_origin=user"
@@ -135,6 +130,10 @@ def yelp_scraper_run(url, user_name, user_id, id):
 
 def thread_runner(data):
     website = data['website']
+    WEB_HOST_IP = os.getenv("WEB_HOST_IP")
+    response = requests.post(f'{WEB_HOST_IP}/check_state', json={'id': data['url_id']})
+    if response.text == "completed":
+        return
     
     if website:
         fb_link, emails, fb_emails = get_fb_info(website)
@@ -181,7 +180,7 @@ def get_fb_info(url):
             response = scraper.get("https://www.musictunnelktv.com/home", timeout=30)
         
         else:
-            response = scraper.get(url, proxies=proxies, verify=verify, timeout=30)
+            response = scraper.get(url, proxies=proxies, verify=verify, timeout=10)
             
     except Exception as e:
         print(url , str(e))

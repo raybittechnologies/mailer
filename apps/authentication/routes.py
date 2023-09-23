@@ -62,7 +62,13 @@ def login():
         user = Users.query.filter_by(username=username).first()
         print()
         # Check the password
-        if user and verify_pass(password, user.password):
+        if user and user.state == "pending":
+            # user is not approved
+            return render_template('accounts/login.html',
+                                msg='Account is not approved. Please contact administrator.',
+                                form=login_form)
+            
+        if user and verify_pass(password, user.password) and user.state == "approved":
             login_user(user)
             return redirect(url_for('authentication_blueprint.route_default'))
 
@@ -78,45 +84,47 @@ def login():
                                form=login_form) 
 
 
-# @blueprint.route('/register', methods=['GET', 'POST'])
-# def register():
-#     create_account_form = CreateAccountForm(request.form)
-#     if 'register' in request.form:
-#
-#         username = request.form['username']
-#         email = request.form['email']
-#
-#         # Check usename exists
-#         user = Users.query.filter_by(username=username).first()
-#         if user:
-#             return render_template('accounts/register.html',
-#                                    msg='Username already registered',
-#                                    success=False,
-#                                    form=create_account_form)
-#
-#         # Check email exists
-#         user = Users.query.filter_by(email=email).first()
-#         if user:
-#             return render_template('accounts/register.html',
-#                                    msg='Email already registered',
-#                                    success=False,
-#                                    form=create_account_form)
-#
-#         # else we can create the user
-#         user = Users(**request.form)
-#         db.session.add(user)
-#         db.session.commit()
-#
-#         # Delete user from session
-#         logout_user()
-#
-#         return render_template('accounts/register.html',
-#                                msg='User created successfully.',
-#                                success=True,
-#                                form=create_account_form)
-#
-#     else:
-#         return render_template('accounts/register.html', form=create_account_form)
+@blueprint.route('/register', methods=['GET', 'POST'])
+def register():
+    create_account_form = CreateAccountForm(request.form)
+    if 'register' in request.form:
+
+        username = request.form['username']
+        email = request.form['email']
+
+        # Check usename exists
+        user = Users.query.filter_by(username=username).first()
+        if user:
+            return render_template('accounts/register.html',
+                                   msg='Username already registered',
+                                   success=False,
+                                   form=create_account_form)
+
+        # Check email exists
+        user = Users.query.filter_by(email=email).first()
+        if user:
+            return render_template('accounts/register.html',
+                                   msg='Email already registered',
+                                   success=False,
+                                   form=create_account_form)
+
+        # else we can create the user
+        user = Users(**request.form)
+        user.role = "user"
+        user.state = "pending"
+        db.session.add(user)
+        db.session.commit()
+
+        # Delete user from session
+        logout_user()
+
+        return render_template('accounts/register.html',
+                               msg='User created successfully.',
+                               success=True,
+                               form=create_account_form)
+
+    else:
+        return render_template('accounts/register.html', form=create_account_form)
 #
 
 @api.route('/login/jwt/', methods=['POST'])
