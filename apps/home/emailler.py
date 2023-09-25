@@ -62,13 +62,16 @@
 
 import mailtrap as mt
 
-mail = mt.Mail(
-    sender=mt.Address(email="mailtrap@aibookingsagent.com", name="Mailtrap Test"),
-    to=[mt.Address(email="lightthree718@gmail.com")],
-    subject="You are awesome!",
-    text="Congrats for sending test email with Mailtrap!",
-    category="Integration Test",
+mail = mt.MailFromTemplate(
+    sender=mt.Address(email="mailtrap@soundheartmusic.com", name="Mailtrap Test"),
+    to=[mt.Address(email="info@soundheartmusic.com")],
+    template_uuid="eba046d2-f2d5-490c-9b87-7c5ecf558925",
+    template_variables={
+      "view_data_link": "Test_View_data_link",
+      "user_email": "Test_User_email",
+      "pass_reset_link": "Test_Pass_reset_link"
+    }
 )
 
-client = mt.MailtrapClient(token="951d7fec429eb856db8f2d9fd198670c")
+client = mt.MailtrapClient(token="6752e77e8028a73e597116dfe06e4960")
 client.send(mail)

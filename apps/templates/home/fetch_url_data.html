@@ -95,25 +95,37 @@
     <script>
         Swal.fire(
             'Processes Started!',
-            'We will email when your results are ready to be downloaded!',
+            'We will email when your results are ready to be downloaded! <br> Please allow around 15min for every 240 records',
             'success'
         );
         $(document).ready(function () {
             // Initialize DataTable
-            $('#filtersTable').DataTable(
-                {responsive: true},
-            );
+            //$('#filtersTable').DataTable(
+                //{responsive: true},
+            //);
         });
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script>
-        var socket = io.connect('http://' + document.domain + ':' + location.port);
-
+        
+        if (document.domain == "localhost") {
+            var socket = io.connect('http://' + document.domain + ':' + location.port);
+            //let socket = new WebSocket("wss://" + document.domain + ':' + location.port);
+        } else {
+            console.log(document.domain, location.port)
+            var socket = io.connect('https://' + document.domain, {
+                secure: true,
+                rejectUnauthorized: false
+            });
+            //let socket = new WebSocket("wss://" + document.domain + ':' + location.port);
+        } 
+    
         var alarm = new Audio("static/assets/sounds/Twinkle.mp3");
+        
         socket.on('connect', function () {
             console.log('Connected to WebSocket');
         });
-
+        
         socket.on('message', function (data) {
             console.log(data)
             var dataTable = $('#filtersTable').DataTable();
@@ -155,7 +167,54 @@
                         ""
                     ]).draw().node();
             }
-        });
+        }); 
+        
+        /*
+        var dataTable = $('#filtersTable').DataTable({
+            responsive: true,
+            order : [],
+            
+            ajax: {
+                url: '/viwe_url_history/{{ current_url.id }}',
+                dataSrc: ''
+            },
+            columns: [
+                {data: 'name', defaultContent : ""},
+                {data: 'phone', defaultContent : ""},
+                {data: 'address', defaultContent : ""},
+                {data: 'venue_type', defaultContent : ""},
+                {
+                    data: 'website',
+                    render: function (website, type, row) {
+                        return '<a href="' + website + '" target="_blank">' + website + ' </a>'
+                    },
+                },
+                {data: 'email1', defaultContent : ""},
+                {data: 'email2', defaultContent : ""},
+                {data: 'email3', defaultContent : ""},
+                {data: 'email4', defaultContent : ""},
+                {data: 'fbemail1', defaultContent : ""},
+                {data: 'fbemail2', defaultContent : ""},
+                {
+                    data: 'facebook',
+                    render: function (facebook, type, row) {
+                        return '<a href="' + facebook + '" target="_blank" >' + facebook + ' </a>'
+                    },
+                },
+                {data: 'bademail', defaultContent : ""},
+            ]
+        }
+    );
+        
+    var interval = setInterval(function () {
+        if (new Date().getTime() - now > 30000) {
+            clearInterval(interval);
+            return;
+        }
+        console.log("working");
+        dataTable.draw();
+        }, 2000);
+    */
 
     </script>
 {% endblock javascripts %}

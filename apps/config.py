@@ -38,6 +38,8 @@ class Config(object):
     DB_NAME = os.getenv('DB_NAME', None)
 
     USE_SQLITE = True
+    
+    WEB_HOST_IP = os.getenv("WEB_HOST_IP", None)
 
     # try to set up a Relational DBMS
     if DB_ENGINE and DB_NAME and DB_USERNAME:
@@ -67,6 +69,7 @@ class Config(object):
         
     SENDER_MAIL = os.environ.get('SENDER_MAIL')
     MAILTRAP_API_KEY = os.environ.get('MAILTRAP_API_KEY')
+    MAILTRAP_TEMP_UUID = os.getenv("MAILTRAP_TEMP_UUID")
 
 
 class ProductionConfig(Config):

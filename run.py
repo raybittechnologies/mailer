@@ -66,23 +66,11 @@ def msg1():
         #Send email here
         user_id = request.json['user_id']
         url_id = request.json['id']
-        user = Users.query.get(int(user_id))
-        user_email = user.email
-        print("Send email here", user_email, app.config['SENDER_MAIL'])
-        send_email(app.config['SENDER_MAIL'], user_email, url_id)
+        
+        send_email(user_id, app.config['SENDER_MAIL'], url_id)
         s="completed"
     else:
         try:
-            # yelpurl = Yelpurl.query.get(int(data['url_id']))
-            # s = yelpurl.state
-            # if s == "completed":
-            #     #Send email here
-            #     user = Users.query.get(int(data['user_id']))
-            #     user_email = user.email
-            #     print("Send email here", user_email, app_config['SENDER_MAIL'])
-            #     send_email(app_config['SENDER_MAIL'], user_email)
-            #     return s
-            
             print("=========", data['venue'] if type(data) == 'str' else data['venue'][0],  "=========")
             existing_url = Service.query.filter_by(url_id=data['url_id'], user_id=data['user_id'], biz_id=data['bizId']).first()
             if existing_url is None:
@@ -116,16 +104,20 @@ def msg1():
         s = yelpurl.state
     return s
 
-def send_email(sender_email, receiver_email, url_id):
-    # create mail object
+def send_email(user_id, sender_email, url_id):
+    user = Users.query.get(int(user_id))
+    user_email = user.email
+    print("Send email here", user_email, app.config['SENDER_MAIL'])
     view_data_link = app.config['WEB_HOST_IP'] + "/url/view/" + str(url_id)
-    mail = mt.Mail(
+    
+    # create mail object
+    mail = mt.MailFromTemplate(
         sender=mt.Address(email=sender_email, name="Robotic Booking Agent"),
-        to=[mt.Address(email=receiver_email)],
-        template_uuid="eba046d2-f2d5-490c-9b87-7c5ecf558925",
+        to=[mt.Address(email=user_email)],
+        template_uuid=app.config['MAILTRAP_TEMP_UUID'],
         template_variables={
         "view_data_link": view_data_link,
-        "user_email": "Test_User_email",
+        "user_email": user_email,
         "pass_reset_link": "Test_Pass_reset_link"
         }
     )

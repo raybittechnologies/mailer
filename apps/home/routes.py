@@ -325,12 +325,9 @@ def starting(urls, user_name, user_id, id):
         for url in urls:
             yelp_scraper_run(url, user_name, user_id, id)
         
-        print("process has completed")
         response = requests.post(f'{WEB_HOST_IP}/complete', json={'id': id})
-        print(response.text)
-        
         response = requests.post(f'{WEB_HOST_IP}/msg', json={'result': "completed", 'id' : id, 'user_id' : user_id})
-        print("Send to FE", response.text)
+        print("Processes", response.text)
 
 
 @blueprint.route('/admin/register', methods=['POST'])
