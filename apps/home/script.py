@@ -11,8 +11,10 @@ from bs4 import BeautifulSoup as BS
 import cloudscraper
 
 from threading import Thread
-
+import queue
 import os
+
+
 #ZYTE Smart Proxy : https://app.zyte.com
 proxies={
         "http": "http://cef7b4ee6daa4bc4810c42be269431fe:@proxy.crawlera.com:8011/",
@@ -28,7 +30,6 @@ def pass_data(item):
     print("Processes", response.text)
     
 
-
 def yelp_scraper_run(url, user_name, user_id, id):
     # url = urllib.parse.unquote(url).replace("+", " ") # Needed when using pure request query string
     find_desc = url.split("find_desc=")[1].split("&")[0]
@@ -41,7 +42,7 @@ def yelp_scraper_run(url, user_name, user_id, id):
     while True:
         search_data = []
         start = page * 10 # 10 business per page
-        
+        print("Start", start)
         WEB_HOST_IP = os.getenv("WEB_HOST_IP")
         response = requests.post(f'{WEB_HOST_IP}/check_state', json={'id': id})
         if response.text == "completed":
@@ -112,6 +113,9 @@ def yelp_scraper_run(url, user_name, user_id, id):
                     
                     search_data.append(data)
                     
+            if len(search_data) == 0:
+                break
+            
             threads = []
             for data in search_data:
                 thread = Thread(target=thread_runner, daemon=True, args=(data, ))
@@ -137,6 +141,10 @@ def thread_runner(data):
     website = data['website']
     WEB_HOST_IP = os.getenv("WEB_HOST_IP")
     
+    response = requests.post(f'{WEB_HOST_IP}/check_state', json={'id': data['url_id']})
+    if response.text == "completed":
+        return
+    
     if website:
         fb_link, emails, fb_emails = get_fb_info(website)
         if fb_link:
@@ -156,9 +164,9 @@ def thread_runner(data):
             except:
                 pass
             
-    response = requests.post(f'{WEB_HOST_IP}/check_state', json={'id': data['url_id']})
-    if response.text == "completed":
-        return
+        response = requests.post(f'{WEB_HOST_IP}/check_state', json={'id': data['url_id']})
+        if response.text == "completed":
+            return
         
     pass_data(data)
     
@@ -180,10 +188,10 @@ def get_fb_info(url):
             response = scraper.get(url, timeout=30)
         
         elif url == "http://www.musictunnelktv.com/":
-            response = scraper.get("https://www.musictunnelktv.com/home", timeout=30)
+            response = scraper.get("https://www.musictunnelktv.com/home", timeout=10)
             
         elif url == "https://www.musictunnelktv.com":
-            response = scraper.get("https://www.musictunnelktv.com/home", timeout=30)
+            response = scraper.get("https://www.musictunnelktv.com/home", timeout=10)
         
         else:
             response = scraper.get(url, proxies=proxies, verify=verify, timeout=10)
@@ -248,17 +256,19 @@ def get_fb_info(url):
     if FB_link :
         # Some FB page can not access without login
         # TODO : Using ZYTE API instead of smart proxy
+        
         while True:
-            payload = {
-                "url" : FB_link,
-                "browserHtml" : True
-            }
-            try:
-                response = requests.post(zyte_api_url, auth=("be8e0737c3664421a37adc8e0a48d9cf", ""), json=payload)
-            except Exception as e:
-                print(str(e))
-                break
-            # response = scraper.get(FB_link, proxies=proxies, verify=verify)
+            # payload = {
+            #     "url" : FB_link,
+            #     "browserHtml" : True
+            # }
+            # try:
+            #     response = requests.post(zyte_api_url, auth=("be8e0737c3664421a37adc8e0a48d9cf", ""), json=payload)
+            # except Exception as e:
+            #     print(str(e))
+            #     break
+            
+            response = scraper.get(FB_link, proxies=proxies, verify=verify, timeout=15)
             
             if response.status_code == 200:
                 html = response.text.replace(r"\u0040", "@")

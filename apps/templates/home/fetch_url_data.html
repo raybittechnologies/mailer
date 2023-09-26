@@ -107,7 +107,7 @@
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script>
-        
+        /*
         if (document.domain == "localhost") {
             var socket = io.connect('http://' + document.domain + ':' + location.port);
             //let socket = new WebSocket("wss://" + document.domain + ':' + location.port);
@@ -120,8 +120,6 @@
             //let socket = new WebSocket("wss://" + document.domain + ':' + location.port);
         } 
     
-        var alarm = new Audio("static/assets/sounds/Twinkle.mp3");
-        
         socket.on('connect', function () {
             console.log('Connected to WebSocket');
         });
@@ -167,9 +165,14 @@
                         ""
                     ]).draw().node();
             }
-        }); 
+        }); */
+        var alarm = new Audio("static/assets/sounds/Twinkle.mp3");
         
-        /*
+        var loaderImage = document.getElementById("loader");
+        var paraElement = document.getElementById("para");
+        var btnView = document.getElementById("btnview");
+        var btnStop = document.getElementById("btnstop");
+      
         var dataTable = $('#filtersTable').DataTable({
             responsive: true,
             order : [],
@@ -207,14 +210,38 @@
     );
         
     var interval = setInterval(function () {
-        if (new Date().getTime() - now > 30000) {
-            clearInterval(interval);
-            return;
-        }
-        console.log("working");
-        dataTable.draw();
-        }, 2000);
-    */
+        fetch('/check_state',{
+            method: 'POST',
+            headers : { 'Content-Type': 'application/json' },
+            body: JSON.stringify({id : '{{ current_url.id }}' }),
+        })
+        .then((response) => {
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+            return response.text(); // Extract the response body as text
+        })
+        .then((res) => {
+            running_status = res;
+            console.log(running_status)
+
+            if (running_status == "completed") {
+                btnstop_ = document.getElementById("btnstop");
+                loaderImage.style.display = "none";
+                btnStop.style.display = "none";
+                btnView.style.display = "block";
+                
+                paraElement.textContent = "Process Completed";
+                alarm.play()
+                clearInterval(interval);
+            }
+        })
+        .catch((err) => {
+            console.log(err)
+        });
+        dataTable.ajax.reload();
+    }, 2000);
+    
 
     </script>
 {% endblock javascripts %}

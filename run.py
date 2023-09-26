@@ -52,17 +52,10 @@ socketio = SocketIO(app)
 CORS(app)
 
 
-@socketio.on('message')
-def handle_message(data):
-    message = data['message']
-    send({'message': message}, broadcast=True)
-
-
 @app.route('/msg', methods=['POST'])
 def msg1():
     data = request.json['result']
     if data == "completed":
-        socketio.emit('message', {'message': "completed"})
         #Send email here
         user_id = request.json['user_id']
         url_id = request.json['id']
@@ -99,7 +92,6 @@ def msg1():
                 print("Already present in db")
         except Exception as e:
             print("Not Saved in db", str(e))
-        socketio.emit('message', {'message': data})
         yelpurl = Yelpurl.query.get(int(data['url_id']))
         s = yelpurl.state
     return s

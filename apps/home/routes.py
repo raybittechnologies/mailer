@@ -84,7 +84,7 @@ def url():
             existing_url = Yelpurl.query.filter_by(product_url=url, userid=current_user.id).first()
             url_id = existing_url.id
             
-            return redirect(url_for('home_blueprint.scrapper', id=url_id))
+            return redirect(url_for('home_blueprint.fetch', id=url_id))
             
         else:
             
@@ -169,20 +169,28 @@ def history():
                            page_data=page_data)
 
 
-@blueprint.route('/scrapper/<int:id>', methods=['GET', 'POST'])
+@blueprint.route('/fetch/<int:id>', methods=['GET', 'POST'])
 @login_required
-def scrapper(id):
+def fetch(id):
     obj = Yelpurl.query.get(id)
     if obj.state != "running":
         obj.state = "running"
-        db.session.commit()
+        
         urls = obj.product_url.split(',')
+        
+        #delete all sevices in db before run
+        services = Service.query.filter_by(url_id=id).all()
+        if len(services):
+            for service in services:
+                db.session.delete(service)
+        db.session.commit()
+        # run scraper
         try:
             executor.submit(lets_start, urls, current_user.username, current_user.id, id)
         except:
             print("something went wrong")
         
-    return redirect(url_for('home_blueprint.scraping', id=id))
+    return redirect(url_for('home_blueprint.fetching', id=id))
 
 
 @blueprint.route('/complete', methods=['POST'])
@@ -194,9 +202,9 @@ def complete_process():
     return "Completed"
 
 
-@blueprint.route('/scraping', methods=['GET', 'POST'])
+@blueprint.route('/fetching', methods=['GET', 'POST'])
 @login_required
-def scraping():
+def fetching():
     id = request.args.get('id')
     page_data = get_page_data()
     yelpurl = Yelpurl.query.get(id)
@@ -215,7 +223,6 @@ def scraping():
 def url_view(id):
     page_data = get_page_data()
     yelpurl = Yelpurl.query.get(id)
-    print(yelpurl)
     return render_template('home/view_url_data.html', segment='url', API_GENERATOR=len(API_GENERATOR),
                            page_data=page_data,
                            current_url=yelpurl
@@ -226,13 +233,12 @@ def url_view(id):
 def url_delete():
     url_id = int(request.form['urlid'])
     yelpurl = Yelpurl.query.get(url_id)
-    sevices = Service.query.filter_by(url_id=url_id)
+    sevices = Service.query.filter_by(url_id=url_id).all()
     for service in sevices:
         db.session.delete(service)
     db.session.delete(yelpurl)
     
     db.session.commit()
-    page_data = get_page_data()
     return redirect(url_for('home_blueprint.history'))
     
 
@@ -315,11 +321,6 @@ def lets_start(urls, user_name, user_id, id):
 
 def starting(urls, user_name, user_id, id):
     if len(urls) > 0:
-        # process = CrawlerProcess({
-        #     'USER_AGENT': 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)'
-        # })
-        # process.crawl(homes, urls=urls, username=user_name, user_id=user_id, url_id=id)
-        # process.start()
         
         WEB_HOST_IP = os.getenv("WEB_HOST_IP")
         for url in urls:
