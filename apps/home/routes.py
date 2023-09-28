@@ -215,7 +215,7 @@ def fetching():
                             current_url=yelpurl
                             )
     else:
-        return redirect(url_for('home_blueprint.url.view', id=id))
+        return redirect(url_for('home_blueprint.url_view', id=id))
 
 
 @blueprint.route('/url/view/<int:id>', methods=['GET', 'POST'])

@@ -59,8 +59,18 @@ def msg1():
         #Send email here
         user_id = request.json['user_id']
         url_id = request.json['id']
+        user = Users.query.get(int(user_id))
+        user_email = user.email
+        user_name = user.username
         
-        send_email(user_id, app.config['SENDER_MAIL'], url_id)
+        SENDER_MAIL = os.environ.get('SENDER_MAIL')
+        print("Send email to", user_email, "from", SENDER_MAIL)
+        try:
+            send_email(user_email, SENDER_MAIL, url_id, user_name)
+        except Exception as e:
+            with open("send_email_logs.log", "w") as f:
+                f.write(repr(e))
+                
         s="completed"
     else:
         try:
@@ -96,30 +106,27 @@ def msg1():
         s = yelpurl.state
     return s
 
-def send_email(user_id, sender_email, url_id):
-    user = Users.query.get(int(user_id))
-    user_email = user.email
-    print("Send email here", user_email, app.config['SENDER_MAIL'])
-    view_data_link = app.config['WEB_HOST_IP'] + "/url/view/" + str(url_id)
+def send_email(user_email, sender_email, url_id, user_name):
+    WEB_HOST_IP = os.environ.get('WEB_HOST_IP')
+    MAILTRAP_TEMP_UUID = os.environ.get('MAILTRAP_TEMP_UUID')
+    MAILTRAP_API_KEY = os.environ.get('MAILTRAP_API_KEY')
+    view_data_link = WEB_HOST_IP + "/url/view/" + str(url_id)
     
     # create mail object
     mail = mt.MailFromTemplate(
         sender=mt.Address(email=sender_email, name="Robotic Booking Agent"),
         to=[mt.Address(email=user_email)],
-        template_uuid=app.config['MAILTRAP_TEMP_UUID'],
+        template_uuid=MAILTRAP_TEMP_UUID,
         template_variables={
         "view_data_link": view_data_link,
         "user_email": user_email,
-        "pass_reset_link": "Test_Pass_reset_link"
+        "user_name" : user_name
         }
     )
 
     # create client and send
-    try:
-        client = mt.MailtrapClient(token=app.config['MAILTRAP_API_KEY'])
-        client.send(mail)
-    except Exception as e:
-        print(str(e))
+    client = mt.MailtrapClient(token=MAILTRAP_API_KEY)
+    client.send(mail)
 
 if __name__ == "__main__":
     socketio.run(app, debug=True, host='0.0.0.0', port=8081)

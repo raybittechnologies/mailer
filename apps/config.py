@@ -70,7 +70,14 @@ class Config(object):
     SENDER_MAIL = os.environ.get('SENDER_MAIL')
     MAILTRAP_API_KEY = os.environ.get('MAILTRAP_API_KEY')
     MAILTRAP_TEMP_UUID = os.getenv("MAILTRAP_TEMP_UUID")
-
+    
+    # MAIL_SERVER = os.getenv("MAIL_SERVER")
+    # MAIL_PORT = os.getenv("MAIL_PORT")
+    # MAIL_USERNAME = os.getenv("MAIL_USERNAME")
+    # MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
+    # MAIL_USE_TLS = True
+    # MAIL_USE_SSL = False
+    
 
 class ProductionConfig(Config):
     DEBUG = False

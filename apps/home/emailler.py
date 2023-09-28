@@ -63,8 +63,8 @@
 import mailtrap as mt
 
 mail = mt.MailFromTemplate(
-    sender=mt.Address(email="mailtrap@soundheartmusic.com", name="Mailtrap Test"),
-    to=[mt.Address(email="info@soundheartmusic.com")],
+    sender=mt.Address(email="info@soundheartmusic.com", name="Mailtrap Test"),
+    to=[mt.Address(email="nvest.dev2021@gmail.com")],
     template_uuid="eba046d2-f2d5-490c-9b87-7c5ecf558925",
     template_variables={
       "view_data_link": "Test_View_data_link",
@@ -74,4 +74,5 @@ mail = mt.MailFromTemplate(
 )
 
 client = mt.MailtrapClient(token="6752e77e8028a73e597116dfe06e4960")
-client.send(mail)
+res = client.send(mail)
+print(res)
