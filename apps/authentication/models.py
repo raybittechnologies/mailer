@@ -17,16 +17,16 @@ class Users(db.Model, UserMixin):
     __tablename__ = 'Users'
 
     id            = db.Column(db.Integer, primary_key=True)
-    username      = db.Column(db.String(64), unique=True)
-    email         = db.Column(db.String(64), unique=True)
+    username      = db.Column(db.String(255), unique=True, nullable=False)
+    email         = db.Column(db.String(255), unique=True,  index=True)
     password      = db.Column(db.LargeBinary)
-    role          = db.Column(db.String(64), unique=True)
+    role          = db.Column(db.String(64), nullable=False)
     oauth_github  = db.Column(db.String(100), nullable=True)
 
     api_token     = db.Column(db.String(100))
     api_token_ts  = db.Column(db.Integer)   
     state         = db.Column(db.String(10)) 
-
+    
     def __init__(self, **kwargs):
         for property, value in kwargs.items():
             # depending on whether value is an iterable or not, we must

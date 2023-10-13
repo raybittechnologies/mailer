@@ -22,19 +22,19 @@ class Book(db.Model):
 class Yelpurl(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(254))
-    product_url = db.Column(db.String(254))
+    product_url = db.Column(db.String(1024))
     userid = db.Column(db.String(254))
     state = db.Column(db.String(20))
-    create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
+    create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, index=True)
 
 
 class Service(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     venue_type = db.Column(db.String(255))
-    website = db.Column(db.String(255))
+    website = db.Column(db.String(1024))
     phone = db.Column(db.String(20))
-    address = db.Column(db.String(255))
+    address = db.Column(db.String(1024))
     facebook = db.Column(db.String(255))
     instagram = db.Column(db.String(255))
     twitter = db.Column(db.String(255))
@@ -45,11 +45,25 @@ class Service(db.Model):
     fbemail1 = db.Column(db.String(255))
     fbemail2 = db.Column(db.String(255))
     bademail = db.Column(db.String(255))
-    url_id = db.Column(db.String(255))
+    url_id = db.Column(db.String(255), nullable=False)
+    user_id = db.Column(db.String(255), nullable=False)
+    biz_id = db.Column(db.String(255), nullable=False)
+    
+    __table_args__ = (
+        db.Index('sevice-idx', "url_id", "user_id", "biz_id", unique=True), 
+    )
+
+
+class Uploadedservice(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255))
+    venue_type = db.Column(db.String(1024))
+    email =  db.Column(db.String(255), unique=True)
+    is_bad =  db.Column(db.Integer, default=0)
     user_id = db.Column(db.String(255))
-    biz_id = db.Column(db.String(255))
-
-
+    create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
+    
+    
 class Admin(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(String(120))
