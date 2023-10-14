@@ -16,23 +16,23 @@ from flask import current_app, request
 
 def hash_pass(password):
     """Hash a password for storing."""
-    salt = hashlib.sha256(os.urandom(60)).hexdigest().encode('ascii')
+    salt = hashlib.sha256(os.urandom(60)).hexdigest()
     pwdhash = hashlib.pbkdf2_hmac('sha512', password.encode('utf-8'),
-                                  salt, 100000)
-    pwdhash = binascii.hexlify(pwdhash)
-    return (salt + pwdhash)  # return bytes
+                                  salt.encode('ascii'), 100000)
+    pwdhash = binascii.hexlify(pwdhash).decode('utf-8')
+    return (salt + pwdhash) 
 
 
 def verify_pass(provided_password, stored_password):
     """Verify a stored password against one provided by user"""
-    stored_password = stored_password.decode('ascii')
+    # stored_password = stored_password.decode('ascii')
     salt = stored_password[:64]
     stored_password = stored_password[64:]
     pwdhash = hashlib.pbkdf2_hmac('sha512',
                                   provided_password.encode('utf-8'),
                                   salt.encode('ascii'),
                                   100000)
-    pwdhash = binascii.hexlify(pwdhash).decode('ascii')
+    pwdhash = binascii.hexlify(pwdhash).decode('utf-8')
     return pwdhash == stored_password
 
 # Used in API Generator

@@ -60,7 +60,6 @@ def login():
 
         # Locate user
         user = Users.query.filter_by(username=username).first()
-        print()
         # Check the password
         if user and user.state == "pending":
             # user is not approved
