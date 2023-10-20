@@ -5,3 +5,4 @@ info.txt
 *.zip
 __pycache__/
 apps_origin/
+uploads/

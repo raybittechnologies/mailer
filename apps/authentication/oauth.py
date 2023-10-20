@@ -8,6 +8,8 @@ from flask import current_app as app
 from flask_login import current_user, login_user
 from flask_dance.consumer import oauth_authorized
 from flask_dance.contrib.github import github, make_github_blueprint
+from flask_dance.contrib.nylas import make_nylas_blueprint
+
 from flask_dance.consumer.storage.sqla import SQLAlchemyStorage
 from flask_dance.contrib.twitter import twitter, make_twitter_blueprint
 # from sqlalchemy.orm.exc import NoResultFound
@@ -27,6 +29,8 @@ github_blueprint = make_github_blueprint(
         user_required=False,        
     ),   
 )
+
+nylas_bp = make_nylas_blueprint()
 
 @oauth_authorized.connect_via(github_blueprint)
 def github_logged_in(blueprint, token):

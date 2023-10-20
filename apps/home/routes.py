@@ -16,11 +16,15 @@ from apps.models import Yelpurl
 from apps import db
 import multiprocessing
 from apps.home.script import yelp_scraper_run
-from apps.models import Service
+from apps.models import Service, Uploadedcontactfile, Uploadedservice
 from sqlalchemy import desc, asc
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql import Insert
 
 from concurrent.futures import ThreadPoolExecutor
 from apps.authentication.forms import LoginForm, CreateAccountForm
+
+import pandas as pd
 
 executor = ThreadPoolExecutor(4)
 
@@ -64,6 +68,10 @@ def add_filter():
                            page_data=page_data
                            )
 
+
+@compiles(Insert, "sqlite")
+def sqlite_insert_ignore(insert, compiler, **kw):
+    return compiler.visit_insert(insert.prefix_with("OR IGNORE"), **kw)
 
 @blueprint.route('/url', methods=['POST', 'GET'])
 @login_required
@@ -216,6 +224,140 @@ def fetching():
                             )
     else:
         return redirect(url_for('home_blueprint.url_view', id=id))
+    
+    
+@blueprint.route('/uploaded_files', methods=['GET'])
+@login_required
+def uploaded_files():
+    uploaded_files = Uploadedcontactfile.query.filter_by(user_id=current_user.id).order_by(Uploadedcontactfile.create_datetime.desc()).all()
+    files = []
+
+    for file in uploaded_files:
+        url_data = {
+            'id': file.id,
+            'description': file.description,
+            'filepath': file.filepath,
+            'filename': file.filename,
+            'create_datetime' : file.create_datetime
+        }
+        files.append(url_data)
+
+    return jsonify(files)
+    
+    
+@blueprint.route('/upload_contact', methods=['GET', 'POST'])
+@login_required
+def upload_contact():
+    upload_folder = "uploads"
+    if request.method == "GET":
+        return render_template('home/upload_contact.html',
+                                segment='upload_contact',
+                                API_GENERATOR=len(API_GENERATOR),
+                                )
+    elif request.method == "POST":
+        if not os.path.exists(upload_folder):
+            os.makedirs(upload_folder)
+            
+        f = request.files['file'] 
+        filepath = os.path.join(upload_folder, f.filename)
+        f.save(filepath)
+        
+        if ".csv" in f.filename:
+            df = pd.read_csv(filepath)
+        elif ".xlsx" in f.filename:
+            df = pd.read_excel(filepath)
+        
+        description = request.form['description']
+        contact_file = Uploadedcontactfile(filename=f.filename, filepath=filepath, description=description, user_id=current_user.id)
+        db.session.add(contact_file)
+        db.session.flush()
+        file_id = contact_file.id
+        
+        services = []
+        df.fillna("", inplace=True)
+        for idx, item in df.iterrows():
+            venue = item['venue']
+            venue_type = item['type']
+            
+            if item['email1'] != "":
+                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email1'], user_id = current_user.id, file_id=file_id)
+                services.append(service)
+                
+            if item['email2'] != "":
+                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email2'], user_id = current_user.id, file_id=file_id)
+                services.append(service)
+                
+            if item['email3'] != "":
+                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email3'], user_id = current_user.id, file_id=file_id)
+                services.append(service)
+                
+            if item['email4'] != "":
+                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email4'], user_id = current_user.id, file_id=file_id)
+                services.append(service)
+                
+            if item['facebookemail1'] != "":
+                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['facebookemail1'], user_id = current_user.id, file_id=file_id)
+                services.append(service)
+                
+            if item['facebookemail2'] != "":
+                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['facebookemail2'], user_id = current_user.id, file_id=file_id)
+                services.append(service)
+        
+        db.session.bulk_save_objects(services)
+        db.session.commit()
+        return redirect(url_for('home_blueprint.upload_contact'))
+        
+        
+@blueprint.route('/contact/delete', methods=['POST'])
+@login_required
+def contact_delete():
+    file_id = int(request.form['fileid'])
+    file = Uploadedcontactfile.query.get(file_id)
+    db.session.delete(file)
+    
+    sevices = Uploadedservice.query.filter_by(file_id=file_id).all()
+    for service in sevices:
+        db.session.delete(service)
+        
+    db.session.commit()
+    return redirect(url_for('home_blueprint.upload_contact'))
+        
+ 
+@blueprint.route('/contacts', methods=['GET', 'POST'])
+@login_required
+def contacts():
+    if request.method == "GET":
+        return render_template('home/contacts.html',
+                                segment='contacts',
+                                )
+@blueprint.route('/contacts/list', methods=['GET'])
+@login_required
+def contacts_list():
+    services = Uploadedservice.query.filter_by(user_id=current_user.id).order_by(Uploadedservice.create_datetime.desc()).all()
+    all_services = []
+
+    for service in services:
+        data = {
+            'id': service.id,
+            'name': service.name,
+            'venue_type': service.venue_type,
+            'email': service.email,
+            'is_bad' : service.is_bad,
+            'create_datetime' : service.create_datetime
+        }
+        all_services.append(data)
+
+    return jsonify(all_services)
+     
+@blueprint.route('/service/delete', methods=['POST'])
+@login_required
+def service_delete():
+    serviceid = int(request.form['serviceid'])
+    service = Uploadedservice.query.get(serviceid)
+    db.session.delete(service)
+    
+    db.session.commit()
+    return redirect(url_for('home_blueprint.contacts'))
 
 
 @blueprint.route('/url/view/<int:id>', methods=['GET', 'POST'])

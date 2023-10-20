@@ -61,7 +61,17 @@ class Uploadedservice(db.Model):
     email =  db.Column(db.String(255), unique=True)
     is_bad =  db.Column(db.Integer, default=0)
     user_id = db.Column(db.String(255))
+    file_id = db.Column(db.String(255))
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
+    
+    
+class Uploadedcontactfile(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(255))
+    filepath = db.Column(db.String(1024))
+    description = db.Column(db.String(1024))
+    user_id = db.Column(db.String(255), nullable=False, index=True)
+    create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, index=True)
     
     
 class Admin(db.Model, UserMixin):

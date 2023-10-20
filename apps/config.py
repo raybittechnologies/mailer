@@ -78,6 +78,9 @@ class Config(object):
     # MAIL_USE_TLS = True
     # MAIL_USE_SSL = False
     
+    NYLAS_OAUTH_CLIENT_ID = "aolbcy91n3qmpnm83hsd4d824"
+    NYLAS_OAUTH_CLIENT_SECRET = "5ye8s1pdm6djq9ypkc58iomgh"
+    
 
 class ProductionConfig(Config):
     DEBUG = False
