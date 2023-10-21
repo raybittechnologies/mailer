@@ -37,8 +37,11 @@
     <link id="pagestyle" href="{{ config.ASSETS_ROOT }}/css/soft-ui-dashboard.css?v=1.0.6" rel="stylesheet"/>
 
     <link id="pagestyle_dark" href="{{ config.ASSETS_ROOT }}/css/dark-theme-core.css" rel="stylesheet"/>
-
     <!-- Specific CSS goes HERE -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-wEmeIV1mKuiNpC+IOBjI7aAzPcEZeedi5yW5f2yOq55WWLwNGmvvx4Um1vskeMj0" crossorigin="anonymous">
+    <!-- JavaScript Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-p34f1UUtsS3wqzfto5wAAmdvj+osOnFyQFpp4Ua3gs/ZVWx6oOypYoCJhGGScy+8" crossorigin="anonymous"></script>
+
     {% block stylesheets %}{% endblock stylesheets %}
 
 </head>
@@ -73,9 +76,13 @@
     }
 </script>
 <!-- Github buttons -->
+
+<script src="{{ config.ASSETS_ROOT }}/js/core/popper.min.js"></script>
+<script src="{{ config.ASSETS_ROOT }}/js/core/bootstrap.min.js"></script>
+
 <script async defer src="https://buttons.github.io/buttons.js"></script>
 <!-- Control Center for Soft Dashboard: parallax effects, scripts for the example pages etc -->
-<script src="{{ config.ASSETS_ROOT }}/js/soft-ui-dashboard.js?v=1.0.6"></script>
+<script src="{{ config.ASSETS_ROOT }}/js/soft-ui-dashboard.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 </html>

@@ -16,7 +16,7 @@ from apps.models import Yelpurl
 from apps import db
 import multiprocessing
 from apps.home.script import yelp_scraper_run
-from apps.models import Service, Uploadedcontactfile, Uploadedservice
+from apps.models import *
 from sqlalchemy import desc, asc
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import Insert
@@ -609,6 +609,7 @@ def inactive_user(id):
 def add_user():
     create_account_form = CreateAccountForm(request.form)
     if request.method == 'POST':
+        print(request.form)
         username = request.form['username']
         email = request.form['email']
 
@@ -634,6 +635,7 @@ def add_user():
 
         user = Users(**request.form)
         user.role = "user"
+        user.state = "pending"
         db.session.add(user)
         db.session.commit()
         return redirect(url_for('home_blueprint.admin_users'))
@@ -642,3 +644,54 @@ def add_user():
                                form=create_account_form,
                                segment="add_user"
                                )
+        
+@blueprint.route('/admin/add/template', methods=['POST', 'GET'])
+@login_required 
+@role_required('admin')
+def add_template():
+    if request.method == 'POST':
+        template_name = request.form['template-name']
+        template_desc = request.form['template-description']
+
+        template = Template(template_name=template_name, template_desc=template_desc)
+        template.status = "draft"
+        db.session.add(template)
+        db.session.commit()
+        return redirect(url_for('home_blueprint.add_template'))
+    else:
+        return render_template('home/admin_add_template.html',
+                               segment="templates"
+                               )
+        
+@blueprint.route('/admin/templates', methods=['GET'])
+@login_required
+def admin_templates():
+    templates = Template.query.order_by(Template.create_datetime.desc()).all()
+    temp_list = []
+
+    for temp in templates:
+        temp_data = {
+            'id': temp.id,
+            'template_name': temp.template_name,
+            'template_desc': temp.template_desc,
+            'status': temp.status,
+            'create_datetime' : temp.create_datetime
+        }
+        temp_list.append(temp_data)
+    return jsonify(temp_list)
+
+
+@blueprint.route('/template/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+def template_delete():
+    templateid = int(request.form['templateid'])
+    temp = Template.query.get(templateid)
+    db.session.delete(temp)
+    
+    db.session.commit()
+    return redirect(url_for('home_blueprint.add_template'))
+    # return render_template('home/admin_add_template.html',
+    #                         segment="templates"
+    #                         )
+

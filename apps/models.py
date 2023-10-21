@@ -101,3 +101,13 @@ class Admin(db.Model, UserMixin):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+
+class Template(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    template_name = db.Column(db.String(255))
+    template_desc = db.Column(db.String(1024))
+    status = db.Column(db.String(16))
+    userid = db.Column(db.Integer)
+    create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, index=True)
+    
