@@ -17,7 +17,7 @@
     <div class="container-fluid py-4">
         
         <div class="container mt-5">
-            <button class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#addNewActionModalMessage">Add New Template</button>
+            <button class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#addNewActionModalMessage" onclick=addtemplate()>Add New Template</button>
             <!--         <button onclick="{{ url_for('home_blueprint.add_filter') }}" class="btn btn-primary" type="button">Add New Filter</button>-->
             <div class="card col shadow-lg border-0 rounded-lg">
                 <div class="card-header"><h3 class="text-center font-weight-light my-4">My Templates</h3></div>
@@ -30,6 +30,7 @@
                         <th>Status</th>
                         <th>Created on</th>
                         <th>Actions</th>
+                        <th>Publish</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -45,30 +46,33 @@
             <!-- Modal -->
             <div class="modal fade" id="addNewActionModalMessage" tabindex="-1" role="dialog" aria-labelledby="addNewActionModalMessageTitle" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="exampleModalLabel">Add Template</h5>
-                        <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">×</span>
-                        </button>
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="exampleModalLabel">Add Template</h5>
+                            <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">×</span>
+                            </button>
+                        </div>
+                        <form action="/admin/add/template" method="post">
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label for="template-name" class="col-form-label">Name:</label>
+                                    <input type="text" class="form-control" id="template-name" name="template-name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="template-description" class="col-form-label">Description:</label>
+                                    <textarea type="text" class="form-control" id="template-description" name="template-description" required></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" class="form-control" id="tempid" name="tempid" hidden>
+                                </div>
+                            </div>
+                            <div class="modal-footer form-group">
+                                <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="submit" class="btn bg-gradient-primary" id="add-template-button" >Create</button>
+                            </div>
+                        </form>
                     </div>
-                    <form action="/admin/add/template" method="post">
-                        <div class="modal-body">
-                            <div class="form-group">
-                                <label for="template-name" class="col-form-label">Name:</label>
-                                <input type="text" class="form-control" id="template-name" name="template-name" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="template-description" class="col-form-label">Description:</label>
-                                <textarea type="text" class="form-control" id="template-description" name="template-description" required></textarea>
-                            </div>
-                        </div>
-                        <div class="modal-footer form-group">
-                            <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Close</button>
-                            <button type="submit" class="btn bg-gradient-primary" >Create</button>
-                        </div>
-                    </form>
-                </div>
                 </div>
             </div>
         </div>
@@ -86,9 +90,16 @@
 <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.4.1/js/responsive.bootstrap.min.js"></script>
 <script>
+
+    function addtemplate() {
+        document.getElementById("template-name").value = "";
+        document.getElementById("template-description").innerHTML = "";
+        document.getElementById("tempid").value = "";
+        document.getElementById("add-template-button").innerHTML = "Create";
+    };
     $(document).ready(function () {
         // Initialize DataTable
-        $('#filtersTable').DataTable({
+        var dataTable = $('#filtersTable').DataTable({
                 responsive: true,
                 columnDefs: [
                 {
@@ -117,14 +128,42 @@
                         data: 'id', // Assuming the id property is present in your data
                         render: function (id, type, row) {
                             // Create action buttons HTML
-                            var buttons = '<a class="btn btn-facebook btn-sm" href="/template/edit/' + id + '">Edit Template</a> ' +
+                            var name = "'" + row.template_name + "'"
+                            var desc = "'" + row.template_desc + "'"
+                            var buttons = '<button class="btn btn-facebook btn-sm" data-bs-toggle="modal" data-bs-target="#addNewActionModalMessage" >Edit</button> ' +
+                                '<a class="btn btn-success btn-sm" href="/template/view/' + id + '">View</a>' +
                                 '<form action="/template/delete" style="display: contents" method="post"> <input type="hidden" name="templateid" value="' + id + '"/><input class="btn btn-danger btn-sm" type="submit" value="Delete"></form>';
+                                
                             return buttons;
                         }
+                    },
+                    {
+                        data : 'id',
+                        render : function(id, type, row) {
+                            var publish_state = '<div class="form-check form-switch">' + 
+                                                    '<input class="form-check-input" type="checkbox" id="flexSwitchCheckDefault" checked="">' +
+                                                '</div>';
+                            return publish_state;
+                        }
                     }
+                    
                 ]
             },
         );
+        
+        $('#filtersTable').on('click', 'button', event => {
+            let data = dataTable.row($(event.target).closest('tr')).data();
+            // console.log(data)
+            if (event.target.innerText === "EDIT") {
+                document.getElementById("template-name").value = data.template_name;
+                document.getElementById("template-description").innerHTML = data.template_desc;
+                document.getElementById("tempid").value = data.id;
+                document.getElementById("add-template-button").innerHTML = "Save";
+            } else {
+                console.log(event.target.innerText)
+            }
+        });
+
     });
 </script>
 {% endblock javascripts %}

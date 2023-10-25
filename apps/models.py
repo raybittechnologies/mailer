@@ -111,3 +111,15 @@ class Template(db.Model):
     userid = db.Column(db.Integer)
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, index=True)
     
+
+class Action(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    action_name = db.Column(db.String(255))
+    subject = db.Column(db.String(255))
+    fromname = db.Column(db.String(255))
+    message = db.Column(db.String)
+    waitdays = db.Column(db.Integer)
+    tempid = db.Column(db.Integer)
+    userid = db.Column(db.Integer)
+    create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, index=True)
+    

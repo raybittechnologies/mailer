@@ -652,16 +652,24 @@ def add_template():
     if request.method == 'POST':
         template_name = request.form['template-name']
         template_desc = request.form['template-description']
-
-        template = Template(template_name=template_name, template_desc=template_desc)
-        template.status = "draft"
-        db.session.add(template)
+        tempid = request.form['tempid']
+        
+        if tempid:
+            print("tempid", tempid)
+            temp = Template.query.get(tempid)
+            temp.template_name = template_name
+            temp.template_desc = template_desc
+        else:
+            template = Template(template_name=template_name, template_desc=template_desc)
+            template.userid = tempid
+            template.status = "draft"
+            db.session.add(template)
+            
         db.session.commit()
         return redirect(url_for('home_blueprint.add_template'))
     else:
-        return render_template('home/admin_add_template.html',
-                               segment="templates"
-                               )
+        return render_template('home/admin_add_template.html', segment="templates" )
+    
         
 @blueprint.route('/admin/templates', methods=['GET'])
 @login_required
@@ -675,7 +683,8 @@ def admin_templates():
             'template_name': temp.template_name,
             'template_desc': temp.template_desc,
             'status': temp.status,
-            'create_datetime' : temp.create_datetime
+            'create_datetime' : temp.create_datetime,
+            'userid' : current_user.id
         }
         temp_list.append(temp_data)
     return jsonify(temp_list)
@@ -695,3 +704,105 @@ def template_delete():
     #                         segment="templates"
     #                         )
 
+@blueprint.route('/template/view/<id>', methods=['GET'])
+@login_required 
+@role_required('admin')
+def template_view(id):
+    temp =Template.query.get(id)
+    template = {
+        "name" : temp.template_name,
+        "tempid" : temp.id
+    }
+    return render_template('home/admin_view_template.html',
+                            template=template
+                            )
+    
+@blueprint.route('/admin/add/action', methods=['POST', 'GET'])
+@login_required 
+def add_action():
+    if request.method == 'POST':
+        print(request.form)
+        action_name = request.form['action-name']
+        subject = request.form['subject']
+        fromname = request.form['fromname']
+        wait_days = request.form['wait-days']
+        message = request.form['message']
+        tempid = request.form['tempid']
+        actionid = request.form['actionid']
+        
+        if actionid:
+            action = Action.query.get(actionid)
+            action.action_name = action_name
+            action.subject = subject
+            action.fromname = fromname
+            action.message = message
+            action.waitdays = wait_days
+            
+        else:
+            action = Action()
+            action.action_name = action_name
+            action.subject = subject
+            action.fromname = fromname
+            action.message = message
+            action.waitdays = wait_days
+            action.tempid = tempid
+            action.userid = current_user.id
+            db.session.add(action)
+            
+        db.session.commit()
+        return redirect(url_for('home_blueprint.template_view', id=tempid))
+
+
+        
+@blueprint.route('/admin/actions/<id>', methods=['GET'])
+@login_required
+def admin_actions(id):
+    
+    actions = Action.query.filter_by(tempid=int(id)).order_by(Action.id.asc()).all()
+    temp_list = []
+
+    for action in actions:
+        temp_data = {
+            'id': action.id,
+            'action_name': action.action_name,
+            'subject': action.subject,
+            'fromname': action.fromname,
+            'message': action.message,
+            'waitdays' : action.waitdays,
+            'create_datetime' : action.create_datetime,
+            'userid' : action.userid,
+            'tempid' : action.tempid
+        }
+        temp_list.append(temp_data)
+    return jsonify(temp_list)
+
+@blueprint.route('/admin/action/<id>', methods=['GET'])
+@login_required
+def admin_action(id):
+    action = Action.query.filter_by(id=int(id)).first()
+    action_data = {
+        'id': action.id,
+        'action_name': action.action_name,
+        'subject': action.subject,
+        'fromname': action.fromname,
+        'message': action.message,
+        'waitdays' : action.waitdays,
+        'create_datetime' : action.create_datetime,
+        'userid' : action.userid,
+        'tempid' : action.tempid
+    }
+    return jsonify(action_data)
+
+
+@blueprint.route('/action/delete', methods=['POST'])
+@login_required
+def action_delete():
+    actionid = int(request.form['actionid'])
+    tempid = int(request.form['tempid'])
+    action = Action.query.get(actionid)
+    db.session.delete(action)
+    
+    db.session.commit()
+    return redirect(url_for('home_blueprint.template_view', id=tempid))
+    
+    
