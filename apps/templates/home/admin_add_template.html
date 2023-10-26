@@ -17,7 +17,7 @@
     <div class="container-fluid py-4">
         
         <div class="container mt-5">
-            <button class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#addNewActionModalMessage" onclick=addtemplate()>Add New Template</button>
+            <button class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#addNewTemplateModalMessage" onclick=addtemplate()>Add New Template</button>
             <!--         <button onclick="{{ url_for('home_blueprint.add_filter') }}" class="btn btn-primary" type="button">Add New Filter</button>-->
             <div class="card col shadow-lg border-0 rounded-lg">
                 <div class="card-header"><h3 class="text-center font-weight-light my-4">My Templates</h3></div>
@@ -30,7 +30,6 @@
                         <th>Status</th>
                         <th>Created on</th>
                         <th>Actions</th>
-                        <th>Publish</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -44,7 +43,7 @@
         {% include "includes/footer.html" %}
         <div class="col-md-6 col-xl-6">
             <!-- Modal -->
-            <div class="modal fade" id="addNewActionModalMessage" tabindex="-1" role="dialog" aria-labelledby="addNewActionModalMessageTitle" aria-hidden="true">
+            <div class="modal fade" id="addNewTemplateModalMessage" tabindex="-1" role="dialog" aria-labelledby="addNewActionModalMessageTitle" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
@@ -76,6 +75,25 @@
                 </div>
             </div>
         </div>
+        <div class="modal fade" id="deleteTemplateModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="exampleModalLabel">Are you sure to delete this template?</h5>
+                  <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <form action="/template/delete" style="display: contents" method="post"> 
+                    <input type="hidden" name="templateid" id="delete-modal-tempid"/>
+                    <div class="modal-footer">
+                        <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <input class="btn btn-danger" type="submit" value="Delete">
+                    </div>
+                </form>
+              </div>
+            </div>
+          </div>
     </div>
 
 {% endblock content %}
@@ -92,11 +110,14 @@
 <script>
 
     function addtemplate() {
+        console.log("add new temp");
         document.getElementById("template-name").value = "";
         document.getElementById("template-description").innerHTML = "";
         document.getElementById("tempid").value = "";
         document.getElementById("add-template-button").innerHTML = "Create";
     };
+
+        
     $(document).ready(function () {
         // Initialize DataTable
         var dataTable = $('#filtersTable').DataTable({
@@ -118,9 +139,17 @@
                     {
                         data: 'status',
                         render : function (status, type, row) {
-                            var  checked = ""
-                            checked = row.status === "publish" ? '<span class="badge bg-gradient-success">Publish</span>' : '<span class="badge bg-gradient-secondary">Draft</span>';
-                            return checked
+                            var  label = ""
+                            var id = row.id;
+                            label = row.status === "publish" ? '<span class="badge bg-gradient-success">Publish</span>' : '<span class="badge bg-gradient-secondary">Draft</span>';
+                            
+                            var chekced = '';
+                            checked = row.status === "publish" ? 'checked' : '';
+                            var publish_state = '<div class="form-check form-switch">' + 
+                                                    '<input class="form-check-input" type="checkbox" id="flexSwitchCheckDefault' + id +'" ' + checked + '>' +
+                                                    label +
+                                                '</div>';
+                            return publish_state
                         }
                     },
                     {data: 'create_datetime'},
@@ -128,22 +157,11 @@
                         data: 'id', // Assuming the id property is present in your data
                         render: function (id, type, row) {
                             // Create action buttons HTML
-                            var name = "'" + row.template_name + "'"
-                            var desc = "'" + row.template_desc + "'"
-                            var buttons = '<button class="btn btn-facebook btn-sm" data-bs-toggle="modal" data-bs-target="#addNewActionModalMessage" >Edit</button> ' +
-                                '<a class="btn btn-success btn-sm" href="/template/view/' + id + '">View</a>' +
-                                '<form action="/template/delete" style="display: contents" method="post"> <input type="hidden" name="templateid" value="' + id + '"/><input class="btn btn-danger btn-sm" type="submit" value="Delete"></form>';
+                            var buttons = '<button class="btn btn-facebook btn-sm" data-bs-toggle="modal" data-bs-target="#addNewTemplateModalMessage" >Edit</button> ' +
+                                '<a class="btn btn-success btn-sm" href="/template/view/' + id + '">View</a> ' +
+                                '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteTemplateModal" type="submit">Delete</button>';
                                 
                             return buttons;
-                        }
-                    },
-                    {
-                        data : 'id',
-                        render : function(id, type, row) {
-                            var publish_state = '<div class="form-check form-switch">' + 
-                                                    '<input class="form-check-input" type="checkbox" id="flexSwitchCheckDefault" checked="">' +
-                                                '</div>';
-                            return publish_state;
                         }
                     }
                     
@@ -159,10 +177,44 @@
                 document.getElementById("template-description").innerHTML = data.template_desc;
                 document.getElementById("tempid").value = data.id;
                 document.getElementById("add-template-button").innerHTML = "Save";
+            } else if (event.target.innerText === "DELETE") {
+                document.getElementById("delete-modal-tempid").value = data.id;
             } else {
                 console.log(event.target.innerText)
             }
         });
+
+        $('#filtersTable').on('click', 'input', event => {
+            let data = dataTable.row($(event.target).closest('tr')).data();
+            var checkBox = document.getElementById("flexSwitchCheckDefault" + data.id)
+            // console.log(data, checkBox.checked)
+
+            // Fetch action data
+            fetch("/admin/update/template", {
+                method: 'POST',
+                body: JSON.stringify({
+                    status : checkBox.checked,
+                    tempid : data.id,
+                }),
+                headers: { 'Content-type': 'application/json' }
+            }).then(response => {
+                    if(!response.ok)
+                        return response.text().then(text => { throw new Error(text) })
+                    else
+                        return response.json()
+                })
+                .then(data => {
+                    //handle data
+                    // console.log(data)
+                    dataTable.ajax.reload();
+                })
+                .catch(error => {
+                    //handle error
+                    console.log(error);
+                });
+
+        });
+        
 
     });
 </script>

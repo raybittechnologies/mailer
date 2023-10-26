@@ -659,9 +659,10 @@ def add_template():
             temp = Template.query.get(tempid)
             temp.template_name = template_name
             temp.template_desc = template_desc
+            temp.userid = current_user.id
         else:
             template = Template(template_name=template_name, template_desc=template_desc)
-            template.userid = tempid
+            template.userid = current_user.id
             template.status = "draft"
             db.session.add(template)
             
@@ -669,7 +670,24 @@ def add_template():
         return redirect(url_for('home_blueprint.add_template'))
     else:
         return render_template('home/admin_add_template.html', segment="templates" )
+
+
+@blueprint.route('/admin/update/template', methods=['POST'])
+@login_required 
+@role_required('admin')
+def update_template():
+    status = request.json['status']
+    tempid = request.json['tempid']
     
+    temp = Template.query.get(tempid)
+    if status:
+        temp.status = "publish"
+    else:
+        temp.status = 'draft'
+    
+    db.session.commit()
+    return {'success': True}
+        
         
 @blueprint.route('/admin/templates', methods=['GET'])
 @login_required
