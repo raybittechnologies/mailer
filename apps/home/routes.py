@@ -23,6 +23,7 @@ from sqlalchemy.sql import Insert
 
 from concurrent.futures import ThreadPoolExecutor
 from apps.authentication.forms import LoginForm, CreateAccountForm
+from flask_dance.contrib.nylas import nylas
 
 import pandas as pd
 
@@ -54,9 +55,16 @@ def role_required(role):
 @login_required
 def index():
     page_data = get_page_data()
+    
+    if nylas.authorized : 
+        if not current_user.nylas_access_token:
+            user = Users.query.filter_by(id=current_user.id).first()
+            user.nylas_access_token = nylas.access_token
+            db.session.commit()
+            logout_user()
+        
     return render_template('home/index.html', segment='index', API_GENERATOR=len(API_GENERATOR),
                            page_data=page_data
-
                            )
 
 
@@ -716,11 +724,13 @@ def template_delete():
     temp = Template.query.get(templateid)
     db.session.delete(temp)
     
+    actions = Action.query.filter_by(tempid=templateid).all()
+    for action in actions:
+        db.session.delete(action)
+    
     db.session.commit()
     return redirect(url_for('home_blueprint.add_template'))
-    # return render_template('home/admin_add_template.html',
-    #                         segment="templates"
-    #                         )
+
 
 @blueprint.route('/template/view/<id>', methods=['GET'])
 @login_required 
@@ -823,4 +833,45 @@ def action_delete():
     db.session.commit()
     return redirect(url_for('home_blueprint.template_view', id=tempid))
     
+       
+@blueprint.route('/myworkflow', methods=['POST', 'GET'])
+@login_required 
+def my_workflow():
+    if request.method == 'POST':
+        template_name = request.form['template-name']
+        template_desc = request.form['template-description']
+        tempid = request.form['tempid']
+        
+        if tempid:
+            print("tempid", tempid)
+            temp = Template.query.get(tempid)
+            temp.template_name = template_name
+            temp.template_desc = template_desc
+            temp.userid = current_user.id
+        else:
+            template = Template(template_name=template_name, template_desc=template_desc)
+            template.userid = current_user.id
+            template.status = "draft"
+            db.session.add(template)
+            
+        db.session.commit()
+        return redirect(url_for('home_blueprint.add_template'))
+    else:
+        
+        admin = Users.query.filter_by(role='admin').first()
+        admin_id = admin.id
+        
+        templates = Template.query.filter_by(status="publish", userid=admin_id).all()
+        template_list = []
+        
+        for temp in templates:
+            data = {
+                'id' : temp.id,
+                'template_name' : temp.template_name,
+                'template_desc' : temp.template_desc,
+            }
+            template_list.append(data)
+        
+        print(template_list)
+        return render_template('home/my_workflow.html', segment="myworkflow", template_list=template_list)
     

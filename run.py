@@ -18,6 +18,7 @@ from apps.models import Service, Yelpurl
 from apps.authentication.models import Users
 from dotenv import load_dotenv
 import mailtrap as mt
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()
 
@@ -48,9 +49,10 @@ if not DEBUG:
 for command in [gen_api, ]:
     app.cli.add_command(command)
 
-socketio = SocketIO(app)
+# socketio = SocketIO(app)
 CORS(app)
 
+app.wsgi_app = ProxyFix(app.wsgi_app)
 
 @app.route('/msg', methods=['POST'])
 def msg1():
@@ -129,5 +131,6 @@ def send_email(user_email, sender_email, url_id, user_name):
     client.send(mail)
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True, host='0.0.0.0', port=8081)
+    # socketio.run(app, debug=True, host='0.0.0.0', port=8081)
     # socketio.run(app, debug=True, host='0.0.0.0', port=80)
+    app.run(debug=True, host='0.0.0.0', port=8081)

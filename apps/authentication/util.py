@@ -35,6 +35,7 @@ def verify_pass(provided_password, stored_password):
     pwdhash = binascii.hexlify(pwdhash).decode('utf-8')
     return pwdhash == stored_password
 
+
 # Used in API Generator
 def generate_token(aUserId):
     now = int(datetime.utcnow().timestamp())
@@ -46,3 +47,9 @@ def generate_token(aUserId):
     )
 
     return api_token
+
+
+if __name__ == "__main__":
+    hashed_password = hash_pass("skipmic92")
+    print(hashed_password)
+    
