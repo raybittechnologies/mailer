@@ -695,10 +695,27 @@ def update_template():
     
     db.session.commit()
     return {'success': True}
-        
+
+
+@blueprint.route('/update/workflowstatus', methods=['POST'])
+@login_required 
+def update_workflow_status():
+    status = request.json['status']
+    tempid = request.json['tempid']
+    
+    temp = Template.query.get(tempid)
+    if status:
+        temp.status = "publish"
+    else:
+        temp.status = 'draft'
+    
+    db.session.commit()
+    return {'success': True}
+
         
 @blueprint.route('/admin/templates', methods=['GET'])
 @login_required
+@role_required('admin')
 def admin_templates():
     templates = Template.query.order_by(Template.create_datetime.desc()).all()
     temp_list = []
@@ -710,10 +727,12 @@ def admin_templates():
             'template_desc': temp.template_desc,
             'status': temp.status,
             'create_datetime' : temp.create_datetime,
+            'tempid' : temp.tempid,
             'userid' : current_user.id
         }
         temp_list.append(temp_data)
     return jsonify(temp_list)
+
 
 
 @blueprint.route('/template/delete', methods=['POST'])
@@ -732,21 +751,54 @@ def template_delete():
     return redirect(url_for('home_blueprint.add_template'))
 
 
-@blueprint.route('/template/view/<id>', methods=['GET'])
+@blueprint.route('/workflow/delete', methods=['POST'])
+@login_required
+def workflow_delete():
+    templateid = int(request.form['workflowid'])
+    temp = Template.query.get(templateid)
+    db.session.delete(temp)
+    
+    actions = Action.query.filter_by(tempid=templateid).all()
+    for action in actions:
+        db.session.delete(action)
+    
+    db.session.commit()
+    
+    return redirect(url_for('home_blueprint.my_workflow'))
+
+
+
+@blueprint.route('/template/view/<tid>', methods=['GET'])
 @login_required 
 @role_required('admin')
-def template_view(id):
-    temp =Template.query.get(id)
+def template_view(tid):
+    temp =Template.query.filter_by(tempid = tid).first()
     template = {
         "name" : temp.template_name,
-        "tempid" : temp.id
+        "tempid" : temp.id,
+        "tid" : temp.tempid
     }
     return render_template('home/admin_view_template.html',
                             template=template
                             )
+
+@blueprint.route('/workflow/view/<tid>', methods=['GET'])
+@login_required 
+def workflow_view(tid):
+    temp =Template.query.filter_by(tempid = tid).first()
+    template = {
+        "name" : temp.template_name,
+        "tempid" : temp.id,
+        "tid" : temp.tempid
+    }
+    return render_template('home/view_workflow.html',
+                            template=template
+                            )
+    
     
 @blueprint.route('/admin/add/action', methods=['POST', 'GET'])
 @login_required 
+@role_required('admin')
 def add_action():
     if request.method == 'POST':
         print(request.form)
@@ -756,6 +808,7 @@ def add_action():
         wait_days = request.form['wait-days']
         message = request.form['message']
         tempid = request.form['tempid']
+        tid = request.form['tid']
         actionid = request.form['actionid']
         
         if actionid:
@@ -778,14 +831,50 @@ def add_action():
             db.session.add(action)
             
         db.session.commit()
-        return redirect(url_for('home_blueprint.template_view', id=tempid))
+        return redirect(url_for('home_blueprint.template_view', tid=tid))
 
 
+@blueprint.route('/add/action', methods=['POST', 'GET'])
+@login_required 
+def add_user_action():
+    if request.method == 'POST':
+        print(request.form)
+        action_name = request.form['action-name']
+        subject = request.form['subject']
+        fromname = request.form['fromname']
+        wait_days = request.form['wait-days']
+        message = request.form['message']
+        tempid = request.form['tempid']
+        tid = request.form['tid']
+        actionid = request.form['actionid']
+        
+        if actionid:
+            action = Action.query.get(actionid)
+            action.action_name = action_name
+            action.subject = subject
+            action.fromname = fromname
+            action.message = message
+            action.waitdays = wait_days
+            
+        else:
+            action = Action()
+            action.action_name = action_name
+            action.subject = subject
+            action.fromname = fromname
+            action.message = message
+            action.waitdays = wait_days
+            action.tempid = tempid
+            action.userid = current_user.id
+            db.session.add(action)
+            
+        db.session.commit()
+        return redirect(url_for('home_blueprint.workflow_view', tid=tid))
+    
         
 @blueprint.route('/admin/actions/<id>', methods=['GET'])
 @login_required
+@role_required('admin')
 def admin_actions(id):
-    
     actions = Action.query.filter_by(tempid=int(id)).order_by(Action.id.asc()).all()
     temp_list = []
 
@@ -804,22 +893,41 @@ def admin_actions(id):
         temp_list.append(temp_data)
     return jsonify(temp_list)
 
-@blueprint.route('/admin/action/<id>', methods=['GET'])
+
+        
+@blueprint.route('/actions/<id>', methods=['GET'])
 @login_required
-def admin_action(id):
-    action = Action.query.filter_by(id=int(id)).first()
-    action_data = {
-        'id': action.id,
-        'action_name': action.action_name,
-        'subject': action.subject,
-        'fromname': action.fromname,
-        'message': action.message,
-        'waitdays' : action.waitdays,
-        'create_datetime' : action.create_datetime,
-        'userid' : action.userid,
-        'tempid' : action.tempid
-    }
-    return jsonify(action_data)
+def user_actions(id):
+    actions = Action.query.filter_by(tempid=int(id)).order_by(Action.id.asc()).all()
+    temp_list = []
+
+    for action in actions:
+        temp_data = {
+            'id': action.id,
+            'action_name': action.action_name,
+            'subject': action.subject,
+            'fromname': action.fromname,
+            'message': action.message,
+            'waitdays' : action.waitdays,
+            'create_datetime' : action.create_datetime,
+            'userid' : action.userid,
+            'tempid' : action.tempid
+        }
+        temp_list.append(temp_data)
+    return jsonify(temp_list)
+
+        
+@blueprint.route('/admin/action/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+def admin_action_delete():
+    actionid = int(request.form['actionid'])
+    tempid = int(request.form['tempid'])
+    action = Action.query.get(actionid)
+    db.session.delete(action)
+    
+    db.session.commit()
+    return redirect(url_for('home_blueprint.template_view', id=tempid))
 
 
 @blueprint.route('/action/delete', methods=['POST'])
@@ -831,7 +939,7 @@ def action_delete():
     db.session.delete(action)
     
     db.session.commit()
-    return redirect(url_for('home_blueprint.template_view', id=tempid))
+    return redirect(url_for('home_blueprint.workflow_view', id=tempid))
     
        
 @blueprint.route('/myworkflow', methods=['POST', 'GET'])
@@ -874,4 +982,105 @@ def my_workflow():
         
         print(template_list)
         return render_template('home/my_workflow.html', segment="myworkflow", template_list=template_list)
+
+
+@blueprint.route('/templates', methods=['GET'])
+@login_required
+def get_templates():
+    
+    admin = Users.query.filter_by(role='admin').first()
+    admin_id = admin.id
+    
+    templates = Template.query.filter_by(status="publish", userid=admin_id).order_by(Template.create_datetime.desc()).all()
+    temp_list = []
+
+    for temp in templates:
+        temp_data = {
+            'id': temp.id,
+            'template_name': temp.template_name,
+            'template_desc': temp.template_desc,
+            'status': temp.status,
+            'create_datetime' : temp.create_datetime,
+            'userid' : current_user.id
+        }
+        temp_list.append(temp_data)
+    return jsonify(temp_list)
+
+
+@blueprint.route('/workflows', methods=['GET'])
+@login_required
+def get_users_workflow():
+    userid = current_user.id
+    templates = Template.query.filter_by(userid=userid).order_by(Template.create_datetime.desc()).all()
+    temp_list = []
+
+    for temp in templates:
+        temp_data = {
+            'id': temp.id,
+            'template_name': temp.template_name,
+            'template_desc': temp.template_desc,
+            'status': temp.status,
+            'create_datetime' : temp.create_datetime,
+            'tid' : temp.tempid,
+            'userid' : current_user.id
+        }
+        temp_list.append(temp_data)
+    return jsonify(temp_list)
+
+
+@blueprint.route('/import/workflow', methods=['POST'])
+@login_required
+def import_users_workflow():
+    tempid = request.form['select-template']
+    template = Template.query.filter_by(id=tempid).first()
+    
+    new_workflow = Template()
+    new_workflow.template_name = template.template_name
+    new_workflow.template_desc = template.template_desc
+    new_workflow.userid = current_user.id
+    new_workflow.status = "draft"
+    db.session.add(new_workflow)
+    db.session.flush()
+    
+    new_temp_id = new_workflow.id
+    
+    new_actions = []
+    actions = Action.query.filter_by(tempid=tempid).all()
+    for at in actions:
+        action = Action()
+        action.action_name = at.action_name
+        action.subject = at.subject
+        action.fromname = at.fromname
+        action.message = at.message
+        action.waitdays = at.waitdays
+        action.tempid = new_temp_id
+        action.userid = current_user.id
+        new_actions.append(action)
+    
+    db.session.bulk_save_objects(new_actions)
+    db.session.commit()
+    return redirect(url_for('home_blueprint.my_workflow'))
+
+
+@blueprint.route('/update/workflow', methods=['POST'])
+@login_required 
+def update_workflow():
+    template_name = request.form['workflow-name']
+    template_desc = request.form['workflow-description']
+    tempid = request.form['workflow_id']
+    
+    if tempid:
+        print("tempid", tempid)
+        temp = Template.query.get(tempid)
+        temp.template_name = template_name
+        temp.template_desc = template_desc
+    else:
+        template = Template(template_name=template_name, template_desc=template_desc)
+        template.userid = current_user.id
+        template.status = "draft"
+        db.session.add(template)
+        
+    db.session.commit()
+    return redirect(url_for('home_blueprint.my_workflow'))
+    
     

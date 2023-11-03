@@ -43,7 +43,7 @@
         {% include "includes/footer.html" %}
         <div class="col-md-6 col-xl-6">
             <!-- Modal -->
-            <div class="modal fade" id="addNewTemplateModalMessage" tabindex="-1" role="dialog" aria-labelledby="addNewActionModalMessageTitle" aria-hidden="true">
+            <div class="modal fade" id="addNewTemplateModalMessage" tabindex="-1" role="dialog" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="addNewActionModalMessageTitle" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
@@ -75,7 +75,7 @@
                 </div>
             </div>
         </div>
-        <div class="modal fade" id="deleteTemplateModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal fade" id="deleteTemplateModal" tabindex="-1" role="dialog"  aria-labelledby="exampleModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered" role="document">
               <div class="modal-content">
                 <div class="modal-header">
@@ -157,8 +157,10 @@
                         data: 'id', // Assuming the id property is present in your data
                         render: function (id, type, row) {
                             // Create action buttons HTML
+                            var tid = ""; 
+                            tid = row.tempid;
                             var buttons = '<button class="btn btn-facebook btn-sm" data-bs-toggle="modal" data-bs-target="#addNewTemplateModalMessage" >Edit</button> ' +
-                                '<a class="btn btn-success btn-sm" href="/template/view/' + id + '">View</a> ' +
+                                '<a class="btn btn-success btn-sm" href="/template/view/' + tid + '">View</a> ' +
                                 '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteTemplateModal" type="submit">Delete</button>';
                                 
                             return buttons;

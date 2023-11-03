@@ -17,10 +17,10 @@
     <div class="container-fluid py-4">
         
         <div class="container mt-5">
-            <button class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#addNewTemplateModalMessage" onclick=addtemplate()>Import Workflow</button>
+            <button class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#importTemplateModalMessage" onclick=importWorkflow()>Import Workflow</button>
             <!--         <button onclick="{{ url_for('home_blueprint.add_filter') }}" class="btn btn-primary" type="button">Add New Filter</button>-->
             <div class="card col shadow-lg border-0 rounded-lg">
-                <div class="card-header"><h3 class="text-center font-weight-light my-4">My Templates</h3></div>
+                <div class="card-header"><h3 class="text-center font-weight-light my-4">My Workflow</h3></div>
                 <div class="card-body">
                 <table style="width:100%" id="filtersTable" class="table table-striped table-bordered nowrap">
                     <thead>
@@ -43,32 +43,65 @@
         {% include "includes/footer.html" %}
         <div class="col-md-6 col-xl-6">
             <!-- Modal -->
-            <div class="modal fade" id="addNewTemplateModalMessage" tabindex="-1" role="dialog" aria-labelledby="addNewActionModalMessageTitle" aria-hidden="true">
+            <div class="modal fade" id="updataWorkflowModalMessage" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" role="dialog" aria-labelledby="updataWorkflowModalTitle" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered" role="document">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title" id="exampleModalLabel">Add Template</h5>
+                            <h5 class="modal-title" id="exampleModalLabel">Update Workflow</h5>
                             <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">×</span>
                             </button>
                         </div>
-                        <form action="/admin/add/template" method="post">
+                        <form action="/update/workflow" method="post">
                             <div class="modal-body">
                                 <div class="form-group">
-                                    <label for="template-name" class="col-form-label">Name:</label>
-                                    <input type="text" class="form-control" id="template-name" name="template-name" required>
+                                    <label for="workflow-name" class="col-form-label">Name:</label>
+                                    <input type="text" class="form-control" id="workflow-name" name="workflow-name" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="template-description" class="col-form-label">Description:</label>
-                                    <textarea type="text" class="form-control" id="template-description" name="template-description" required></textarea>
+                                    <label for="workflow-description" class="col-form-label">Description:</label>
+                                    <textarea type="text" class="form-control" id="workflow-description" name="workflow-description" required></textarea>
                                 </div>
                                 <div class="form-group">
-                                    <input type="text" class="form-control" id="tempid" name="tempid" hidden>
+                                    <input type="text" class="form-control" id="workflow_id" name="workflow_id" hidden>
                                 </div>
                             </div>
                             <div class="modal-footer form-group">
                                 <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Close</button>
-                                <button type="submit" class="btn bg-gradient-primary" id="add-template-button" >Create</button>
+                                <button type="submit" class="btn bg-gradient-primary" id="update-workflow-button" >Save</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-6">
+            <!-- Modal -->
+            <div class="modal fade" id="importTemplateModalMessage" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" role="dialog" aria-labelledby="importTemplateModalMessageTitle" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="importTemplateModalLabel">Import Template</h5>
+                            <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">×</span>
+                            </button>
+                        </div>
+                        <form action="/import/workflow" method="post">
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label for="template-name" class="col-form-label">Select Template:</label>
+                                    <!-- <input type="text" class="form-control" id="template-name" name="template-name" required> -->
+                                    <select class="form-control form-select" id="select-template" name="select-template">
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="template-description" class="col-form-label">Description:</label>
+                                    <textarea type="text" class="form-control" id="template-description" name="template-description" readonly required></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer form-group">
+                                <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="submit" class="btn bg-gradient-primary" id="import-template-button" >Import</button>
                             </div>
                         </form>
                     </div>
@@ -79,13 +112,13 @@
             <div class="modal-dialog modal-dialog-centered" role="document">
               <div class="modal-content">
                 <div class="modal-header">
-                  <h5 class="modal-title" id="exampleModalLabel">Are you sure to delete this template?</h5>
+                  <h5 class="modal-title" id="exampleModalLabel">Are you sure to delete this workflow?</h5>
                   <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                   </button>
                 </div>
-                <form action="/template/delete" style="display: contents" method="post"> 
-                    <input type="hidden" name="templateid" id="delete-modal-tempid"/>
+                <form action="/workflow/delete" style="display: contents" method="post"> 
+                    <input type="hidden" name="workflowid" id="delete-modal-tempid"/>
                     <div class="modal-footer">
                         <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
                         <input class="btn btn-danger" type="submit" value="Delete">
@@ -108,17 +141,50 @@
 <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.4.1/js/responsive.bootstrap.min.js"></script>
 <script>
+    var templates = null;
 
-    function addtemplate() {
-        console.log("add new temp");
-        document.getElementById("template-name").value = "";
-        document.getElementById("template-description").innerHTML = "";
-        document.getElementById("tempid").value = "";
-        document.getElementById("add-template-button").innerHTML = "Create";
+    function importWorkflow() {
+        fetch('/templates',{
+            method: 'GET',
+        })
+        .then((response) => {
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+            return response.json(); // Extract the response body as text
+        })
+        .then((res) => {
+            var options = "";
+            for (let i = 0; i < res.length; i++) {
+                // console.log(res[i])
+                options += '<option ' +  ' value="' + res[i].id +'">' + res[i].template_name + "</option>" + "<br>";
+            }
+            document.getElementById("select-template").innerHTML = options;
+            document.getElementById("template-description").innerHTML = res[0].template_desc;
+            templates = res;
+            // console.log(templates);
+        })
+        .catch((err) => {
+            console.log(err);
+        });
+
     };
+
 
         
     $(document).ready(function () {
+        const selectElement = document.getElementById("select-template");
+        const result = document.querySelector(".result");
+
+        selectElement.addEventListener("change", (event) => {
+            for (let  i = 0; i <  templates.length; i++) {
+                if (templates[i].id == event.target.value) {
+                    document.getElementById("template-description").innerHTML = templates[i].template_desc
+                }
+            }
+
+        });
+
         // Initialize DataTable
         var dataTable = $('#filtersTable').DataTable({
                 responsive: true,
@@ -129,7 +195,7 @@
                 }],
                 order : [],
                 ajax: {
-                    url: '/admin/templates',
+                    url: '/workflows',
                     dataSrc: ''
                 },
                 columns: [
@@ -141,7 +207,7 @@
                         render : function (status, type, row) {
                             var  label = ""
                             var id = row.id;
-                            label = row.status === "publish" ? '<span class="badge bg-gradient-success">Publish</span>' : '<span class="badge bg-gradient-secondary">Draft</span>';
+                            label = row.status === "publish" ? '<span class="badge bg-gradient-success">Active</span>' : '<span class="badge bg-gradient-secondary">Draft</span>';
                             
                             var chekced = '';
                             checked = row.status === "publish" ? 'checked' : '';
@@ -156,9 +222,10 @@
                     {
                         data: 'id', // Assuming the id property is present in your data
                         render: function (id, type, row) {
-                            // Create action buttons HTML
-                            var buttons = '<button class="btn btn-facebook btn-sm" data-bs-toggle="modal" data-bs-target="#addNewTemplateModalMessage" >Edit</button> ' +
-                                '<a class="btn btn-success btn-sm" href="/template/view/' + id + '">View</a> ' +
+                            // Create action buttons HTML'
+                            var tid = row.tid;
+                            var buttons = '<button class="btn btn-facebook btn-sm" data-bs-toggle="modal" data-bs-target="#updataWorkflowModalMessage" >Edit</button> ' +
+                                '<a class="btn btn-success btn-sm" href="/workflow/view/' + tid + '">View</a> ' +
                                 '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteTemplateModal" type="submit">Delete</button>';
                                 
                             return buttons;
@@ -173,10 +240,10 @@
             let data = dataTable.row($(event.target).closest('tr')).data();
             // console.log(data)
             if (event.target.innerText === "EDIT") {
-                document.getElementById("template-name").value = data.template_name;
-                document.getElementById("template-description").innerHTML = data.template_desc;
-                document.getElementById("tempid").value = data.id;
-                document.getElementById("add-template-button").innerHTML = "Save";
+                document.getElementById("workflow-name").value = data.template_name;
+                document.getElementById("workflow-description").innerHTML = data.template_desc;
+                document.getElementById("workflow_id").value = data.id;
+
             } else if (event.target.innerText === "DELETE") {
                 document.getElementById("delete-modal-tempid").value = data.id;
             } else {
@@ -190,7 +257,7 @@
             // console.log(data, checkBox.checked)
 
             // Fetch action data
-            fetch("/admin/update/template", {
+            fetch("/update/workflowstatus", {
                 method: 'POST',
                 body: JSON.stringify({
                     status : checkBox.checked,
