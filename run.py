@@ -9,15 +9,15 @@ from flask_login import current_user
 from flask_migrate import Migrate
 from flask_minify import Minify
 from sys import exit
-from flask_socketio import SocketIO, send, emit
+# from flask_socketio import SocketIO, send, emit
 from api_generator.commands import gen_api
 from flask_cors import CORS
 from apps.config import config_dict
 from apps import create_app, db
 from apps.models import Service, Yelpurl
 from apps.authentication.models import Users
+from apps.home.emailler import send_email
 from dotenv import load_dotenv
-import mailtrap as mt
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv()
@@ -107,28 +107,6 @@ def msg1():
         yelpurl = Yelpurl.query.get(int(data['url_id']))
         s = yelpurl.state
     return s
-
-def send_email(user_email, sender_email, url_id, user_name):
-    WEB_HOST_IP = os.environ.get('WEB_HOST_IP')
-    MAILTRAP_TEMP_UUID = os.environ.get('MAILTRAP_TEMP_UUID')
-    MAILTRAP_API_KEY = os.environ.get('MAILTRAP_API_KEY')
-    view_data_link = WEB_HOST_IP + "/url/view/" + str(url_id)
-    
-    # create mail object
-    mail = mt.MailFromTemplate(
-        sender=mt.Address(email=sender_email, name="Robotic Booking Agent"),
-        to=[mt.Address(email=user_email)],
-        template_uuid=MAILTRAP_TEMP_UUID,
-        template_variables={
-        "view_data_link": view_data_link,
-        "user_email": user_email,
-        "user_name" : user_name
-        }
-    )
-
-    # create client and send
-    client = mt.MailtrapClient(token=MAILTRAP_API_KEY)
-    client.send(mail)
 
 if __name__ == "__main__":
     # socketio.run(app, debug=True, host='0.0.0.0', port=8081)

@@ -6,6 +6,8 @@ Copyright (c) 2019 - present AppSeed.us
 import os
 import hashlib
 import binascii
+import random
+import string
 
 import jwt
 from datetime import datetime
@@ -47,6 +49,16 @@ def generate_token(aUserId):
     )
 
     return api_token
+
+def generate_random_string():
+    length = 36
+    # Define the characters you want to include in the random string
+    characters = string.ascii_letters + string.digits  # You can customize this as needed
+
+    # Generate the random string of the specified length
+    random_string = ''.join(random.choice(characters) for _ in range(length))
+
+    return random_string
 
 
 if __name__ == "__main__":

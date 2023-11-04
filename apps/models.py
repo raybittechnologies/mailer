@@ -8,6 +8,7 @@ from flask_login import UserMixin
 from apps import db
 from sqlalchemy import create_engine, Column, Integer, String, orm
 from flask_bcrypt import generate_password_hash, check_password_hash
+from apps.authentication.util import generate_random_string
 import uuid
 '''
 Add your models below
@@ -110,7 +111,7 @@ class Template(db.Model):
     template_desc = db.Column(db.String(1024))
     status = db.Column(db.String(16))
     userid = db.Column(db.Integer)
-    tempid = db.Column(db.String(36), nullable=False, default=str(uuid.uuid4()), index=True)
+    tempid = db.Column(db.String(36), nullable=False, default=generate_random_string, index=True)
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, index=True)
     
 

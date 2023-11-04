@@ -8,6 +8,7 @@ from apps.authentication.util import verify_pass
 from apps.home import blueprint
 from flask import render_template, request, jsonify, redirect, url_for, current_app
 from flask_login import login_required, current_user, logout_user, login_user
+from jinja2 import Template as JT
 
 from apps.config import API_GENERATOR
 import requests
@@ -24,6 +25,7 @@ from sqlalchemy.sql import Insert
 from concurrent.futures import ThreadPoolExecutor
 from apps.authentication.forms import LoginForm, CreateAccountForm
 from flask_dance.contrib.nylas import nylas
+from apps.home.emailler import send_test_email, user_test_email
 
 import pandas as pd
 
@@ -58,10 +60,14 @@ def index():
     
     if nylas.authorized : 
         if not current_user.nylas_access_token:
+            
             user = Users.query.filter_by(id=current_user.id).first()
             user.nylas_access_token = nylas.access_token
             db.session.commit()
             logout_user()
+            
+            return redirect(url_for('authentication_blueprint.login')) 
+            
         
     return render_template('home/index.html', segment='index', API_GENERATOR=len(API_GENERATOR),
                            page_data=page_data
@@ -717,7 +723,7 @@ def update_workflow_status():
 @login_required
 @role_required('admin')
 def admin_templates():
-    templates = Template.query.order_by(Template.create_datetime.desc()).all()
+    templates = Template.query.filter_by(userid=current_user.id).order_by(Template.create_datetime.desc()).all()
     temp_list = []
 
     for temp in templates:
@@ -801,7 +807,7 @@ def workflow_view(tid):
 @role_required('admin')
 def add_action():
     if request.method == 'POST':
-        print(request.form)
+        # print(request.form)
         action_name = request.form['action-name']
         subject = request.form['subject']
         fromname = request.form['fromname']
@@ -838,7 +844,7 @@ def add_action():
 @login_required 
 def add_user_action():
     if request.method == 'POST':
-        print(request.form)
+        # print(request.form)
         action_name = request.form['action-name']
         subject = request.form['subject']
         fromname = request.form['fromname']
@@ -923,11 +929,12 @@ def user_actions(id):
 def admin_action_delete():
     actionid = int(request.form['actionid'])
     tempid = int(request.form['tempid'])
+    tid = request.form['tid']
     action = Action.query.get(actionid)
     db.session.delete(action)
     
     db.session.commit()
-    return redirect(url_for('home_blueprint.template_view', id=tempid))
+    return redirect(url_for('home_blueprint.template_view', tid=tid))
 
 
 @blueprint.route('/action/delete', methods=['POST'])
@@ -935,11 +942,12 @@ def admin_action_delete():
 def action_delete():
     actionid = int(request.form['actionid'])
     tempid = int(request.form['tempid'])
+    tid = request.form['tid']
     action = Action.query.get(actionid)
     db.session.delete(action)
     
     db.session.commit()
-    return redirect(url_for('home_blueprint.workflow_view', id=tempid))
+    return redirect(url_for('home_blueprint.workflow_view', tid=tid))
     
        
 @blueprint.route('/myworkflow', methods=['POST', 'GET'])
@@ -951,7 +959,7 @@ def my_workflow():
         tempid = request.form['tempid']
         
         if tempid:
-            print("tempid", tempid)
+            # print("tempid", tempid)
             temp = Template.query.get(tempid)
             temp.template_name = template_name
             temp.template_desc = template_desc
@@ -980,7 +988,6 @@ def my_workflow():
             }
             template_list.append(data)
         
-        print(template_list)
         return render_template('home/my_workflow.html', segment="myworkflow", template_list=template_list)
 
 
@@ -1070,7 +1077,6 @@ def update_workflow():
     tempid = request.form['workflow_id']
     
     if tempid:
-        print("tempid", tempid)
         temp = Template.query.get(tempid)
         temp.template_name = template_name
         temp.template_desc = template_desc
@@ -1082,5 +1088,59 @@ def update_workflow():
         
     db.session.commit()
     return redirect(url_for('home_blueprint.my_workflow'))
+    
+
+@blueprint.route('/admin/action/test', methods=['POST'])
+@login_required 
+@role_required('admin')
+def admin_action_test():
+    
+    actionid = request.json['id']
+    action = Action.query.filter_by(id=actionid).first()
+    
+    test_service = {
+        "service_name" : "Servcie Name",
+        "company_name" : "Company Name"
+    }
+    
+    SENDER_MAIL = os.environ.get('SENDER_MAIL')
+    
+    jinja_temp = JT(action.message)
+    mail_body = jinja_temp.render(test_service)
+    
+    if send_test_email(action.subject , action.fromname, mail_body, SENDER_MAIL, SENDER_MAIL):
+        return {"success": True}
+    
+    else:
+        return {"success": False}
+    
+
+@blueprint.route('/action/test', methods=['POST'])
+@login_required 
+def action_test():
+    
+    actionid = request.json['id']
+    action = Action.query.filter_by(id=actionid).first()
+    
+    test_service = {
+        "service_name" : "Servcie Name",
+        "company_name" : "Company Name"
+    }
+    
+    
+    SENDER_MAIL = current_user.email
+    
+    try:
+        jinja_temp = JT(action.message)
+        mail_body = jinja_temp.render(test_service)
+        if user_test_email(action.subject , action.fromname, mail_body, SENDER_MAIL):
+            return {"success": True}
+
+        else:
+            return {"success": False, "message": "Please check Nylas api"}
+        
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+    
     
     
