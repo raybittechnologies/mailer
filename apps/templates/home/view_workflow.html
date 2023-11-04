@@ -110,7 +110,7 @@
                 </form>
               </div>
             </div>
-          </div>
+        </div>
     </div>
 
 {% endblock content %}
@@ -174,7 +174,7 @@
                             // Create action buttons HTML
                             var tempid = row.tempid;
                             var buttons = '<button class="btn btn-facebook btn-sm"  data-bs-toggle="modal" data-bs-target="#addNewActionModalMessage" >Edit</button> ' +
-                                '<button class="btn btn-success btn-sm" id="test-button-' + id + '">Test</button> ' +
+                                '<button class="btn btn-success btn-sm">Test</button> ' +
                                 '<button class="btn btn-danger btn-sm" type="submit" data-bs-toggle="modal" data-bs-target="#deleteActionModal">Delete</button>'
                             return buttons;
                         }
@@ -201,7 +201,7 @@
             } else if ( event.target.innerText === "TEST") {
                 
                 event.target.disabled = true;
-                event.target.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...'
+                event.target.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>'
 
                 document.getElementById("add-action-button").innerHTML = "Save";
 
@@ -219,7 +219,7 @@
                     })
                     .then(data => {
                         //handle data
-                        console.log(data)
+                        // console.log(data)
                         
                         event.target.disabled = false;
                         event.target.innerHTML = 'TEST'
@@ -232,7 +232,7 @@
                                 timer: 2000
                             });
                         } else {
-                            
+                            console.log(data.message);
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Email is not sent! Please try again.',

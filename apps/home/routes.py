@@ -563,27 +563,23 @@ def admin_profile():
                            )
 
 
-@blueprint.route('/admin/users/delete/<id>', methods=['POST', 'GET'])
+@blueprint.route('/admin/users/delete', methods=['POST'])
 @login_required
 @role_required('admin')
-def delete_user(id):
-    user = Users.query.get(id)
+def delete_user():
+    userid = request.form['userid']
+    user = Users.query.get(int(userid))
     if user:
         db.session.delete(user)
-        services = Service.query.filter_by(user_id=id).all()
+        services = Service.query.filter_by(user_id=userid).all()
         for service in services:
             db.session.delete(service)
-        urls = Yelpurl.query.filter_by(userid=id).all()
+        urls = Yelpurl.query.filter_by(userid=userid).all()
         for url__ in urls:
             db.session.delete(url__)
         db.session.commit()
-    page_data = get_admin_data()
-    users = Users.query.filter(Users.role != "admin").all()
-    return redirect(url_for("home_blueprint.admin_users",
-                            segment='users', API_GENERATOR=len(API_GENERATOR),
-                            page_data=page_data,
-                            users=users,
-                            ))
+    return redirect(url_for("home_blueprint.admin_users"))
+
     
 @blueprint.route('/admin/users/approve/<id>', methods=['POST', 'GET'])
 @login_required
@@ -593,13 +589,8 @@ def approve_user(id):
     user.state = "approved"
     db.session.add(user)
     db.session.commit()
-    page_data = get_admin_data()
-    users = Users.query.filter(Users.role != "admin").all()
-    return redirect(url_for("home_blueprint.admin_users",
-                            segment='users', API_GENERATOR=len(API_GENERATOR),
-                            page_data=page_data,
-                            users=users,
-                            ))
+    return redirect(url_for("home_blueprint.admin_users"))
+
     
 @blueprint.route('/admin/users/inactive/<id>', methods=['POST', 'GET'])
 @login_required
@@ -609,13 +600,30 @@ def inactive_user(id):
     user.state = "pending"
     db.session.add(user)
     db.session.commit()
-    page_data = get_admin_data()
-    users = Users.query.filter(Users.role != "admin").all()
-    return redirect(url_for("home_blueprint.admin_users",
-                            segment='users', API_GENERATOR=len(API_GENERATOR),
-                            page_data=page_data,
-                            users=users,
-                            ))
+    return redirect(url_for("home_blueprint.admin_users"))
+
+
+@blueprint.route('/admin/users/upgrade/<id>', methods=['GET'])
+@login_required
+@role_required('admin')
+def upgrade_user(id):
+    user = Users.query.get(id)
+    user.role = "premium"
+    db.session.add(user)
+    db.session.commit()
+    return redirect(url_for("home_blueprint.admin_users"))
+
+    
+@blueprint.route('/admin/users/downgrade/<id>', methods=['GET'])
+@login_required
+@role_required('admin')
+def downgrade_user(id):
+    user = Users.query.get(id)
+    user.role = "user"
+    db.session.add(user)
+    db.session.commit()
+    return redirect(url_for("home_blueprint.admin_users"))
+
 
 @blueprint.route('/admin/add/user', methods=['POST', 'GET'])
 @login_required
@@ -1127,7 +1135,6 @@ def action_test():
         "company_name" : "Company Name"
     }
     
-    
     SENDER_MAIL = current_user.email
     
     try:
@@ -1137,9 +1144,10 @@ def action_test():
             return {"success": True}
 
         else:
-            return {"success": False, "message": "Please check Nylas api"}
+            return {"success": False, "message": "Please check Nylas API"}
         
     except Exception as e:
+        print(repr(e))
         return {"success": False, "message": str(e)}
     
     

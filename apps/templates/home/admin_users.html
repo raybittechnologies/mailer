@@ -122,6 +122,9 @@
                                         <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                                             Status
                                         </th>
+                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                                            Type
+                                        </th>
                                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                                             Action
                                         </th>
@@ -150,6 +153,13 @@
                                                 {% else %}
                                                     <span class="badge badge-sm bg-gradient-success">Active</span>
                                                 {% endif %}
+                                            </td>>
+                                            <td>
+                                                {% if user.role == 'user' %}
+                                                    <span class="badge badge-sm bg-gradient-success">Normal</span>
+                                                {% else %}
+                                                    <span class="badge badge-sm bg-gradient-primary">Premium</span>
+                                                {% endif %}
                                             </td>
                                             <td class="align-middle text-center text-sm">
                                                 {% if user.state == 'pending' %}
@@ -157,7 +167,12 @@
                                                 {% else %}
                                                     <a href="/admin/users/inactive/{{ user.id }}" class="btn btn-sm btn-secondary">Inactive</a>
                                                 {% endif %}
-                                                <a href="/admin/users/delete/{{ user.id }}" class="btn btn-sm btn-danger">Delete</a>
+                                                {% if user.role == 'user' %}
+                                                    <a href="/admin/users/upgrade/{{ user.id }}" class="btn btn-sm btn-success ">Upgrade</a>
+                                                {% else %}
+                                                    <a href="/admin/users/downgrade/{{ user.id }}" class="btn btn-sm btn-secondary">Downgrade</a>
+                                                {% endif %}
+                                                <button data-bs-toggle="modal" data-bs-target="#deleteUserModal" onclick="deleteUser('{{ user.id }}')" class="btn btn-sm btn-danger">Delete</button>
                                             </td>
                                         </tr>
                                     {% endfor %}
@@ -170,7 +185,7 @@
                 </div>
             </div>
         </div>
-        <!--      <div class="row mt-4">-->
+             <!-- <div class="row mt-4">-->
         <!--        <div class="col-lg-7 mb-lg-0 mb-4">-->
         <!--          <div class="card">-->
         <!--            <div class="card-body p-3">-->
@@ -694,9 +709,29 @@
         <!--            </div>-->
         <!--          </div>-->
         <!--        </div>-->
-        <!--      </div>-->
+        <!--      </div> -->
 
         {% include "includes/footer.html" %}
+        <div class="modal fade" id="deleteUserModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="exampleModalLabel">Are you sure to remove this user?</h5>
+                  <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <form action="/admin/users/delete" style="display: contents" method="post"> 
+                    <input type="hidden" name="userid" id="userid"/>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <input class="btn btn-danger" type="submit" value="Delete">
+                    </div>
+                </form>
+              </div>
+            </div>
+        </div>
 
     </div>
 
@@ -704,5 +739,13 @@
 
 <!-- Specific JS goes HERE -->
 {% block javascripts %}
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script>
+    function deleteUser(userid) {
+        //Init modal
+        console.log(userid);
+        document.getElementById("userid").value = userid;
+    };
+</script>
 
 {% endblock javascripts %}

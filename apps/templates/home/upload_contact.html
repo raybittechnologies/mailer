@@ -19,14 +19,15 @@
                 <div class="card-body">
                     <form method="post" enctype="multipart/form-data">
                         <div class="form-group">
-                            <label class="small mb-1" for="category">Description</label>
-                           <input class="form-control py-1" id="description" name="description" placeholder="Pleas enter short description about data" type="text" required/>
-                        </div>
-                         <div class="form-group">
-                            <input class="form-control py-1" id="file" name="file" type="file" accept=".csv,.xlsx" required/>
+                            <label class="small mb-1" for="category">Select file:</label>
+                           <input class="form-control py-1" id="file" name="file" type="file" accept=".csv,.xlsx" required/>
+                       </div>
+                        <div class="form-group">
+                            <label class="small mb-1" for="category">Description:</label>
+                            <input class="form-control py-1" id="description" name="description" placeholder="Pleas enter short description about data" type="text" required/>
                         </div>
                         <div class="form-group d-flex align-items-center justify-content-between mt-4 mb-0">
-                            <button class="btn btn-danger" type="submit">Upload</button>
+                            <button class="btn btn-success" type="submit">Upload</button>
                         </div>
                     </form>
                     
