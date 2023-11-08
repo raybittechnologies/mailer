@@ -77,15 +77,22 @@ def user_test_email(subject, fromname, body, receiver):
         <head>
             <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         </head>
-        <body style="font-family: sans-serif;">
-            {body}
-        </body>
+            <body style="font-family: sans-serif;">
+                {body}
+            </body>
         </html>
     """
+    
     
     message = client.drafts.create()
     message.body = html
     message.to = [{'email': receiver, 'name': fromname}]
+    message.tracking = {
+        "opens": True, # Enable message open tracking.
+        "links": True, # Enable link clicked tracking.
+        "thread_replies": True, # Enable thread replied tracking.
+        "payload": "Use this string to describe the message you're enabling tracking for. It's included in webhook notifications about tracked events."
+    }
     message.subject = subject
     response = message.send()
     

@@ -1135,12 +1135,13 @@ def action_test():
         "company_name" : "Company Name"
     }
     
-    SENDER_MAIL = current_user.email
+    receiver = current_user.email
+    receiver = "lightthree718@gmail.com"
     
     try:
         jinja_temp = JT(action.message)
         mail_body = jinja_temp.render(test_service)
-        if user_test_email(action.subject , action.fromname, mail_body, SENDER_MAIL):
+        if user_test_email(action.subject , action.fromname, mail_body, receiver):
             return {"success": True}
 
         else:
@@ -1151,4 +1152,56 @@ def action_test():
         return {"success": False, "message": str(e)}
     
     
+@blueprint.route('/webhook', methods=['POST', "GET"])
+def webhook():
+    if request.method == "GET" : 
+        # Verify webhooks on nylas settings 
+        challenge = request.args['challenge']
+        return challenge
     
+    else:
+        print(request.json)
+        
+        return request.json
+
+
+   
+@blueprint.route('/automation', methods=['POST', 'GET'])
+@login_required 
+def automation():
+    if request.method == 'POST':
+        template_name = request.form['template-name']
+        template_desc = request.form['template-description']
+        tempid = request.form['tempid']
+        
+        if tempid:
+            # print("tempid", tempid)
+            temp = Template.query.get(tempid)
+            temp.template_name = template_name
+            temp.template_desc = template_desc
+            temp.userid = current_user.id
+        else:
+            template = Template(template_name=template_name, template_desc=template_desc)
+            template.userid = current_user.id
+            template.status = "draft"
+            db.session.add(template)
+            
+        db.session.commit()
+        return redirect(url_for('home_blueprint.add_template'))
+    else:
+        
+        admin = Users.query.filter_by(role='admin').first()
+        admin_id = admin.id
+        
+        templates = Template.query.filter_by(status="publish", userid=admin_id).all()
+        template_list = []
+        
+        for temp in templates:
+            data = {
+                'id' : temp.id,
+                'template_name' : temp.template_name,
+                'template_desc' : temp.template_desc,
+            }
+            template_list.append(data)
+        
+        return render_template('home/automation.html', segment="automation", template_list=template_list)

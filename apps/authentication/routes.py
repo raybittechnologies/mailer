@@ -55,7 +55,7 @@ def login():
         # read form data
         username = request.form['username']
         password = request.form['password']
-        print(username, password)
+        # print(username, password)
         #return 'Login: ' + username + ' / ' + password
 
         # Locate user
@@ -69,7 +69,8 @@ def login():
             
         if user and verify_pass(password, user.password) and user.state == "approved":
             login_user(user)
-            return redirect(url_for('authentication_blueprint.route_default'))
+            # return redirect(url_for('authentication_blueprint.route_default'))
+            return redirect(url_for('home_blueprint.index'))
 
         # Something (user or pass) is not ok
         return render_template('accounts/login.html',
@@ -77,7 +78,9 @@ def login():
                                form=login_form)
 
     if current_user.is_authenticated:
+        print("login sucess!")
         return redirect(url_for('home_blueprint.index'))
+    
     else:
         return render_template('accounts/login.html',
                                form=login_form) 

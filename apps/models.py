@@ -8,7 +8,7 @@ from flask_login import UserMixin
 from apps import db
 from sqlalchemy import create_engine, Column, Integer, String, orm
 from flask_bcrypt import generate_password_hash, check_password_hash
-from apps.authentication.util import generate_random_string
+from apps.authentication.util import generate_random_string, generate_unsubscribe_token
 import uuid
 '''
 Add your models below
@@ -65,6 +65,7 @@ class Uploadedservice(db.Model):
     user_id = db.Column(db.String(255))
     file_id = db.Column(db.String(255))
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
+    unsubscribe_token = db.Column(db.String(128), nullable=False, default=generate_unsubscribe_token, index=True)
     
     
 class Uploadedcontactfile(db.Model):

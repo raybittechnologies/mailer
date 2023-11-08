@@ -61,6 +61,16 @@ def generate_random_string():
     return random_string
 
 
+def generate_unsubscribe_token():
+    length = 128
+    # Define the characters you want to include in the random string
+    characters = string.ascii_letters + string.digits + "_" + "-" # You can customize this as needed
+
+    # Generate the random string of the specified length
+    random_string = ''.join(random.choice(characters) for _ in range(length))
+
+    return random_string
+
 if __name__ == "__main__":
     hashed_password = hash_pass("skipmic92")
     print(hashed_password)
