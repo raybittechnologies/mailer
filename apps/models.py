@@ -25,7 +25,7 @@ class Yelpurl(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(254))
     product_url = db.Column(db.String(1024))
-    userid = db.Column(db.String(254))
+    userid = db.Column(db.Integer)
     state = db.Column(db.String(20))
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, index=True)
 

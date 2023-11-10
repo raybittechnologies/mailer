@@ -53,6 +53,7 @@ for command in [gen_api, ]:
 # socketio = SocketIO(app)
 CORS(app)
 
+# When using Ngrok, uncomment the following lines
 app.wsgi_app = ProxyFix(app.wsgi_app)
 
 scheduler.start()
