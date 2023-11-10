@@ -304,6 +304,10 @@
             })
         });
 
+        var interval = setInterval(function () {
+            dataTable.ajax.reload();
+        }, 60000);
+
     });
 </script>
 {% endblock javascripts %}

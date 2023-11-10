@@ -2,7 +2,6 @@ import os
 
 import mailtrap as mt
 from flask_dance.contrib.nylas import make_nylas_blueprint, nylas
-from nylas import APIClient
 from flask import current_app
 from flask_login import current_user
 
@@ -61,16 +60,10 @@ def send_test_email(subject, fromname, body, receiver, sender):
     
 
 
-def user_test_email(subject, fromname, body, receiver):
+def send_email_via_nylas(nylas_client, subject, fromname, body, receiver):
     
     # print(current_user.nylas_access_token)
         
-    client = APIClient(
-        client_id=current_app.config["NYLAS_OAUTH_CLIENT_ID"],
-        client_secret=current_app.config["NYLAS_OAUTH_CLIENT_SECRET"],
-        access_token=current_user.nylas_access_token,
-    )
-
     html=f"""
         <!doctype html>
         <html>
@@ -82,9 +75,7 @@ def user_test_email(subject, fromname, body, receiver):
             </body>
         </html>
     """
-    
-    
-    message = client.drafts.create()
+    message = nylas_client.drafts.create()
     message.body = html
     message.to = [{'email': receiver, 'name': fromname}]
     message.tracking = {
@@ -96,9 +87,4 @@ def user_test_email(subject, fromname, body, receiver):
     message.subject = subject
     response = message.send()
     
-    # print(response)
-
-    # if not response['success']:
-    #     print(response)
-        
-    return True
+    return response

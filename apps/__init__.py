@@ -30,7 +30,6 @@ def register_blueprints(app):
 
 def configure_database(app):
 
-    # @app.before_first_request
     with app.app_context():
         
     # def initialize_database():

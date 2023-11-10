@@ -2,6 +2,7 @@
 # from apps.home.script import  homes
 from functools import wraps
 import os
+import pprint
 
 from apps.authentication.models import Users
 from apps.authentication.util import verify_pass
@@ -25,9 +26,9 @@ from sqlalchemy.sql import Insert
 from concurrent.futures import ThreadPoolExecutor
 from apps.authentication.forms import LoginForm, CreateAccountForm
 from flask_dance.contrib.nylas import nylas
-from apps.home.emailler import send_test_email, user_test_email
+from apps.home.emailler import send_test_email, send_email_via_nylas
 from apps.authentication.util import generate_job_id
-from jobs import email_automation_job
+from nylas import APIClient
 
 import pandas as pd
 
@@ -346,6 +347,8 @@ def contacts():
         return render_template('home/contacts.html',
                                 segment='contacts',
                                 )
+        
+        
 @blueprint.route('/contacts/list', methods=['GET'])
 @login_required
 def contacts_list():
@@ -359,11 +362,14 @@ def contacts_list():
             'venue_type': service.venue_type,
             'email': service.email,
             'is_bad' : service.is_bad,
-            'create_datetime' : service.create_datetime
+            'create_datetime' : service.create_datetime,
+            'is_unsubscribed' : service.is_unsubscribed,
+            'unsubscribe_token' : service.unsubscribe_token
         }
         all_services.append(data)
 
     return jsonify(all_services)
+
      
 @blueprint.route('/service/delete', methods=['POST'])
 @login_required
@@ -1114,8 +1120,8 @@ def admin_action_test():
     action = Action.query.filter_by(id=actionid).first()
     
     test_service = {
-        "service_name" : "Servcie Name",
-        "company_name" : "Company Name"
+        "venue" : "Servcie Name",
+        "unsubscribe_link" : "unsubscribe_link"
     }
     
     SENDER_MAIL = os.environ.get('SENDER_MAIL')
@@ -1138,17 +1144,23 @@ def action_test():
     action = Action.query.filter_by(id=actionid).first()
     
     test_service = {
-        "service_name" : "Servcie Name",
-        "company_name" : "Company Name"
+        "venue" : "Servcie Name",
+        "unsubscribe_link" : "unsubscribe_link"
     }
     
     receiver = current_user.email
-    receiver = "lightthree718@gmail.com"
     
     try:
         jinja_temp = JT(action.message)
         mail_body = jinja_temp.render(test_service)
-        if user_test_email(action.subject , action.fromname, mail_body, receiver):
+        
+        client = APIClient(
+            client_id=current_app.config["NYLAS_OAUTH_CLIENT_ID"],
+            client_secret=current_app.config["NYLAS_OAUTH_CLIENT_SECRET"],
+            access_token=current_user.nylas_access_token,
+        )
+        
+        if send_email_via_nylas(client, action.subject , action.fromname, mail_body, receiver):
             return {"success": True}
 
         else:
@@ -1167,9 +1179,26 @@ def webhook():
         return challenge
     
     else:
-        print(request.json)
+        # print(request.json)
+        # pprint.pprint(request.json)
         
-        return request.json
+        event_type = request.json['deltas'][0]['type']
+        
+        if event_type == "message.opened":
+            message_id = request.json['deltas'][0]['object_data']['metadata']['message_id']
+            email = Email.query.filter_by(mail_id=message_id).first()
+            if email:
+                email.is_opened = 1
+                db.session.commit()
+            
+        elif event_type == "thread.replied":
+            message_id = request.json['deltas'][0]['object_data']['metadata']['reply_to_message_id']
+            email = Email.query.filter_by(mail_id=message_id).first()
+            if email:
+                email.is_replied = 1
+                db.session.commit()
+        
+        return "okay"
 
 
    
@@ -1220,7 +1249,7 @@ def create_campaign():
     
     workflow_id = request.json['workflow_id']
     # number of emails in a Group is 150 , so we need to divide emails into groups
-    group_size = 50
+    group_size = 150
     
     services = Uploadedservice.query.filter_by(user_id=current_user.id, is_unsubscribed=0).all()
     if len(services) == 0:
@@ -1258,7 +1287,7 @@ def create_campaign():
                 'trigger' : 'date',
                 "run_date" : job_starttime.strftime("%Y-%m-%d %H:%M:%S"),
                 "func" : "jobs:email_automation_job",
-                "args" : (action.id, group.job_id)
+                "args" : (current_user.nylas_access_token, action.id, group.job_id)
             }
             try:
                 scheduler.add_job(**job)
@@ -1340,6 +1369,55 @@ def automation_view(jobid):
         "name" : automation.action_name,
         "jobid" : automation.job_id,
     }
-    return render_template('home/view_automation.html', template=job )
+    return render_template('home/view_automation.html', job=job )
     
+
+@blueprint.route('/emails/<jobid>', methods=['GET'])
+@login_required
+def get_emails(jobid):
+    emails = Email.query.filter_by(job_id=jobid).all()
+    temp_list = []
+
+    for email in emails:
+        
+        temp_data = {
+            'id': email.id,
+            'email': email.email,
+            'is_sent': email.is_sent,
+            'is_opened': email.is_opened,
+            'is_unsubscribed' : email.is_unsubscribed,
+            'is_replied' : email.is_replied,
+            'updated_datetime' : email.updated_datetime,
+            'unsubscribe_token' : email.unsubscribe_token
+        }
+        temp_list.append(temp_data)
+        
+    return jsonify(temp_list)
+
+
+@blueprint.route('/unsubscribe/<token>', methods=['GET'])
+def unsubscribe(token):
+    emails = Email.query.filter_by(unsubscribe_token=token).all()
+    service = Uploadedservice.query.filter_by(unsubscribe_token=token).first()
     
+    for email in emails:
+        email.is_unsubscribed = 1
+    
+    service.is_unsubscribed = 1
+    db.session.commit()
+    
+    return "You have been unsubscribed successfully."
+
+
+@blueprint.route('/subscribe/<token>', methods=['GET'])
+def subscribe(token):
+    emails = Email.query.filter_by(unsubscribe_token=token).all()
+    service = Uploadedservice.query.filter_by(unsubscribe_token=token).first()
+    
+    for email in emails:
+        email.is_unsubscribed = 0
+    
+    service.is_unsubscribed = 0
+    db.session.commit()
+    
+    return "You have been subscribed successfully."

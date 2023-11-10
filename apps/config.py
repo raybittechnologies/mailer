@@ -71,6 +71,8 @@ class Config(object):
     MAILTRAP_API_KEY = os.environ.get('MAILTRAP_API_KEY')
     MAILTRAP_TEMP_UUID = os.getenv("MAILTRAP_TEMP_UUID")
     
+    SERVER_URL = os.getenv('WEB_HOST_IP')
+    
     # MAIL_SERVER = os.getenv("MAIL_SERVER")
     # MAIL_PORT = os.getenv("MAIL_PORT")
     # MAIL_USERNAME = os.getenv("MAIL_USERNAME")

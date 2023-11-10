@@ -60,7 +60,7 @@ class Uploadedservice(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     venue_type = db.Column(db.String(1024))
-    email =  db.Column(db.String(255), unique=True)
+    email =  db.Column(db.String(255))
     is_bad =  db.Column(db.Integer, default=0)
     user_id = db.Column(db.String(255))
     file_id = db.Column(db.String(255))
@@ -146,10 +146,10 @@ class Email(db.Model):
     is_sent = db.Column(db.Integer, default=0)
     is_opened = db.Column(db.Integer, default=0)
     is_unsubscribed = db.Column(db.Integer, default=0)
-    updated_datetime = db.Column(db.DateTime(), onupdate=datetime.datetime.utcnow)
+    updated_datetime = db.Column(db.DateTime(), onupdate=datetime.datetime.utcnow, default=datetime.datetime.utcnow)
     unsubscribe_token = db.Column(db.String(128), nullable=False, index=True)
     is_replied = db.Column(db.Integer, default=0)
-    mail_id = db.Column(db.String(255))
+    mail_id = db.Column(db.String(255), index=True)
     
     
     
