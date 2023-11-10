@@ -5,7 +5,7 @@ Copyright (c) 2019 - present AppSeed.us
 
 import os, random, string
 from datetime import timedelta
-
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 
 class Config(object):
     basedir = os.path.abspath(os.path.dirname(__file__))
@@ -80,6 +80,15 @@ class Config(object):
     
     NYLAS_OAUTH_CLIENT_ID = "d05jow5hd9z0q6dlrmt1w52s9"
     NYLAS_OAUTH_CLIENT_SECRET = "5w3ost6x3aoztwomi10xg8e6g"
+    
+    JobStore_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'jobs.sqlite3')
+    # Background Schedular settins
+    SCHEDULER_JOBSTORES = {
+        "default": SQLAlchemyJobStore(url=JobStore_DATABASE_URI)
+    }
+    SCHEDULER_EXECUTORS = {"default": {"type": "threadpool", "max_workers": 20}}
+    SCHEDULER_JOB_DEFAULTS = {"coalesce": False, "max_instances": 10}
+    SCHEDULER_API_ENABLED = True
     
 
 class ProductionConfig(Config):

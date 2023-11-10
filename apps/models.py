@@ -66,6 +66,7 @@ class Uploadedservice(db.Model):
     file_id = db.Column(db.String(255))
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
     unsubscribe_token = db.Column(db.String(128), nullable=False, default=generate_unsubscribe_token, index=True)
+    is_unsubscribed = db.Column(db.Integer, default=0)
     
     
 class Uploadedcontactfile(db.Model):
@@ -126,4 +127,29 @@ class Action(db.Model):
     tempid = db.Column(db.Integer)
     userid = db.Column(db.Integer)
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, index=True)
+
+
+class Automation(db.Model):
+    id = db.Column(db.Integer, primary_key =True)
+    action_id = db.Column(db.Integer, db.ForeignKey('action.id'), nullable=False)
+    action_name = db.Column(db.String(255))
+    group_number = db.Column(db.Integer)
+    action_datetime = db.Column(db.DateTime())
+    job_id = db.Column(db.String(191))
+    userid = db.Column(db.Integer, index=True)
+
+
+class Email(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    job_id = db.Column(db.String(191), index=True)
+    email = db.Column(db.String(255))
+    is_sent = db.Column(db.Integer, default=0)
+    is_opened = db.Column(db.Integer, default=0)
+    is_unsubscribed = db.Column(db.Integer, default=0)
+    updated_datetime = db.Column(db.DateTime(), onupdate=datetime.datetime.utcnow)
+    unsubscribe_token = db.Column(db.String(128), nullable=False, index=True)
+    is_replied = db.Column(db.Integer, default=0)
+    mail_id = db.Column(db.String(255))
+    
+    
     

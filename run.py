@@ -13,7 +13,7 @@ from sys import exit
 from api_generator.commands import gen_api
 from flask_cors import CORS
 from apps.config import config_dict
-from apps import create_app, db
+from apps import create_app, db, scheduler
 from apps.models import Service, Yelpurl
 from apps.authentication.models import Users
 from apps.home.emailler import send_email
@@ -34,6 +34,7 @@ try:
 
 except KeyError:
     exit('Error: Invalid <config_mode>. Expected values [Debug, Production] ')
+    
 app = create_app(app_config)
 Migrate(app, db, render_as_batch=True)
 
@@ -53,6 +54,8 @@ for command in [gen_api, ]:
 CORS(app)
 
 app.wsgi_app = ProxyFix(app.wsgi_app)
+
+scheduler.start()
 
 @app.route('/msg', methods=['POST'])
 def msg1():
@@ -104,9 +107,11 @@ def msg1():
                 print("Already present in db")
         except Exception as e:
             print("Not Saved in db", str(e))
-        yelpurl = Yelpurl.query.get(int(data['url_id']))
+        # yelpurl = Yelpurl.query.get(int(data['url_id']))
+        yelpurl = db.session.get(Yelpurl, int(data['url_id']))
         s = yelpurl.state
     return s
+
 
 if __name__ == "__main__":
     # socketio.run(app, debug=True, host='0.0.0.0', port=8081)

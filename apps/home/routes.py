@@ -12,9 +12,9 @@ from jinja2 import Template as JT
 
 from apps.config import API_GENERATOR
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from apps.models import Yelpurl
-from apps import db
+from apps import db, scheduler
 import multiprocessing
 from apps.home.script import yelp_scraper_run
 from apps.models import *
@@ -26,6 +26,8 @@ from concurrent.futures import ThreadPoolExecutor
 from apps.authentication.forms import LoginForm, CreateAccountForm
 from flask_dance.contrib.nylas import nylas
 from apps.home.emailler import send_test_email, user_test_email
+from apps.authentication.util import generate_job_id
+from jobs import email_automation_job
 
 import pandas as pd
 
@@ -1022,11 +1024,16 @@ def get_templates():
     return jsonify(temp_list)
 
 
-@blueprint.route('/workflows', methods=['GET'])
+@blueprint.route('/workflows', methods=['GET', 'POST'])
 @login_required
 def get_users_workflow():
     userid = current_user.id
-    templates = Template.query.filter_by(userid=userid).order_by(Template.create_datetime.desc()).all()
+    
+    if request.method == "GET":
+        templates = Template.query.filter_by(userid=userid).order_by(Template.create_datetime.desc()).all()
+    else:
+        templates = Template.query.filter_by(userid=userid, status="publish").order_by(Template.create_datetime.asc()).all()
+        
     temp_list = []
 
     for temp in templates:
@@ -1205,3 +1212,134 @@ def automation():
             template_list.append(data)
         
         return render_template('home/automation.html', segment="automation", template_list=template_list)
+    
+    
+@blueprint.route('/create/campaign', methods=['POST'])
+@login_required 
+def create_campaign():
+    
+    workflow_id = request.json['workflow_id']
+    # number of emails in a Group is 150 , so we need to divide emails into groups
+    group_size = 50
+    
+    services = Uploadedservice.query.filter_by(user_id=current_user.id, is_unsubscribed=0).all()
+    if len(services) == 0:
+        print("No services")
+        return {"success": False, "message": "There is no contracts uploaded. Please upload contracts first."}
+    
+    actions = Action.query.filter_by(tempid=workflow_id).all()
+    if len(actions) == 0:
+        print("No actions")
+        return {"success": False, "message": "There is no actions registered in this workflow. It should have at least one action."}
+    
+    group_count =  len(services) // group_size
+    if len(services ) % group_size != 0:
+        group_count += 1
+    
+    groups = []
+    emails = []
+    
+    # A group is a job here
+    for action in actions:
+        for groupid in range(group_count):
+            group = Automation()
+            group.group_number = groupid
+            group.action_id = action.id
+            group.action_name = action.action_name
+            group.job_id = "job_" + generate_job_id(32)
+            group.userid = action.userid
+            # Job start time is waitdays + 2 minutes
+            job_starttime = datetime.datetime.now() + timedelta(days=int(action.waitdays) + int(groupid), minutes=1)
+            job_start_utctime = datetime.datetime.utcnow() + timedelta(days=int(action.waitdays) + int(groupid), minutes=1)
+            group.action_datetime = job_start_utctime
+            
+            job = {
+                "id" : group.job_id,
+                'trigger' : 'date',
+                "run_date" : job_starttime.strftime("%Y-%m-%d %H:%M:%S"),
+                "func" : "jobs:email_automation_job",
+                "args" : (action.id, group.job_id)
+            }
+            try:
+                scheduler.add_job(**job)
+            except Exception as e:
+                print("Failed to create job", str(e))
+                return {"success": False, "message": "Something went wrong. Please try again."}
+            
+            groups.append(group)
+            
+            for service in services[groupid*group_size : (groupid+1)*group_size]:
+                email = Email()
+                email.email = service.email
+                email.job_id = group.job_id
+                email.unsubscribe_token = service.unsubscribe_token
+                emails.append(email)
+                    
+            
+    db.session.bulk_save_objects(groups)
+    db.session.bulk_save_objects(emails)
+    db.session.commit()
+    
+    return {"success": True, "message": "Campaign created successfully. It will start on the scheduled time."}
+
+
+@blueprint.route('/automations', methods=['GET'])
+@login_required
+def get_automations():
+    userid = current_user.id
+    automations = Automation.query.filter_by(userid=userid).all()
+    temp_list = []
+
+    for temp in automations:
+        
+        job = scheduler.get_job(temp.job_id)
+        if job:
+            status = "pendding"
+        else:
+            status = "completed"
+            
+        temp_data = {
+            'id': temp.id,
+            'action_nanme': temp.action_name,
+            'action_id': temp.action_id,
+            'group_number': temp.group_number,
+            'action_datetime' : temp.action_datetime,
+            'job_id' : temp.job_id,
+            'status' : status
+        }
+        temp_list.append(temp_data)
+        
+    return jsonify(temp_list)
+
+
+@blueprint.route('/automation/delete', methods=['POST'])
+@login_required 
+def job_delete():
+    jobid = request.json['jobid']
+    job = Automation.query.filter_by(job_id=jobid).first()
+    
+    if job:
+        db.session.delete(job)
+    
+    emails = Email.query.filter_by(job_id=jobid).all()
+    for email in emails:
+        db.session.delete(email)
+    
+    if scheduler.get_job(jobid):
+        scheduler.remove_job(jobid)
+        
+    db.session.commit()
+    return {"success": True, 'message': "Job deleted successfully."}
+
+
+@blueprint.route('/automation/view/<jobid>', methods=['GET'])
+@login_required 
+def automation_view(jobid):
+    automation =Automation.query.filter_by(job_id = jobid).first()
+    job = {
+        "name" : automation.action_name,
+        "jobid" : automation.job_id,
+    }
+    return render_template('home/view_automation.html', template=job )
+    
+    

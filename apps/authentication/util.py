@@ -71,6 +71,15 @@ def generate_unsubscribe_token():
 
     return random_string
 
+def generate_job_id(length):
+    # Define the characters you want to include in the random string
+    characters = string.ascii_letters + string.digits # You can customize this as needed
+
+    # Generate the random string of the specified length
+    random_string = ''.join(random.choice(characters) for _ in range(length))
+
+    return random_string
+
 if __name__ == "__main__":
     hashed_password = hash_pass("skipmic92")
     print(hashed_password)
