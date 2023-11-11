@@ -68,6 +68,9 @@ class Uploadedservice(db.Model):
     unsubscribe_token = db.Column(db.String(128), nullable=False, default=generate_unsubscribe_token, index=True)
     is_unsubscribed = db.Column(db.Integer, default=0)
     
+    __table_args__ = (
+        db.UniqueConstraint('email', 'user_id', name='unique-service'),
+    )
     
 class Uploadedcontactfile(db.Model):
     id = db.Column(db.Integer, primary_key=True)
