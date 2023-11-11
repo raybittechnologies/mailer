@@ -60,9 +60,8 @@ def send_test_email(subject, fromname, body, receiver, sender):
     
 
 
-def send_email_via_nylas(nylas_client, subject, fromname, body, receiver):
+def send_email_via_nylas(nylas_client, subject, toname, fromemail, fromname, body, receiver):
     
-    # print(current_user.nylas_access_token)
         
     html=f"""
         <!doctype html>
@@ -77,7 +76,9 @@ def send_email_via_nylas(nylas_client, subject, fromname, body, receiver):
     """
     message = nylas_client.drafts.create()
     message.body = html
-    message.to = [{'email': receiver, 'name': fromname}]
+    message.from_ = [{'email': fromemail, 'name': fromname}]
+    message.to = [{'email': receiver, 'name': toname}]
+    
     message.tracking = {
         "opens": True, # Enable message open tracking.
         "links": True, # Enable link clicked tracking.

@@ -83,8 +83,8 @@
                             render: function (id, type, row) {
                                 // Create action buttons HTML
                                 var state_text = ''
-                                state_text = row.state === "running" ? 'View Processes' : 'Start Processes';
-                                var buttons = '<a class="btn btn-success btn-sm" href="/fetch/' + id + '">' + state_text + '</a> ' +
+                                state_text = row.state === "running" ? '<a class="btn btn-success btn-sm" href="/fetch/' + id + '">View Processes</a> ' : '<a class="btn btn-info btn-sm" href="/fetch/' + id + '">Start Processes</a> ';
+                                var buttons = state_text +
                                     '<a class="btn btn-facebook btn-sm" href="/url/view/' + id + '">View Data</a> ' +
                                     '<form action="/url/delete" style="display: contents" method="post"> <input type="hidden" name="urlid" value="' + id + '"/><input class="btn btn-danger btn-sm" type="submit" value="Delete"></form>';
                                 return buttons;

@@ -1160,7 +1160,7 @@ def action_test():
             access_token=current_user.nylas_access_token,
         )
         
-        if send_email_via_nylas(client, action.subject , action.fromname, mail_body, receiver):
+        if send_email_via_nylas(client, action.subject , "Servcie Name",  current_user.email, action.fromname,  mail_body, receiver):
             return {"success": True}
 
         else:
@@ -1277,6 +1277,8 @@ def create_campaign():
             group.action_name = action.action_name
             group.job_id = "job_" + generate_job_id(32)
             group.userid = action.userid
+            group.status = "pending"
+            
             # Job start time is waitdays + 2 minutes
             job_starttime = datetime.datetime.now() + timedelta(days=int(action.waitdays) + int(groupid), minutes=1)
             job_start_utctime = datetime.datetime.utcnow() + timedelta(days=int(action.waitdays) + int(groupid), minutes=1)
@@ -1287,7 +1289,7 @@ def create_campaign():
                 'trigger' : 'date',
                 "run_date" : job_starttime.strftime("%Y-%m-%d %H:%M:%S"),
                 "func" : "jobs:email_automation_job",
-                "args" : (current_user.nylas_access_token, action.id, group.job_id)
+                "args" : (current_user.nylas_access_token, action.id, group.job_id, current_user.email)
             }
             try:
                 scheduler.add_job(**job)
@@ -1320,13 +1322,6 @@ def get_automations():
     temp_list = []
 
     for temp in automations:
-        
-        job = scheduler.get_job(temp.job_id)
-        if job:
-            status = "pendding"
-        else:
-            status = "completed"
-            
         temp_data = {
             'id': temp.id,
             'action_nanme': temp.action_name,
@@ -1334,7 +1329,7 @@ def get_automations():
             'group_number': temp.group_number,
             'action_datetime' : temp.action_datetime,
             'job_id' : temp.job_id,
-            'status' : status
+            'status' : temp.status
         }
         temp_list.append(temp_data)
         

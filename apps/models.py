@@ -135,8 +135,9 @@ class Automation(db.Model):
     action_name = db.Column(db.String(255))
     group_number = db.Column(db.Integer)
     action_datetime = db.Column(db.DateTime())
-    job_id = db.Column(db.String(191))
+    job_id = db.Column(db.String(191), index=True)
     userid = db.Column(db.Integer, index=True)
+    status = db.Column(db.String(16))
 
 
 class Email(db.Model):

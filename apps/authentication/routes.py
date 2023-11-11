@@ -26,7 +26,7 @@ from apps.authentication.models import Users
 from apps.authentication.util import verify_pass, generate_token
 
 # Bind API -> Auth BP
-api = Api(blueprint)
+# api = Api(blueprint)
 
 
 @blueprint.route('/')
@@ -128,55 +128,53 @@ def register():
     else:
         return render_template('accounts/register.html', form=create_account_form)
 #
+@blueprint.route('/login/jwt/', methods=['POST'])
+def post():
+    try:
+        data = request.form
 
-@api.route('/login/jwt/', methods=['POST'])
-class JWTLogin(Resource):
-    def post(self):
-        try:
-            data = request.form
+        if not data:
+            data = request.json
 
-            if not data:
-                data = request.json
+        if not data:
+            return {
+                        'message': 'username or password is missing',
+                        "data": None,
+                        'success': False
+                    }, 400
+        # validate input
+        user = Users.query.filter_by(username=data.get('username')).first()
+        if user and verify_pass(data.get('password'), user.password):
+            try:
 
-            if not data:
+                # Empty or null Token
+                if not user.api_token or user.api_token == '':
+                    user.api_token = generate_token(user.id)
+                    user.api_token_ts = int(datetime.utcnow().timestamp())
+                    db.session.commit()
+
+                # token should expire after 24 hrs
                 return {
-                           'message': 'username or password is missing',
-                           "data": None,
-                           'success': False
-                       }, 400
-            # validate input
-            user = Users.query.filter_by(username=data.get('username')).first()
-            if user and verify_pass(data.get('password'), user.password):
-                try:
-
-                    # Empty or null Token
-                    if not user.api_token or user.api_token == '':
-                        user.api_token = generate_token(user.id)
-                        user.api_token_ts = int(datetime.utcnow().timestamp())
-                        db.session.commit()
-
-                    # token should expire after 24 hrs
-                    return {
-                        "message": "Successfully fetched auth token",
-                        "success": True,
-                        "data": user.api_token
-                    }
-                except Exception as e:
-                    return {
-                               "error": "Something went wrong",
-                               "success": False,
-                               "message": str(e)
-                           }, 500
-            return {
-                       'message': 'username or password is wrong',
-                       'success': False
-                   }, 403
-        except Exception as e:
-            return {
-                       "error": "Something went wrong",
-                       "success": False,
-                       "message": str(e)
-                   }, 500
+                    "message": "Successfully fetched auth token",
+                    "success": True,
+                    "data": user.api_token
+                }
+            except Exception as e:
+                return {
+                            "error": "Something went wrong",
+                            "success": False,
+                            "message": str(e)
+                        }, 500
+        return {
+                    'message': 'username or password is wrong',
+                    'success': False
+                }, 403
+    except Exception as e:
+        return {
+                    "error": "Something went wrong",
+                    "success": False,
+                    "message": str(e)
+                }, 500
 
 
 @blueprint.route('/logout')

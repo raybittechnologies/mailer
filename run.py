@@ -54,7 +54,7 @@ for command in [gen_api, ]:
 CORS(app)
 
 # When using Ngrok, uncomment the following lines
-app.wsgi_app = ProxyFix(app.wsgi_app)
+# app.wsgi_app = ProxyFix(app.wsgi_app)
 
 scheduler.start()
 
@@ -65,7 +65,7 @@ def msg1():
         #Send email here
         user_id = request.json['user_id']
         url_id = request.json['id']
-        user = Users.query.get(int(user_id))
+        user = db.session.get(Users, int(user_id))
         user_email = user.email
         user_name = user.username
         

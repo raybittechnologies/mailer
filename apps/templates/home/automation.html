@@ -186,7 +186,15 @@
                         data: 'status',
                         render : function (status, type, row) {
                             var  label = ""
-                            label = row.status === "completed" ? '<span class="badge bg-gradient-success">Completed</span>' : '<span class="badge bg-gradient-primary">Pendding</span>';
+                            if (status === "completed") {
+                                label = '<span class="badge bg-gradient-success">Completed</span>'
+                            } else if (status === "pending") {
+                                label = '<span class="badge bg-gradient-primary">Pending</span>'
+                            } else if (status === "running") {
+                                label = '<span class="badge bg-gradient-warning">Running</span>'
+                            } else {
+                                label = '<span class="badge bg-gradient-secondary">Unknown</span>'
+                            }
                             return label
                         }
                     },
@@ -306,7 +314,7 @@
 
         var interval = setInterval(function () {
             dataTable.ajax.reload();
-        }, 60000);
+        }, 30000);
 
     });
 </script>
