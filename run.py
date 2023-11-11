@@ -54,7 +54,7 @@ for command in [gen_api, ]:
 CORS(app)
 
 # When using Ngrok, uncomment the following lines
-# app.wsgi_app = ProxyFix(app.wsgi_app)
+app.wsgi_app = ProxyFix(app.wsgi_app)
 
 scheduler.start()
 

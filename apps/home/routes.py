@@ -579,12 +579,18 @@ def delete_user():
     user = Users.query.get(int(userid))
     if user:
         db.session.delete(user)
-        services = Service.query.filter_by(user_id=userid).all()
-        for service in services:
-            db.session.delete(service)
-        urls = Yelpurl.query.filter_by(userid=userid).all()
-        for url__ in urls:
-            db.session.delete(url__)
+        Service.query.filter_by(user_id=userid).delete()
+        Yelpurl.query.filter_by(userid=userid).delete()
+        Uploadedservice.query.filter_by(user_id=userid).delete()
+        Uploadedcontactfile.query.filter_by(user_id=userid).delete()
+        Template.query.filter_by(userid=userid).delete()
+        jobs = Automation.query.filter_by(userid=userid)
+        for _ in jobs:
+            jod_id = _.job_id
+            Email.query.filter_by(job_id=jod_id).delete()
+            db.session.delete(_)
+            
+        Action.query.filter_by(userid=userid).delete()
         db.session.commit()
     return redirect(url_for("home_blueprint.admin_users"))
 
