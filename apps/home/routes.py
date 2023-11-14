@@ -527,7 +527,7 @@ def admin_login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-        user = Users.query.filter_by(email=email).first()
+        user = Users.query.filter_by(email=email, role="admin").first()
         # Check the password
         if user and verify_pass(password, user.password):
             login_user(user)

@@ -19,8 +19,8 @@ class Users(db.Model, UserMixin):
     id            = db.Column(db.Integer, primary_key=True)
     username      = db.Column(db.String(255), unique=True, nullable=False)
     email         = db.Column(db.String(255), unique=True,  index=True)
-    password      = db.Column(db.String(255), default='user')
-    role          = db.Column(db.String(64), nullable=False)
+    password      = db.Column(db.String(255))
+    role          = db.Column(db.String(64), nullable=False, default='user')
     oauth_github  = db.Column(db.String(100), nullable=True)
     nylas_access_token = db.Column(db.String(32))
 
