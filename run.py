@@ -9,7 +9,6 @@ from flask_login import current_user
 from flask_migrate import Migrate
 from flask_minify import Minify
 from sys import exit
-# from flask_socketio import SocketIO, send, emit
 from api_generator.commands import gen_api
 from flask_cors import CORS
 from apps.config import config_dict
@@ -115,6 +114,4 @@ def msg1():
 
 
 if __name__ == "__main__":
-    # socketio.run(app, debug=True, host='0.0.0.0', port=8081)
-    # socketio.run(app, debug=True, host='0.0.0.0', port=80)
     app.run(debug=True, host='0.0.0.0', port=8081)

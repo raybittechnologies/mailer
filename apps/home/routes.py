@@ -297,27 +297,27 @@ def upload_contact():
             venue_type = item['type']
             
             if item['email1'] != "":
-                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email1'], user_id = current_user.id, file_id=file_id)
+                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email1'].strip(), user_id = current_user.id, file_id=file_id)
                 services.append(service)
                 
             if item['email2'] != "":
-                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email2'], user_id = current_user.id, file_id=file_id)
+                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email2'].strip(), user_id = current_user.id, file_id=file_id)
                 services.append(service)
                 
             if item['email3'] != "":
-                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email3'], user_id = current_user.id, file_id=file_id)
+                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email3'].strip(), user_id = current_user.id, file_id=file_id)
                 services.append(service)
                 
             if item['email4'] != "":
-                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email4'], user_id = current_user.id, file_id=file_id)
+                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email4'].strip(), user_id = current_user.id, file_id=file_id)
                 services.append(service)
                 
             if item['facebookemail1'] != "":
-                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['facebookemail1'], user_id = current_user.id, file_id=file_id)
+                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['facebookemail1'].strip(), user_id = current_user.id, file_id=file_id)
                 services.append(service)
                 
             if item['facebookemail2'] != "":
-                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['facebookemail2'], user_id = current_user.id, file_id=file_id)
+                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['facebookemail2'].strip(), user_id = current_user.id, file_id=file_id)
                 services.append(service)
         
         db.session.bulk_save_objects(services)
@@ -340,19 +340,23 @@ def contact_delete():
     return redirect(url_for('home_blueprint.upload_contact'))
         
  
-@blueprint.route('/contacts', methods=['GET', 'POST'])
+@blueprint.route('/contact/<int:id>', methods=['GET'])
 @login_required
-def contacts():
-    if request.method == "GET":
-        return render_template('home/contacts.html',
-                                segment='contacts',
-                                )
+def view_contact(id):
+    userid = current_user.id
+    uploaded_file = Uploadedcontactfile.query.filter_by(id=id, user_id=userid).first()
+    
+    if uploaded_file:
+        return render_template('home/view_contact.html', fileid=id)
+        
+    else:
+        return render_template('home/page-404.html')
         
         
-@blueprint.route('/contacts/list', methods=['GET'])
+@blueprint.route('/contacts/list/<int:id>', methods=['GET'])
 @login_required
-def contacts_list():
-    services = Uploadedservice.query.filter_by(user_id=current_user.id).order_by(Uploadedservice.create_datetime.desc()).all()
+def contacts_list(id):
+    services = Uploadedservice.query.filter_by(user_id=current_user.id, file_id=id).order_by(Uploadedservice.create_datetime.desc()).all()
     all_services = []
 
     for service in services:
@@ -374,12 +378,22 @@ def contacts_list():
 @blueprint.route('/service/delete', methods=['POST'])
 @login_required
 def service_delete():
-    serviceid = int(request.form['serviceid'])
-    service = Uploadedservice.query.get(serviceid)
-    db.session.delete(service)
     
+    serviceid = request.json['serviceid']
+    service = Uploadedservice.query.get(serviceid)
+    
+    
+    if service:
+        unsubscribe_token = service.unsubscribe_token
+        emails = Email.query.filter_by(unsubscribe_token=unsubscribe_token).all()
+        
+        for email in emails:
+            db.session.delete(email)
+        
+        db.session.delete(service)
+        
     db.session.commit()
-    return redirect(url_for('home_blueprint.contacts'))
+    return {"success": True, 'message': "Service deleted successfully."}
 
 
 @blueprint.route('/url/view/<int:id>', methods=['GET', 'POST'])
@@ -591,6 +605,8 @@ def delete_user():
             db.session.delete(_)
             
         Action.query.filter_by(userid=userid).delete()
+        Campaign.query.filter_by(userid=userid).delete()
+        
         db.session.commit()
     return redirect(url_for("home_blueprint.admin_users"))
 
@@ -605,6 +621,18 @@ def approve_user(id):
     db.session.commit()
     return redirect(url_for("home_blueprint.admin_users"))
 
+
+@blueprint.route('/admin/users/reset', methods=['POST'])
+@login_required
+@role_required('admin')
+def reset_nylas_token():
+    userid = request.form['userid']
+    user = Users.query.get(int(userid))
+    user.nylas_access_token = None
+    db.session.add(user)
+    db.session.commit()
+    
+    return redirect(url_for("home_blueprint.admin_users"))
     
 @blueprint.route('/admin/users/inactive/<id>', methods=['POST', 'GET'])
 @login_required
@@ -782,17 +810,22 @@ def template_delete():
 @blueprint.route('/workflow/delete', methods=['POST'])
 @login_required
 def workflow_delete():
-    templateid = int(request.form['workflowid'])
+    templateid = request.json['workflowid']
     temp = Template.query.get(templateid)
-    db.session.delete(temp)
     
     actions = Action.query.filter_by(tempid=templateid).all()
     for action in actions:
+        automations = Automation.query.filter((Automation.action_id == action.id) & (Automation.status != "completed")).all()
+        
+        if len(automations) > 0:
+            return {"success": False, "message": "This workflow is already used in automation."}
+        
         db.session.delete(action)
     
+    db.session.delete(temp)
     db.session.commit()
     
-    return redirect(url_for('home_blueprint.my_workflow'))
+    return {"success": True, "message": "Workflow deleted successfully."}
 
 
 
@@ -903,7 +936,7 @@ def add_user_action():
 @login_required
 @role_required('admin')
 def admin_actions(id):
-    actions = Action.query.filter_by(tempid=int(id)).order_by(Action.id.asc()).all()
+    actions = Action.query.filter_by(tempid=int(id)).order_by(Action.waitdays.asc()).all()
     temp_list = []
 
     for action in actions:
@@ -926,7 +959,7 @@ def admin_actions(id):
 @blueprint.route('/actions/<id>', methods=['GET'])
 @login_required
 def user_actions(id):
-    actions = Action.query.filter_by(tempid=int(id)).order_by(Action.id.asc()).all()
+    actions = Action.query.filter_by(tempid=int(id)).order_by(Action.waitdays.asc()).all()
     temp_list = []
 
     for action in actions:
@@ -962,14 +995,16 @@ def admin_action_delete():
 @blueprint.route('/action/delete', methods=['POST'])
 @login_required
 def action_delete():
-    actionid = int(request.form['actionid'])
-    tempid = int(request.form['tempid'])
-    tid = request.form['tid']
+    actionid = request.json['actionid']
+    automations = Automation.query.filter((Automation.action_id == actionid) & (Automation.status != "completed")).all()
+    
+    if len(automations) > 0:
+        return {"success": False, "message": "This action is already used in automation."}
+    
     action = Action.query.get(actionid)
     db.session.delete(action)
-    
     db.session.commit()
-    return redirect(url_for('home_blueprint.workflow_view', tid=tid))
+    return {"success": True, "message": "Action deleted successfully."}
     
        
 @blueprint.route('/myworkflow', methods=['POST', 'GET'])
@@ -996,21 +1031,7 @@ def my_workflow():
         return redirect(url_for('home_blueprint.add_template'))
     else:
         
-        admin = Users.query.filter_by(role='admin').first()
-        admin_id = admin.id
-        
-        templates = Template.query.filter_by(status="publish", userid=admin_id).all()
-        template_list = []
-        
-        for temp in templates:
-            data = {
-                'id' : temp.id,
-                'template_name' : temp.template_name,
-                'template_desc' : temp.template_desc,
-            }
-            template_list.append(data)
-        
-        return render_template('home/my_workflow.html', segment="myworkflow", template_list=template_list)
+        return render_template('home/my_workflow.html', segment="myworkflow")
 
 
 @blueprint.route('/templates', methods=['GET'])
@@ -1036,30 +1057,61 @@ def get_templates():
     return jsonify(temp_list)
 
 
-@blueprint.route('/workflows', methods=['GET', 'POST'])
+@blueprint.route('/get_workflows', methods=['GET', 'POST'])
 @login_required
 def get_users_workflow():
     userid = current_user.id
     
+    temp_list = []
     if request.method == "GET":
         templates = Template.query.filter_by(userid=userid).order_by(Template.create_datetime.desc()).all()
+        for temp in templates:
+            temp_data = {
+                'id': temp.id,
+                'template_name': temp.template_name,
+                'template_desc': temp.template_desc,
+                'status': temp.status,
+                'create_datetime' : temp.create_datetime,
+                'tid' : temp.tempid,
+                'userid' : current_user.id
+            }
+            temp_list.append(temp_data)
+            
+        return jsonify(temp_list)
+    
     else:
         templates = Template.query.filter_by(userid=userid, status="publish").order_by(Template.create_datetime.asc()).all()
+        contacts = Uploadedcontactfile.query.filter_by(user_id=userid).order_by(Uploadedcontactfile.create_datetime.desc()).all()
         
-    temp_list = []
-
-    for temp in templates:
-        temp_data = {
-            'id': temp.id,
-            'template_name': temp.template_name,
-            'template_desc': temp.template_desc,
-            'status': temp.status,
-            'create_datetime' : temp.create_datetime,
-            'tid' : temp.tempid,
-            'userid' : current_user.id
+        temp_list = []
+        contacts_list = []
+        
+        for temp in templates:
+            temp_data = {
+                'id': temp.id,
+                'template_name': temp.template_name,
+                'template_desc': temp.template_desc,
+                'status': temp.status,
+                'create_datetime' : temp.create_datetime,
+                'tid' : temp.tempid,
+                'userid' : current_user.id
+            }
+            temp_list.append(temp_data)
+        
+        for temp in contacts:
+            temp_data = {
+                'id': temp.id,
+                'description': temp.description,
+                'create_datetime' : temp.create_datetime
+            }
+            contacts_list.append(temp_data)
+            
+        data = {
+            "templates" : temp_list,
+            "contacts" : contacts_list
         }
-        temp_list.append(temp_data)
-    return jsonify(temp_list)
+        
+        return jsonify(data)
 
 
 @blueprint.route('/import/workflow', methods=['POST'])
@@ -1232,21 +1284,34 @@ def automation():
         return redirect(url_for('home_blueprint.add_template'))
     else:
         
-        admin = Users.query.filter_by(role='admin').first()
-        admin_id = admin.id
+        return render_template('home/automation.html', segment="campaigns")
+    
+  
+@blueprint.route('/campaigns', methods=['POST', 'GET'])
+@login_required 
+def campaigns():
+    if request.method == 'POST':
+        template_name = request.form['template-name']
+        template_desc = request.form['template-description']
+        tempid = request.form['tempid']
         
-        templates = Template.query.filter_by(status="publish", userid=admin_id).all()
-        template_list = []
+        if tempid:
+            # print("tempid", tempid)
+            temp = Template.query.get(tempid)
+            temp.template_name = template_name
+            temp.template_desc = template_desc
+            temp.userid = current_user.id
+        else:
+            template = Template(template_name=template_name, template_desc=template_desc)
+            template.userid = current_user.id
+            template.status = "draft"
+            db.session.add(template)
+            
+        db.session.commit()
+        return redirect(url_for('home_blueprint.add_template'))
+    else:
         
-        for temp in templates:
-            data = {
-                'id' : temp.id,
-                'template_name' : temp.template_name,
-                'template_desc' : temp.template_desc,
-            }
-            template_list.append(data)
-        
-        return render_template('home/automation.html', segment="automation", template_list=template_list)
+        return render_template('home/campaigns.html', segment="campaigns")
     
     
 @blueprint.route('/create/campaign', methods=['POST'])
@@ -1254,25 +1319,38 @@ def automation():
 def create_campaign():
     
     workflow_id = request.json['workflow_id']
+    contactfile_id = request.json['contactfile_id']
     # number of emails in a Group is 150 , so we need to divide emails into groups
     group_size = 150
     
+    automations = Automation.query.filter( (Automation.userid == current_user.id), (Automation.status != "completed")).all()
+    if len(automations) > 0:
+        print("There is an automation running")
+        return {"success": False, "message": "There is an automation running. Please wait until it is completed."}
+    
     services = Uploadedservice.query.filter_by(user_id=current_user.id, is_unsubscribed=0).all()
     if len(services) == 0:
-        print("No services")
-        return {"success": False, "message": "There is no contracts uploaded. Please upload contracts first."}
+        print("No contacts")
+        return {"success": False, "message": "There is no contacts uploaded. Please upload contacts first."}
     
-    actions = Action.query.filter_by(tempid=workflow_id).all()
+    actions = Action.query.filter_by(tempid=workflow_id).order_by(Action.waitdays.asc()).all()
     if len(actions) == 0:
         print("No actions")
         return {"success": False, "message": "There is no actions registered in this workflow. It should have at least one action."}
     
+    template = Template.query.get(workflow_id)
+    template_name = template.template_name
+    
+    contactfile = Uploadedcontactfile.query.get(contactfile_id)
+    contactfile_name = contactfile.description
+        
     group_count =  len(services) // group_size
     if len(services ) % group_size != 0:
         group_count += 1
     
     groups = []
     emails = []
+    campaignid = generate_job_id(32)
     
     # A group is a job here
     for action in actions:
@@ -1280,12 +1358,14 @@ def create_campaign():
             group = Automation()
             group.group_number = groupid
             group.action_id = action.id
+            group.group_count = group_count
             group.action_name = action.action_name
             group.job_id = "job_" + generate_job_id(32)
             group.userid = action.userid
             group.status = "pending"
+            group.campaignid = campaignid
             
-            # Job start time is waitdays + 2 minutes
+            # First Job start time is waitdays + 1 minutes
             job_starttime = datetime.datetime.now() + timedelta(days=int(action.waitdays) + int(groupid), minutes=1)
             job_start_utctime = datetime.datetime.utcnow() + timedelta(days=int(action.waitdays) + int(groupid), minutes=1)
             group.action_datetime = job_start_utctime
@@ -1299,6 +1379,7 @@ def create_campaign():
             }
             try:
                 scheduler.add_job(**job)
+                print("created job", group.job_id)
             except Exception as e:
                 print("Failed to create job", str(e))
                 return {"success": False, "message": "Something went wrong. Please try again."}
@@ -1308,11 +1389,18 @@ def create_campaign():
             for service in services[groupid*group_size : (groupid+1)*group_size]:
                 email = Email()
                 email.email = service.email
+                email.venue = service.name
                 email.job_id = group.job_id
                 email.unsubscribe_token = service.unsubscribe_token
                 emails.append(email)
-                    
-            
+    
+    campaign = Campaign()
+    campaign.contact_name = contactfile_name
+    campaign.templatename = template_name
+    campaign.campaignid = campaignid
+    campaign.userid = current_user.id
+    
+    db.session.add(campaign)
     db.session.bulk_save_objects(groups)
     db.session.bulk_save_objects(emails)
     db.session.commit()
@@ -1320,19 +1408,40 @@ def create_campaign():
     return {"success": True, "message": "Campaign created successfully. It will start on the scheduled time."}
 
 
-@blueprint.route('/automations', methods=['GET'])
+@blueprint.route('/get_campaigns', methods=['GET'])
 @login_required
-def get_automations():
+def get_campaigns():
     userid = current_user.id
-    automations = Automation.query.filter_by(userid=userid).all()
+    campaigns = Campaign.query.filter_by(userid=userid).order_by(Campaign.create_datetime.desc()).all()
+    temp_list = []
+
+    for temp in campaigns:
+        temp_data = {
+            'id': temp.id,
+            'campaignid': temp.campaignid,
+            'contact_name': temp.contact_name,
+            'templatename': temp.templatename,
+            'create_datetime' : temp.create_datetime,
+        }
+        temp_list.append(temp_data)
+        
+    return jsonify(temp_list)
+
+
+@blueprint.route('/get_automations/<campaignid>', methods=['GET'])
+@login_required
+def get_automations(campaignid):
+    userid = current_user.id
+    # print('get_automations', campaignid)
+    automations = Automation.query.filter_by(userid=userid, campaignid=campaignid).all()
     temp_list = []
 
     for temp in automations:
         temp_data = {
             'id': temp.id,
             'action_nanme': temp.action_name,
-            'action_id': temp.action_id,
             'group_number': temp.group_number,
+            'group_count': temp.group_count,
             'action_datetime' : temp.action_datetime,
             'job_id' : temp.job_id,
             'status' : temp.status
@@ -1340,6 +1449,30 @@ def get_automations():
         temp_list.append(temp_data)
         
     return jsonify(temp_list)
+
+
+@blueprint.route('/campaign/delete', methods=['POST'])
+@login_required 
+def camp_delete():
+    id = request.json['campid']
+    camp = Campaign.query.get(id)
+    
+    if camp:
+        campid = camp.campaignid
+        db.session.delete(camp)
+        
+    automations = Automation.query.filter_by(campaignid=campid).all()
+    
+    for automation in automations:
+        jobid = automation.job_id
+        db.session.delete(automation)
+        Email.query.filter_by(job_id=jobid).delete()
+        
+        if scheduler.get_job(jobid):
+            scheduler.remove_job(jobid)
+        
+    db.session.commit()
+    return {"success": True, 'message': "Campaign deleted successfully."}
 
 
 @blueprint.route('/automation/delete', methods=['POST'])
@@ -1360,6 +1493,13 @@ def job_delete():
         
     db.session.commit()
     return {"success": True, 'message': "Job deleted successfully."}
+
+
+@blueprint.route('/campaign/view/<campaignid>', methods=['GET'])
+@login_required 
+def campaign_view(campaignid):
+    # print("campaignid", campaignid)
+    return render_template('home/view_campaign.html', campaignid=campaignid )
 
 
 @blueprint.route('/automation/view/<jobid>', methods=['GET'])

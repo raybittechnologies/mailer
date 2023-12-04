@@ -62,7 +62,7 @@
                                 <input type="text" class="form-control" name="subject" id="subject" required>
                             </div>
                             <div class="form-group">
-                                <label for="recipient-name" class="col-form-label">From:</label>
+                                <label for="recipient-name" class="col-form-label">FromName:</label>
                                 <input type="text" class="form-control" id="fromname" name="fromname" required>
                             </div>
                             <div class="form-group">
@@ -94,11 +94,11 @@
               <div class="modal-content">
                 <div class="modal-header">
                   <h5 class="modal-title" id="exampleModalLabel">Are you sure to delete this action?</h5>
-                  <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close">
+                  <button type="button" class="btn-close text-dark" id="delete-action-modal" data-bs-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                   </button>
                 </div>
-                <form action="/action/delete" style="display: contents" method="post"> 
+                <form style="display: contents"> 
                     <input type="hidden" name="actionid" id="delete-modal-actionid" />
                     <input type="hidden" name="tempid" id="delete-modal-tempid"/>
                     <input type="hidden" class="form-control" id="tid" value="{{template.tid}}" name="tid" hidden>
@@ -157,6 +157,7 @@
         // Initialize DataTable
         var dataTable = $('#filtersTable').DataTable({
                 responsive: true,
+                pageLength: 100,
                 order : [],
                 ajax: {
                     url: '/actions/{{template.tempid}}',
@@ -229,15 +230,21 @@
                                 icon: 'success',
                                 title: 'Email is sent successfully!',
                                 showConfirmButton: false,
-                                timer: 2000
+                                timer: 2000 
                             });
                         } else {
                             console.log(data.message);
+                            if (data.message.includes("401")) {
+                                title = "Email is not sent! Please contact administrator to reset token and verify your email address again."
+                            } else {
+                                title = "Email is not sent! Please try again."
+                            }
+
                             Swal.fire({
                                 icon: 'error',
-                                title: 'Email is not sent! Please try again.',
+                                title: title,
                                 showConfirmButton: false,
-                                timer: 2000
+                                timer: 3000
                             });
                         }
                     })
@@ -251,6 +258,52 @@
             } else {
                 console.log(event.target.innerText)
             }
+        });
+
+        $('#deleteActionModal').on('submit', function(e) { //use on if jQuery 1.7+
+            e.preventDefault();  //prevent form from submitting
+            const actionid = document.getElementById("delete-modal-actionid").value;
+
+            $('#delete-action-modal').click();
+
+            fetch('/action/delete',{
+                method: 'POST',
+                headers : { 'Content-Type': 'application/json' },
+                body: JSON.stringify({"actionid" : actionid}),
+            })
+            .then((response) => {
+                if(!response.ok)
+                    return response.text().then(text => { throw new Error(text) })
+                else
+                    return response.json()
+            })
+            .then((data) => {
+                if (data.success) {
+                    // console.log(data);
+                    dataTable.ajax.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: data.message,
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                } else {
+                    console.log(data.message);
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Cannot delete this action!",
+                        text: data.message,
+                    });
+                }
+            })
+            .catch((err) => {
+                console.log(err);
+                Swal.fire({
+                    icon: "warning",
+                    title: "Oops...",
+                    text: data.message,
+                });
+            })
         });
 
     });

@@ -2,7 +2,7 @@ import time
 from apps import scheduler, db
 from flask_login import current_user
 from apps.models import Email, Automation, Action, Template, Uploadedservice
-from apps.home.emailler import send_email_via_nylas
+from apps.home.emailler import send_email_via_nylas, send_email_via_mailtrap
 from nylas import APIClient
 from jinja2 import Template as JT
 import os
@@ -71,6 +71,25 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
                     if "504 Gateway Timeout" in str(e):
                         time.sleep(5)
                         continue
+                    
+                    if "401" in str(e):
+                        job.status = "failed"
+                        db.session.commit()
+                        subject = "Email Automation Failed"
+                        fromname = "Robotic Booking Agent"
+                        message = """<p><strong>Email Automation Failed.</strong></p>
+                        
+                                    <p>Your token is expired.</p>
+                                    
+                                    <p>Please contact support to reset your token and try again.</p>
+
+                                    <p>Sorry for this inconvenience.</p>
+
+                                    <p>Best regards.</p>"""
+                                    
+                        send_email_via_mailtrap(subject, fromname, message, useremail)
+                        return
+                    
                     else:
                         break
             

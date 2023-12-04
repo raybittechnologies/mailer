@@ -128,6 +128,9 @@
                                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                                             Action
                                         </th>
+                                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                                            Reset Token
+                                        </th>
                                     </tr>
                                     </thead>
                                     <tbody>
@@ -173,6 +176,11 @@
                                                     <a href="/admin/users/downgrade/{{ user.id }}" class="btn btn-sm btn-secondary">Downgrade</a>
                                                 {% endif %}
                                                 <button data-bs-toggle="modal" data-bs-target="#deleteUserModal" onclick="deleteUser('{{ user.id }}')" class="btn btn-sm btn-danger">Delete</button>
+                                            </td>
+                                            <td class="align-middle text-center text-sm">
+                                                {% if user.nylas_access_token %}
+                                                    <button data-bs-toggle="modal" data-bs-target="#resetUserTokenModal" onclick="resetToken('{{ user.id }}')" class="btn btn-sm btn-danger">Reset</button>
+                                                {% endif %}
                                             </td>
                                         </tr>
                                     {% endfor %}
@@ -732,6 +740,28 @@
               </div>
             </div>
         </div>
+        
+        <div class="modal fade" id="resetUserTokenModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="exampleModalLabel">Are you sure to reset user token?</h5>
+                  <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <form action="/admin/users/reset" style="display: contents" method="post"> 
+                    <input type="hidden" name="userid" id="reset-userid"/>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <input class="btn btn-danger" type="submit" value="Reset">
+                    </div>
+                </form>
+              </div>
+            </div>
+        </div>
+
 
     </div>
 
@@ -745,6 +775,13 @@
         //Init modal
         console.log(userid);
         document.getElementById("userid").value = userid;
+    };
+
+    
+    function resetToken(userid) {
+        //Init modal
+        console.log(userid);
+        document.getElementById("reset-userid").value = userid;
     };
 </script>
 

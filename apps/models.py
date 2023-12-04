@@ -134,19 +134,31 @@ class Action(db.Model):
 
 class Automation(db.Model):
     id = db.Column(db.Integer, primary_key =True)
-    action_id = db.Column(db.Integer, db.ForeignKey('action.id'), nullable=False)
+    action_id = db.Column(db.Integer, index=True)
     action_name = db.Column(db.String(255))
     group_number = db.Column(db.Integer)
+    group_count = db.Column(db.Integer)
     action_datetime = db.Column(db.DateTime())
     job_id = db.Column(db.String(191), index=True)
     userid = db.Column(db.Integer, index=True)
-    status = db.Column(db.String(16))
+    status = db.Column(db.String(16)) # pending, running, completed, failed
+    campaignid = db.Column(db.String(32), index=True) # Created another unique id for campaign, because it should be used in query string.
 
 
+class Campaign(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    campaignid = db.Column(db.String(32))
+    contact_name = db.Column(db.Integer)
+    templatename = db.Column(db.Integer)
+    userid = db.Column(db.Integer)
+    create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
+    
+        
 class Email(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     job_id = db.Column(db.String(191), index=True)
     email = db.Column(db.String(255))
+    venue = db.Column(db.String(255))
     is_sent = db.Column(db.Integer, default=0)
     is_opened = db.Column(db.Integer, default=0)
     is_unsubscribed = db.Column(db.Integer, default=0)

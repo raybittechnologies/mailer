@@ -57,7 +57,36 @@ def send_test_email(subject, fromname, body, receiver, sender):
         print(response)
         
     return response['success']
+
+
+def send_email_via_mailtrap(subject, fromname, body, receiver):
     
+    SENDER_MAIL = os.environ.get('SENDER_MAIL')
+    MAILTRAP_API_KEY = os.environ.get('MAILTRAP_API_KEY')
+    
+    mail = mt.Mail(
+        sender=mt.Address(email=SENDER_MAIL, name=fromname),
+        to=[mt.Address(email=receiver, name="")],
+        subject=subject,
+        html=f"""
+            <!doctype html>
+            <html>
+            <head>
+                <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+            </head>
+            <body style="font-family: sans-serif;">
+                {body}
+            </body>
+            </html>
+        """
+    )
+
+    client = mt.MailtrapClient(token=MAILTRAP_API_KEY)
+    response = client.send(mail)
+    if not response['success']:
+        print(response)
+        
+    return response['success']  
 
 
 def send_email_via_nylas(nylas_client, subject, toname, fromemail, fromname, body, receiver):

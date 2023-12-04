@@ -39,64 +39,7 @@
                 </div>
             </div>
         </div>
-
         {% include "includes/footer.html" %}
-        <div class="col-md-6 col-xl-6">
-            <!-- Modal -->
-            <div class="modal fade" id="creatCampaignModalMessage" data-bs-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="importTemplateModalMessageTitle" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="importTemplateModalLabel">Create Campaign</h5>
-                            <button type="button" class="btn-close text-dark" id="close-modal" data-bs-dismiss="modal" aria-label="Close">
-                                <span aria-hidden="true">×</span>
-                            </button>
-                        </div>
-                        <form id="create-campaign-form" action="/create/campaign" method="post">
-                            <div class="modal-body">
-                                <div class="form-group">
-                                    <label for="select-workflow" class="col-form-label">Select Workflow:</label>
-                                    <select class="form-control form-select" id="select-workflow" name="select-workflow">
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="workflow-description" class="col-form-label">Description:</label>
-                                    <textarea type="text" class="form-control" id="workflow-description" name="workflow-description" readonly></textarea>
-                                </div>
-                                <!-- <div class="form-group">
-                                    <label for="automation-datetime-local-input" class="col-form-label">State Time:</label>
-                                    <input class="form-control" type="datetime-local" id="automation-datetime-local-input" readonly>
-                                </div> -->
-                                <p class="mb-4 mx-auto text-info">*Max 150 emails can be sent per day!</p>
-                            </div>
-                            <div class="modal-footer form-group">
-                                <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Close</button>
-                                <button type="submit" class="btn bg-gradient-primary" id="create-campaign-button" >Create</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="modal fade" id="deleteJobModal" tabindex="-1" role="dialog" aria-labelledby="deleteJobModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered" role="document">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h5 class="modal-title" id="deleteJobModalLabel">Are you sure to delete this Job?</h5>
-                  <button type="button" class="btn-close text-dark" id="close-deletejob-modal" data-bs-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                  </button>
-                </div>
-                <form action="/automation/delete" style="display: contents" method="post"> 
-                    <input type="hidden" name="jobid" id="delete-modal-jobid"/>
-                    <div class="modal-footer">
-                        <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <input class="btn btn-danger" type="submit" value="Delete">
-                    </div>
-                </form>
-              </div>
-            </div>
-          </div>
     </div>
 
 {% endblock content %}
@@ -113,55 +56,12 @@
 <script>
     var templates = null;
 
-    function createCampaign() {
-        fetch('/workflows',{
-            method: 'POST',
-        })
-        .then((response) => {
-            if (!response.ok) {
-              throw new Error('Network response was not ok');
-            }
-            return response.json(); // Extract the response body as text
-        })
-        .then((res) => {
-            var options = "";
-            for (let i = 0; i < res.length; i++) {
-                // console.log(res[i])
-                options += '<option ' +  ' value="' + res[i].id +'">' + res[i].template_name + "</option>" + "<br>";
-            }
-            document.getElementById("select-workflow").innerHTML = options;
-            document.getElementById("workflow-description").innerHTML = res[0].template_desc;
-            templates = res;
-            // console.log(templates);
-        })
-        .catch((err) => {
-            console.log(err);
-        });
-
-        // For showing start time of Campaign : might be needed in the future
-        // var now = new Date();
-        // local_now = new Date(now.getTime() - now.getTimezoneOffset()*60000 + 2).toISOString().substring(0,19)
-        // console.log(now);
-        // document.getElementById("automation-datetime-local-input").value = local_now;
-
-    };
-
     $(document).ready(function () {
-        const selectElement = document.getElementById("select-workflow");
-        // const result = document.querySelector(".result");
-
-        selectElement.addEventListener("change", (event) => {
-            for (let  i = 0; i <  templates.length; i++) {
-                if (templates[i].id == event.target.value) {
-                    document.getElementById("workflow-description").innerHTML = templates[i].template_desc
-                }
-            }
-
-        });
 
         // Initialize DataTable
         var dataTable = $('#filtersTable').DataTable({
                 responsive: true,
+                pageLength: 50,
                 columnDefs: [
                 {
                     target: 5,
@@ -218,8 +118,6 @@
                                 button = '<button class="btn bg-gradient-danger btn-sm">Unsubscribe</button>';
                             }
 
-                            // var buttons = '<button class="btn bg-gradient-danger btn-sm" target="_blank" >Unsubscribe</button> '
-                                // + '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteJobModal" type="submit">Delete</button>';
                             return button;
                         }
                     }
@@ -253,93 +151,6 @@
                 .catch((err) => {
                     console.log(err);
                 })
-        });
-
-        $('#create-campaign-form').on('submit', function(e) { //use on if jQuery 1.7+
-            e.preventDefault();  //prevent form from submitting
-            const workflow_id = document.getElementById("select-workflow").value;
-
-            $('#close-modal').click();
-
-            fetch('/create/campaign',{
-                method: 'POST',
-                headers : { 'Content-Type': 'application/json' },
-                body: JSON.stringify({"workflow_id" : workflow_id}),
-            })
-            .then((response) => {
-                if(!response.ok)
-                    return response.text().then(text => { throw new Error(text) })
-                else
-                    return response.json()
-            })
-            .then((data) => {
-                if (data.success) {
-                    console.log(data);
-                    dataTable.ajax.reload();
-                    Swal.fire({
-                        icon: 'success',
-                        title: data.message,
-                        showConfirmButton: false,
-                        timer: 2000
-                    });
-                } else {
-                    console.log(data.message);
-                    Swal.fire({
-                        icon: "warning",
-                        title: "Oops...",
-                        text: data.message,
-                    });
-                }
-            })
-            .catch((err) => {
-                console.log(err);
-            })
-        });
-
-        $('#deleteJobModal').on('submit', function(e) { //use on if jQuery 1.7+
-            e.preventDefault();  //prevent form from submitting
-            const jobid = document.getElementById("delete-modal-jobid").value;
-
-            $('#close-deletejob-modal').click();
-
-            fetch('/automation/delete',{
-                method: 'POST',
-                headers : { 'Content-Type': 'application/json' },
-                body: JSON.stringify({"jobid" : jobid}),
-            })
-            .then((response) => {
-                if(!response.ok)
-                    return response.text().then(text => { throw new Error(text) })
-                else
-                    return response.json()
-            })
-            .then((data) => {
-                if (data.success) {
-                    // console.log(data);
-                    dataTable.ajax.reload();
-                    Swal.fire({
-                        icon: 'success',
-                        title: data.message,
-                        showConfirmButton: false,
-                        timer: 2000
-                    });
-                } else {
-                    console.log(data.message);
-                    Swal.fire({
-                        icon: "warning",
-                        title: "Oops...",
-                        text: data.message,
-                    });
-                }
-            })
-            .catch((err) => {
-                console.log(err);
-                Swal.fire({
-                    icon: "warning",
-                    title: "Oops...",
-                    text: data.message,
-                });
-            })
         });
 
         var interval = setInterval(function () {

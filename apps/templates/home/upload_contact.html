@@ -24,7 +24,7 @@
                        </div>
                         <div class="form-group">
                             <label class="small mb-1" for="category">Description:</label>
-                            <input class="form-control py-1" id="description" name="description" placeholder="Pleas enter short description about data" type="text" required/>
+                            <input class="form-control py-1" id="description" name="description" placeholder="Please enter short description about data" type="text" required/>
                         </div>
                         <div class="form-group d-flex align-items-center justify-content-between mt-4 mb-0">
                             <button class="btn btn-success" type="submit">Upload</button>
@@ -88,7 +88,7 @@
                             var filepath = '';
                             filepath = row.filepath;
                             var buttons = 
-                                //'<a class="btn btn-facebook btn-sm" href="/' + filepath + '">Download</a> ' +
+                                '<a class="btn bg-gradient-success btn-sm" href="contact/' + id + '">View</a> ' +
                                 '<form style="display: contents" action="/contact/delete" method="post"> <input type="hidden" name="fileid" value="' + id + '"/><input class="btn btn-danger btn-sm" type="submit" value="Delete"></form>';
                             return buttons;
                         }
