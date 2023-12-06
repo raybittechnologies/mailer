@@ -1328,15 +1328,15 @@ def create_campaign():
         print("There is an automation running")
         return {"success": False, "message": "There is an automation running. Please wait until it is completed."}
     
-    services = Uploadedservice.query.filter_by(user_id=current_user.id, is_unsubscribed=0).all()
-    if len(services) == 0:
-        print("No contacts")
-        return {"success": False, "message": "There is no contacts uploaded. Please upload contacts first."}
-    
     actions = Action.query.filter_by(tempid=workflow_id).order_by(Action.waitdays.asc()).all()
     if len(actions) == 0:
         print("No actions")
         return {"success": False, "message": "There is no actions registered in this workflow. It should have at least one action."}
+    
+    services = Uploadedservice.query.filter_by(user_id=current_user.id, is_unsubscribed=0, file_id=contactfile_id).all()
+    if len(services) == 0:
+        print("No contacts")
+        return {"success": False, "message": "There is no contacts uploaded. Please upload contacts first."}
     
     template = Template.query.get(workflow_id)
     template_name = template.template_name
