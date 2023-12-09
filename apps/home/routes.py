@@ -5,7 +5,7 @@ import os
 import pprint
 
 from apps.authentication.models import Users
-from apps.authentication.util import verify_pass
+from apps.authentication.util import verify_pass, hash_pass
 from apps.home import blueprint
 from flask import render_template, request, jsonify, redirect, url_for, current_app
 from flask_login import login_required, current_user, logout_user, login_user
@@ -26,7 +26,7 @@ from sqlalchemy.sql import Insert
 from concurrent.futures import ThreadPoolExecutor
 from apps.authentication.forms import LoginForm, CreateAccountForm
 from flask_dance.contrib.nylas import nylas
-from apps.home.emailler import send_test_email, send_email_via_nylas
+from apps.home.emailler import send_test_email, send_email_via_nylas, send_password_reset_email
 from apps.authentication.util import generate_job_id
 from nylas import APIClient
 
@@ -1562,3 +1562,52 @@ def subscribe(token):
     db.session.commit()
     
     return "You have been subscribed successfully."
+
+@blueprint.route('/passwordreset', methods=['GET', 'POST'])
+def passwordreset():
+    if request.method == 'POST':
+        print("here")
+        email = request.form['email']
+        user = Users.query.filter_by(email=email).first()
+        
+        if user:
+            token = generate_job_id(128)
+            user.password_reset_token = token
+            db.session.commit()
+            
+            WEB_HOST_IP = os.getenv("WEB_HOST_IP")
+            reset_link = f"{WEB_HOST_IP}/newpassword/{token}"
+            
+            send_password_reset_email(email, reset_link)
+            
+            return render_template('home/password_reset.html', segment="passwordreset", msg="Please check your email for password reset link.")
+        else:
+            return render_template('home/password_reset.html', segment="passwordreset", msg="There is no user with this email.")
+        
+    else:
+        return render_template('home/password_reset.html', segment="passwordreset")
+
+@blueprint.route('/newpassword/<token>', methods=['GET', 'POST'])
+def newpassword(token):
+    
+    if request.method == "GET":
+        user = Users.query.filter_by(password_reset_token=token).first()
+        if user:
+            return render_template('home/new_password.html', segment="newpassword", token=token)
+        else:
+            return render_template('home/page-404.html')
+    
+    else:
+        password = request.form['password']
+        token = request.form['token']
+        user = Users.query.filter_by(password_reset_token=token).first()
+        
+        if user:
+            user.password = hash_pass(password)
+            user.password_reset_token = None
+            db.session.commit()
+            return redirect(url_for('authentication_blueprint.login')) 
+        
+        else:
+            return render_template('home/page-404.html')
+        

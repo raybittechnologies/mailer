@@ -27,6 +27,7 @@ class Users(db.Model, UserMixin):
     api_token     = db.Column(db.String(100))
     api_token_ts  = db.Column(db.Integer)   
     state         = db.Column(db.String(10)) 
+    password_reset_token = db.Column(db.String(128)) 
     
     def __init__(self, **kwargs):
         for property, value in kwargs.items():

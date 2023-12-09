@@ -118,3 +118,34 @@ def send_email_via_nylas(nylas_client, subject, toname, fromemail, fromname, bod
     response = message.send()
     
     return response
+
+
+def send_password_reset_email(email, reset_link):
+    
+    SENDER_MAIL = os.environ.get('SENDER_MAIL')
+    MAILTRAP_API_KEY = os.environ.get('MAILTRAP_API_KEY')
+    
+    mail = mt.Mail(
+        sender=mt.Address(email=SENDER_MAIL, name="Robitic Booking Agent"),
+        to=[mt.Address(email=email, name="")],
+        subject="Reset your password",
+        html=f"""
+            <!doctype html>
+            <html>
+            <head>
+                <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+            </head>
+            <body style="font-family: sans-serif;">
+                please click the link below to reset your password.
+                {reset_link}
+            </body>
+            </html>
+        """
+    )
+
+    client = mt.MailtrapClient(token=MAILTRAP_API_KEY)
+    response = client.send(mail)
+    if not response['success']:
+        print(response)
+        
+    return response['success']  
