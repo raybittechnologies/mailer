@@ -295,29 +295,57 @@ def upload_contact():
         for idx, item in df.iterrows():
             venue = item['venue']
             venue_type = item['type']
+            website = item['website']
+            phone = item['phone']
+            address = item['address']
+            facebook = item['facebook']
             
             if item['email1'] != "":
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email1'].strip(), user_id = current_user.id, file_id=file_id)
+                service.website = website
+                service.phone = phone
+                service.address = address
+                service.facebook = facebook
                 services.append(service)
                 
             if item['email2'] != "":
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email2'].strip(), user_id = current_user.id, file_id=file_id)
+                service.website = website
+                service.phone = phone
+                service.address = address
+                service.facebook = facebook
                 services.append(service)
                 
             if item['email3'] != "":
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email3'].strip(), user_id = current_user.id, file_id=file_id)
+                service.website = website
+                service.phone = phone
+                service.address = address
+                service.facebook = facebook
                 services.append(service)
                 
             if item['email4'] != "":
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email4'].strip(), user_id = current_user.id, file_id=file_id)
+                service.website = website
+                service.phone = phone
+                service.address = address
+                service.facebook = facebook
                 services.append(service)
                 
             if item['facebookemail1'] != "":
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['facebookemail1'].strip(), user_id = current_user.id, file_id=file_id)
+                service.website = website
+                service.phone = phone
+                service.address = address
+                service.facebook = facebook
                 services.append(service)
                 
             if item['facebookemail2'] != "":
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['facebookemail2'].strip(), user_id = current_user.id, file_id=file_id)
+                service.website = website
+                service.phone = phone
+                service.address = address
+                service.facebook = facebook
                 services.append(service)
         
         db.session.bulk_save_objects(services)
@@ -332,9 +360,7 @@ def contact_delete():
     file = Uploadedcontactfile.query.get(file_id)
     db.session.delete(file)
     
-    sevices = Uploadedservice.query.filter_by(file_id=file_id).all()
-    for service in sevices:
-        db.session.delete(service)
+    Uploadedservice.query.filter_by(file_id=file_id).delete()
         
     db.session.commit()
     return redirect(url_for('home_blueprint.upload_contact'))
@@ -345,9 +371,10 @@ def contact_delete():
 def view_contact(id):
     userid = current_user.id
     uploaded_file = Uploadedcontactfile.query.filter_by(id=id, user_id=userid).first()
+    file_desc = uploaded_file.description
     
     if uploaded_file:
-        return render_template('home/view_contact.html', fileid=id)
+        return render_template('home/view_contact.html', fileid=id, file_desc=file_desc)
         
     else:
         return render_template('home/page-404.html')
@@ -368,7 +395,12 @@ def contacts_list(id):
             'is_bad' : service.is_bad,
             'create_datetime' : service.create_datetime,
             'is_unsubscribed' : service.is_unsubscribed,
-            'unsubscribe_token' : service.unsubscribe_token
+            'unsubscribe_token' : service.unsubscribe_token,
+            'website': service.website,
+            'phone': service.phone,
+            'address': service.address,
+            'facebook': service.facebook,
+            
         }
         all_services.append(data)
 
@@ -385,10 +417,7 @@ def service_delete():
     
     if service:
         unsubscribe_token = service.unsubscribe_token
-        emails = Email.query.filter_by(unsubscribe_token=unsubscribe_token).all()
-        
-        for email in emails:
-            db.session.delete(email)
+        Email.query.filter_by(unsubscribe_token=unsubscribe_token).delete()
         
         db.session.delete(service)
         

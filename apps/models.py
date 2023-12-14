@@ -67,6 +67,10 @@ class Uploadedservice(db.Model):
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
     unsubscribe_token = db.Column(db.String(128), nullable=False, default=generate_unsubscribe_token, index=True)
     is_unsubscribed = db.Column(db.Integer, default=0)
+    website = db.Column(db.String(1024))
+    phone = db.Column(db.String(20))
+    address = db.Column(db.String(1024))
+    facebook = db.Column(db.String(255))
     
     __table_args__ = (
         db.UniqueConstraint('email', 'user_id', name='unique-service'),
