@@ -112,8 +112,18 @@
                     {data: 'venue_type'},
                     {data: 'phone'},
                     {data: 'address'},
-                    {data: 'website'},
-                    {data: 'facebook'},
+                    {
+                        data: 'website',
+                        render: function (website, type, row) {
+                            return '<a href="' + website + '" target="_blank" >' + website + ' </a>'
+                        },
+                    },
+                    {
+                        data: 'facebook',
+                        render: function (facebook, type, row) {
+                            return '<a href="' + facebook + '" target="_blank" >' + facebook + ' </a>'
+                        },
+                    },
                     {
                         data: 'is_unsubscribed',
                         render : function (is_unsubscribed, type, row) {

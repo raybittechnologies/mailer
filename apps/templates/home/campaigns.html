@@ -63,10 +63,14 @@
                                     <select class="form-control form-select" id="select-workflow" name="select-workflow">
                                     </select>
                                 </div>
-                                <div class="form-group">
+                                <!-- <div class="form-group">
                                     <label for="workflow-description" class="col-form-label">Description:</label>
                                     <textarea type="text" class="form-control" id="workflow-description" name="workflow-description" readonly></textarea>
-                                </div>
+                                </div> -->
+                                <!-- <div class="form-group">
+                                    <label for="start-date" class="col-form-label">Start Date:</label>
+                                    <input type="datetime-local" class="form-control" id="start-date" name="start-date" required></input>
+                                </div> -->
                                 <p class="mb-4 mx-auto text-info">*The daily email sending limit is capped at a maximum of 150 emails.</p>
                             </div>
                             <div class="modal-footer form-group">
@@ -138,7 +142,7 @@
                     options += '<option ' +  ' value="' + templates[i].id +'">' + templates[i].template_name + "</option>" + "<br>";
                 }
                 document.getElementById("select-workflow").innerHTML = options;
-                document.getElementById("workflow-description").innerHTML = templates[0].template_desc;
+                // document.getElementById("workflow-description").innerHTML = templates[0].template_desc;
             }
 
             if (contacts.length == 0) {
@@ -157,6 +161,14 @@
             } else {
                 document.getElementById("create-campaign-button").disabled = false;
             }
+
+            // start_date = document.getElementById("start-date");
+            // start_date.value = "12/16/2023 11:47 PM"
+            // //
+
+
+            // console.log(start_date.value);
+            // console.log(new Date().toLocaleString('en-US').replace(",", ""));
             // console.log(templates);
         })
         .catch((err) => {
@@ -177,17 +189,17 @@
     };
 
     $(document).ready(function () {
-        const selectElement = document.getElementById("select-workflow");
+        // const selectElement = document.getElementById("select-workflow");
         // const result = document.querySelector(".result");
 
-        selectElement.addEventListener("change", (event) => {
-            for (let  i = 0; i <  templates.length; i++) {
-                if (templates[i].id == event.target.value) {
-                    document.getElementById("workflow-description").innerHTML = templates[i].template_desc
-                }
-            }
+        // selectElement.addEventListener("change", (event) => {
+        //     for (let  i = 0; i <  templates.length; i++) {
+        //         if (templates[i].id == event.target.value) {
+        //             document.getElementById("workflow-description").innerHTML = templates[i].template_desc
+        //         }
+        //     }
 
-        });
+        // });
 
         // Initialize DataTable
         var dataTable = $('#filtersTable').DataTable({
@@ -237,6 +249,8 @@
             e.preventDefault();  //prevent form from submitting
             const workflow_id = document.getElementById("select-workflow").value;
             const contactfile_id = document.getElementById("select-contacts").value;
+            // const start_date = document.getElementById("start-date").value;
+
             $('#close-modal').click();
 
             fetch('/create/campaign',{
@@ -245,6 +259,7 @@
                 body: JSON.stringify({
                     "workflow_id" : workflow_id,
                     "contactfile_id" : contactfile_id
+                    // 'start_date' : start_date
                 }),
             })
             .then((response) => {

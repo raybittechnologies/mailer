@@ -440,9 +440,7 @@ def url_view(id):
 def url_delete():
     url_id = int(request.form['urlid'])
     yelpurl = Yelpurl.query.get(url_id)
-    sevices = Service.query.filter_by(url_id=url_id).all()
-    for service in sevices:
-        db.session.delete(service)
+    Service.query.filter_by(url_id=url_id).delete()
     db.session.delete(yelpurl)
     
     db.session.commit()
@@ -827,11 +825,7 @@ def template_delete():
     templateid = int(request.form['templateid'])
     temp = Template.query.get(templateid)
     db.session.delete(temp)
-    
-    actions = Action.query.filter_by(tempid=templateid).all()
-    for action in actions:
-        db.session.delete(action)
-    
+    Action.query.filter_by(tempid=templateid).delete()
     db.session.commit()
     return redirect(url_for('home_blueprint.add_template'))
 
@@ -1352,10 +1346,10 @@ def create_campaign():
     # number of emails in a Group is 150 , so we need to divide emails into groups
     group_size = 150
     
-    automations = Automation.query.filter( (Automation.userid == current_user.id), (Automation.status != "completed")).all()
-    if len(automations) > 0:
-        print("There is an automation running")
-        return {"success": False, "message": "There is an automation running. Please wait until it is completed."}
+    # automations = Automation.query.filter( (Automation.userid == current_user.id), (Automation.status != "completed")).all()
+    # if len(automations) > 0:
+    #     print("There is an automation running")
+    #     return {"success": False, "message": "There is an automation running. Please wait until it is completed."}
     
     actions = Action.query.filter_by(tempid=workflow_id).order_by(Action.waitdays.asc()).all()
     if len(actions) == 0:
@@ -1407,7 +1401,7 @@ def create_campaign():
                 "args" : (current_user.nylas_access_token, action.id, group.job_id, current_user.email)
             }
             try:
-                scheduler.add_job(**job)
+                scheduler.add_job(**job) # TODO: Uncomment this line
                 print("created job", group.job_id)
             except Exception as e:
                 print("Failed to create job", str(e))
@@ -1513,9 +1507,7 @@ def job_delete():
     if job:
         db.session.delete(job)
     
-    emails = Email.query.filter_by(job_id=jobid).all()
-    for email in emails:
-        db.session.delete(email)
+    Email.query.filter_by(job_id=jobid).delete()
     
     if scheduler.get_job(jobid):
         scheduler.remove_job(jobid)
