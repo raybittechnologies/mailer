@@ -115,13 +115,13 @@
                     {
                         data: 'website',
                         render: function (website, type, row) {
-                            return '<a href="' + website + '" target="_blank" >' + website + ' </a>'
+                            return website ? '<a href="' + website + '" target="_blank" >' + website + ' </a>' : ''
                         },
                     },
                     {
                         data: 'facebook',
                         render: function (facebook, type, row) {
-                            return '<a href="' + facebook + '" target="_blank" >' + facebook + ' </a>'
+                            return facebook ? '<a href="' + facebook + '" target="_blank" >' + facebook + ' </a>' : ''
                         },
                     },
                     {
