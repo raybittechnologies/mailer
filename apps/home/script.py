@@ -13,6 +13,7 @@ import cloudscraper
 from threading import Thread
 import queue
 import os
+from apps.home.utils import check_blacklisted
 
 
 #ZYTE Smart Proxy : https://app.zyte.com
@@ -32,8 +33,13 @@ def pass_data(item):
 
 def yelp_scraper_run(url, user_name, user_id, id):
     # url = urllib.parse.unquote(url).replace("+", " ") # Needed when using pure request query string
-    find_desc = url.split("find_desc=")[1].split("&")[0]
-    find_loc = url.split("find_loc=")[1].split("&")[0]
+    try:
+        find_desc = url.split("find_desc=")[1].split("&")[0]
+        find_loc = url.split("find_loc=")[1].split("&")[0]
+    except Exception as e:
+        print("Invalid URL")
+        return
+    
     print("Start scraping", url)
     
     start = 0
@@ -61,6 +67,13 @@ def yelp_scraper_run(url, user_name, user_id, id):
             print(str(e))
             break
         
+        try:
+            response.json()['statusCode']
+        except Exception as e:
+            print(str(e), response.text)
+            page += 1
+            continue
+
         # "venue	city	phone	Venue Type	Website	email	email 2	Email (facebook)	Facebook Link"
         if response.json()['statusCode'] == 200:
             try:
@@ -76,6 +89,10 @@ def yelp_scraper_run(url, user_name, user_id, id):
                 if "bizId" in business:
                     bizId = business['bizId']
                     venue_name = business['searchResultBusiness']['name']
+
+                    if "temp. closed" in venue_name.lower():
+                        continue
+
                     venue_type = ", ".join([i['title'] for i in business['searchResultBusiness']['categories']])
                     phone = business['searchResultBusiness']['phone']
                     
@@ -146,7 +163,14 @@ def thread_runner(data):
         return
     
     if website:
-        fb_link, emails, fb_emails = get_fb_info(website)
+        try:
+            fb_link, emails, fb_emails = get_fb_info(website)
+        except Exception as e:
+            print(str(e))
+            fb_link = ""
+            emails = []
+            fb_emails = []
+        
         if fb_link:
             data['facebook'] = fb_link
         if fb_emails:
@@ -163,7 +187,7 @@ def thread_runner(data):
                 data['Email4'] = emails[3]
             except:
                 pass
-            
+
         response = requests.post(f'{WEB_HOST_IP}/check_state', json={'id': data['url_id']})
         if response.text == "completed":
             return
@@ -267,8 +291,11 @@ def get_fb_info(url):
             # except Exception as e:
             #     print(str(e))
             #     break
-            
-            response = scraper.get(FB_link, proxies=proxies, verify=verify, timeout=15)
+            try:
+                response = scraper.get(FB_link, proxies=proxies, verify=verify, timeout=15)
+            except Exception as e:
+                print(FB_link, str(e))
+                break
             
             if response.status_code == 200:
                 html = response.text.replace(r"\u0040", "@")
@@ -278,9 +305,9 @@ def get_fb_info(url):
                 #     f.write(html)
                 break
             
-            elif response.status_code == 503 or response.status_code == 429:
-                print(FB_link, response.status_code)
-                continue
+            # elif response.status_code == 503 or response.status_code == 429:
+            #     print(FB_link, response.status_code)
+            #     continue
             
             else:
                 print(FB_link, response.status_code)
@@ -324,6 +351,6 @@ def find_emails(html):
     emails = re.findall(email_regex, html)
     emails = list(set( [ email.lower() for email in emails] ))
     filtered_emails = [
-        email  for email in emails if not email[-4:] in ['.jpg', '.png'] and not "@sentry" in email]
+        email  for email in emails if not email[-4:] in ['.jpg', '.png'] and check_blacklisted(email)]
     return filtered_emails
     

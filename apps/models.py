@@ -50,6 +50,7 @@ class Service(db.Model):
     url_id = db.Column(db.String(255), nullable=False)
     user_id = db.Column(db.String(255), nullable=False)
     biz_id = db.Column(db.String(255), nullable=False)
+    is_credited = db.Column(db.Integer, default=0)
     
     __table_args__ = (
         db.Index('sevice-idx', "url_id", "user_id", "biz_id", unique=True), 
@@ -68,8 +69,8 @@ class Uploadedservice(db.Model):
     unsubscribe_token = db.Column(db.String(128), nullable=False, default=generate_unsubscribe_token, index=True)
     is_unsubscribed = db.Column(db.Integer, default=0)
     website = db.Column(db.String(1024))
-    phone = db.Column(db.String(20))
-    address = db.Column(db.String(1024))
+    phone = db.Column(db.String(20), index=True)
+    address = db.Column(db.String(1024), index=True)
     facebook = db.Column(db.String(255))
     
     __table_args__ = (
@@ -167,9 +168,15 @@ class Email(db.Model):
     is_opened = db.Column(db.Integer, default=0)
     is_unsubscribed = db.Column(db.Integer, default=0)
     updated_datetime = db.Column(db.DateTime(), onupdate=datetime.datetime.utcnow, default=datetime.datetime.utcnow)
-    unsubscribe_token = db.Column(db.String(128), nullable=False, index=True)
+    unsubscribe_token = db.Column(db.String(128), nullable=False, index=True) # it is synced with unsubscribe_token in Uploadedservice table
     is_replied = db.Column(db.Integer, default=0)
     mail_id = db.Column(db.String(255), index=True)
     
     
+class UserCredit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    userid = db.Column(db.Integer)
+    credit = db.Column(db.Integer)
+    create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
+    update_datetime = db.Column(db.DateTime(), onupdate=datetime.datetime.utcnow, default=datetime.datetime.utcnow)
     

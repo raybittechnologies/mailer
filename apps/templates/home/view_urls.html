@@ -14,9 +14,12 @@
 {% block content %}
 
     <div class="container-fluid py-4">
+        {%if current_user.role == 'lite' %}
+            <p class="text-center font-weight-light my-4">* You are in <strong>Lite Plan</strong> currently so you can see only {{ credit }} venues. Please upgrade your plan to see all results.</p>
+        {% endif %}
+
         <div class="container mt-5">
             <a href="{{ url_for('home_blueprint.url') }}" class="btn btn-danger bg-gradient-danger">Add New URL</a>
-            <!--         <button onclick="{{ url_for('home_blueprint.add_filter') }}" class="btn btn-primary" type="button">Add New Filter</button>-->
             <h3 class="text-center font-weight-light my-4">My URLs</h3>
 {#            <div class="card col shadow-lg border-0 rounded-lg">#}
                 {#                <div class="card-header"><h3 class="text-center font-weight-light my-4">My URLs</h3></div>#}
@@ -27,8 +30,8 @@
                     <tr>
                         {#                            <th>ID</th>#}
                         {#                            <th>Username</th>#}
-                        <th>Name</th>
-                        <th>URLs</th>
+                        <th>Business Name</th>
+                        <th>Location</th>
                         <th>Actions</th>
                     </tr>
                     </thead>
@@ -72,8 +75,24 @@
                             data: 'product_url',
                             render: function (product_url, type, row) {
                                 var text = ''
+                                let business = '';
+                                let location = '';
+
                                 for (let i = 0; i < product_url.split(',').length; i++) {
-                                    text += '<a href="' + product_url.split(',')[i] + '" target="_blank" >' + product_url.split(',')[i].split('?')[1] + ' </a>' + "<br>";
+                                    var url = product_url.split(',')[i].split("?")[1];
+                                    var urlsearchparam = new URLSearchParams(url)
+                                    business = urlsearchparam.get('find_desc');
+                                    location = urlsearchparam.get('find_loc');
+
+                                    if (business === null || location === null) {
+                                        continue;
+                                    }
+                                    // console.log(urlsearchparam); 
+                                    // for (const param of urlsearchparam) {
+                                    //     console.log(param);
+                                    // }
+
+                                    text += '<a href="' + product_url.split(',')[i] + '" target="_blank" >' + business + " in " + location + ' </a>' + "<br>";
                                 }
                                 return text
                             }

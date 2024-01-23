@@ -14,12 +14,10 @@ from jinja2 import Template as JT
 from apps.config import API_GENERATOR
 import requests
 from datetime import datetime, timedelta
-from apps.models import Yelpurl
 from apps import db, scheduler
 import multiprocessing
 from apps.home.script import yelp_scraper_run
 from apps.models import *
-from sqlalchemy import desc, asc
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import Insert
 
@@ -31,6 +29,10 @@ from apps.authentication.util import generate_job_id
 from nylas import APIClient
 
 import pandas as pd
+import urllib.parse
+
+from apps.authentication.oauth import nylas_bp
+from apps.home.utils import check_blacklisted
 
 executor = ThreadPoolExecutor(4)
 
@@ -60,7 +62,6 @@ def role_required(role):
 @login_required
 def index():
     page_data = get_page_data()
-    
     if nylas.authorized : 
         if not current_user.nylas_access_token:
             
@@ -68,22 +69,13 @@ def index():
             user.nylas_access_token = nylas.access_token
             db.session.commit()
             logout_user()
+
+            # delete nyals token from storage
+            del nylas_bp.token
             
             return redirect(url_for('authentication_blueprint.login')) 
             
-        
-    return render_template('home/index.html', segment='index', API_GENERATOR=len(API_GENERATOR),
-                           page_data=page_data
-                           )
-
-
-@blueprint.route('/add/url')
-@login_required
-def add_filter():
-    page_data = get_page_data()
-    return render_template('home/add_url.html', segment='index', API_GENERATOR=len(API_GENERATOR),
-                           page_data=page_data
-                           )
+    return render_template('home/index.html', segment='index', API_GENERATOR=len(API_GENERATOR), page_data=page_data )
 
 
 @compiles(Insert, "sqlite")
@@ -94,15 +86,19 @@ def sqlite_insert_ignore(insert, compiler, **kw):
 @login_required
 def url():
     if request.method == 'POST':
-        url = request.form['url']
-        name = request.form['name']
-        page_data = get_page_data()
-        data = {
-            'url': url
-        }
+        location = request.form['location']
+        business = request.form['business']
+
+        base_url = 'https://www.yelp.com/search?'
+        encoded_business = urllib.parse.quote(business)
+        encoded_location = urllib.parse.quote(location)
+
+        encoded_url = f"find_desc={encoded_business}&find_loc={encoded_location}"
+        url = base_url + encoded_url
+
         existing_url = Yelpurl.query.filter_by(product_url=url, userid=current_user.id).first()
         if existing_url is None:
-            new_url = Yelpurl(product_url=url, userid=current_user.id, state="idle", name=name)
+            new_url = Yelpurl(product_url=url, userid=current_user.id, state="idle", name=encoded_business)
             db.session.add(new_url)
             db.session.commit()
             
@@ -112,28 +108,12 @@ def url():
             return redirect(url_for('home_blueprint.fetch', id=url_id))
             
         else:
-            
             print("already present in db")
             message = "This url is already reistered."
-            return render_template('home/view_urls.html',
-                                segment='history',
-                                API_GENERATOR=len(API_GENERATOR),
-                                page_data=page_data,
-                                data=data,
-                                message=message
-                                )
+            return render_template('home/view_urls.html', segment='history', message=message )
+        
     else:
-        page_data = get_page_data()
-        data = {
-            'url': "",
-            'name': ""
-        }
-        return render_template('home/add_url.html',
-                               segment='url',
-                               API_GENERATOR=len(API_GENERATOR),
-                               page_data=page_data,
-                               data=data
-                               )
+        return render_template('home/add_url.html', segment='url')
 
 
 @blueprint.route('/url_history')
@@ -158,7 +138,8 @@ def url_history():
 @blueprint.route('/viwe_url_history/<int:url_id>')
 @login_required
 def viwe_url_history(url_id):
-    user_urls = Service.query.filter_by(url_id=url_id, user_id=current_user.id).all()
+    # Return only the urls that are credited
+    user_urls = Service.query.filter_by(url_id=url_id, user_id=current_user.id, is_credited=1).all()
     # print(user_urls)
     url_list = []
     for url_entry in user_urls:
@@ -189,9 +170,13 @@ def viwe_url_history(url_id):
 @blueprint.route('/history', methods=['POST', 'GET'])
 @login_required
 def history():
-    page_data = get_page_data()
-    return render_template('home/view_urls.html', segment='history', API_GENERATOR=len(API_GENERATOR),
-                           page_data=page_data)
+    if current_user.role == "lite":
+        user_credit = UserCredit.query.filter_by(userid=current_user.id).first()
+        credit = user_credit.credit
+    else:
+        credit = None
+
+    return render_template('home/view_urls.html', segment='history', credit=credit)
 
 
 @blueprint.route('/fetch/<int:id>', methods=['GET', 'POST'])
@@ -267,10 +252,8 @@ def uploaded_files():
 def upload_contact():
     upload_folder = "uploads"
     if request.method == "GET":
-        return render_template('home/upload_contact.html',
-                                segment='upload_contact',
-                                API_GENERATOR=len(API_GENERATOR),
-                                )
+        return render_template('home/upload_contact.html',segment='upload_contact')
+    
     elif request.method == "POST":
         if not os.path.exists(upload_folder):
             os.makedirs(upload_folder)
@@ -300,7 +283,7 @@ def upload_contact():
             address = item['address']
             facebook = item['facebook']
             
-            if item['email1'] != "":
+            if item['email1'] != "" and check_blacklisted(item['email1'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email1'].strip(), user_id = current_user.id, file_id=file_id)
                 service.website = website
                 service.phone = phone
@@ -308,7 +291,7 @@ def upload_contact():
                 service.facebook = facebook
                 services.append(service)
                 
-            if item['email2'] != "":
+            if item['email2'] != "" and check_blacklisted(item['email2'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email2'].strip(), user_id = current_user.id, file_id=file_id)
                 service.website = website
                 service.phone = phone
@@ -316,7 +299,7 @@ def upload_contact():
                 service.facebook = facebook
                 services.append(service)
                 
-            if item['email3'] != "":
+            if item['email3'] != "" and check_blacklisted(item['email3'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email3'].strip(), user_id = current_user.id, file_id=file_id)
                 service.website = website
                 service.phone = phone
@@ -324,7 +307,7 @@ def upload_contact():
                 service.facebook = facebook
                 services.append(service)
                 
-            if item['email4'] != "":
+            if item['email4'] != "" and check_blacklisted(item['email4'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email4'].strip(), user_id = current_user.id, file_id=file_id)
                 service.website = website
                 service.phone = phone
@@ -332,7 +315,7 @@ def upload_contact():
                 service.facebook = facebook
                 services.append(service)
                 
-            if item['facebookemail1'] != "":
+            if item['facebookemail1'] != "" and check_blacklisted(item['facebookemail1'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['facebookemail1'].strip(), user_id = current_user.id, file_id=file_id)
                 service.website = website
                 service.phone = phone
@@ -340,7 +323,7 @@ def upload_contact():
                 service.facebook = facebook
                 services.append(service)
                 
-            if item['facebookemail2'] != "":
+            if item['facebookemail2'] != "" and check_blacklisted(item['facebookemail2'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['facebookemail2'].strip(), user_id = current_user.id, file_id=file_id)
                 service.website = website
                 service.phone = phone
@@ -428,12 +411,8 @@ def service_delete():
 @blueprint.route('/url/view/<int:id>', methods=['GET', 'POST'])
 @login_required
 def url_view(id):
-    page_data = get_page_data()
     yelpurl = Yelpurl.query.get(id)
-    return render_template('home/view_url_data.html', segment='url', API_GENERATOR=len(API_GENERATOR),
-                           page_data=page_data,
-                           current_url=yelpurl
-                           )
+    return render_template('home/view_url_data.html', segment='url', current_url=yelpurl)
     
 @blueprint.route('/url/delete', methods=['POST'])
 @login_required
@@ -450,10 +429,12 @@ def url_delete():
 @blueprint.route('/profile')
 @login_required
 def profile():
-    page_data = get_page_data()
-    return render_template('home/profile.html', segment='rem-process', API_GENERATOR=len(API_GENERATOR),
-                           page_data=page_data
-                           )
+    user_credit = db.session.query(UserCredit).filter_by(userid=current_user.id).first()
+    if user_credit:
+        credit  = user_credit.credit
+    else:
+        credit = None
+    return render_template('home/profile.html', segment='profile', user_credit=credit)
 
 
 @blueprint.route('/process_stop/<int:id>')
@@ -595,7 +576,7 @@ def admin():
 @role_required('admin')
 def admin_users():
     page_data = get_admin_data()
-    users = Users.query.filter(Users.role != "admin").all()
+    users = Users.query.filter(Users.role != "admin").join(UserCredit, UserCredit.userid == Users.id, isouter=True).all()
     return render_template("home/admin_users.html",
                            segment='users', API_GENERATOR=len(API_GENERATOR),
                            page_data=page_data,
@@ -633,6 +614,7 @@ def delete_user():
             
         Action.query.filter_by(userid=userid).delete()
         Campaign.query.filter_by(userid=userid).delete()
+        UserCredit.query.filter_by(userid=userid).delete()
         
         db.session.commit()
     return redirect(url_for("home_blueprint.admin_users"))
@@ -644,7 +626,6 @@ def delete_user():
 def approve_user(id):
     user = Users.query.get(id)
     user.state = "approved"
-    db.session.add(user)
     db.session.commit()
     return redirect(url_for("home_blueprint.admin_users"))
 
@@ -656,7 +637,6 @@ def reset_nylas_token():
     userid = request.form['userid']
     user = Users.query.get(int(userid))
     user.nylas_access_token = None
-    db.session.add(user)
     db.session.commit()
     
     return redirect(url_for("home_blueprint.admin_users"))
@@ -667,29 +647,66 @@ def reset_nylas_token():
 def inactive_user(id):
     user = Users.query.get(id)
     user.state = "pending"
-    db.session.add(user)
     db.session.commit()
     return redirect(url_for("home_blueprint.admin_users"))
 
 
-@blueprint.route('/admin/users/upgrade/<id>', methods=['GET'])
+@blueprint.route('/admin/users/upgrade/premium/<id>', methods=['GET'])
 @login_required
 @role_required('admin')
-def upgrade_user(id):
+def upgrade_user_premium(id):
     user = Users.query.get(id)
     user.role = "premium"
-    db.session.add(user)
+    
+    services = db.session.query(Service).filter_by(user_id = id).all()
+    for service in services:
+        service.is_credited = 1
+
     db.session.commit()
     return redirect(url_for("home_blueprint.admin_users"))
 
     
-@blueprint.route('/admin/users/downgrade/<id>', methods=['GET'])
+@blueprint.route('/admin/users/upgrade/lite/<id>', methods=['GET'])
 @login_required
 @role_required('admin')
-def downgrade_user(id):
+def upgrade_user_lite(id):
+    user = Users.query.get(id)
+    user.role = "lite"
+
+    # User initial credit = 30
+    user_initial_credit = 30
+
+    user_credit = UserCredit.query.filter_by(userid=id).first()
+    if user_credit:
+        # User get 30 credits for lite plan
+        user_credit.credit = user_initial_credit
+    else:
+        user_credit = UserCredit(userid=id, credit=user_initial_credit)
+        db.session.add(user_credit)
+
+    services = db.session.query(Service).filter_by(user_id = id).all()
+
+    for idx, service in enumerate(services):
+        if idx < user_initial_credit:
+            service.is_credited = 1
+        else:
+            service.is_credited = 0
+
+    db.session.commit()
+    return redirect(url_for("home_blueprint.admin_users"))
+
+
+@blueprint.route('/admin/users/upgrade/normal/<id>', methods=['GET'])
+@login_required
+@role_required('admin')
+def upgrade_user_normal(id):
     user = Users.query.get(id)
     user.role = "user"
-    db.session.add(user)
+    
+    services = db.session.query(Service).filter_by(user_id = id).all()
+    for service in services:
+        service.is_credited = 1
+
     db.session.commit()
     return redirect(url_for("home_blueprint.admin_users"))
 
@@ -1562,11 +1579,48 @@ def unsubscribe(token):
     emails = Email.query.filter_by(unsubscribe_token=token).all()
     service = Uploadedservice.query.filter_by(unsubscribe_token=token).first()
     
-    for email in emails:
-        email.is_unsubscribed = 1
+    try:
+        for email in emails:
+            email.is_unsubscribed = 1
+        
+        if service:
+            service.is_unsubscribed = 1
+            address = service.address
+            if address:
+                # Unsubscribe all emails from this address : same business
+                services = Uploadedservice.query.filter_by(address=address, user_id = current_user.id).all()
+                for service in services:
+                    # Unsubscribe all service with this address
+                    service.is_unsubscribed = 1
+                    
+                    # Unsubscribe all emails from campaigns
+                    unsubscribe_token = service.unsubscribe_token
+                    email = Email.query.filter_by(unsubscribe_token=unsubscribe_token).first()
+                    if email:
+                        print("unsubscribed", email.email)
+                        email.is_unsubscribed = 1
+            else:
+                phone = service.phone
+
+                if phone:
+                    # Unsubscribe all emails from this phone : same business
+                    services = Uploadedservice.query.filter_by(phone=phone, user_id = current_user.id).all()
+                    for service in services:
+                        # Unsubscribe all service with this phone
+                        service.is_unsubscribed = 1
+                        
+                        # Unsubscribe all emails from campaigns
+                        unsubscribe_token = service.unsubscribe_token
+                        email = Email.query.filter_by(unsubscribe_token=unsubscribe_token).first()
+                        if email:
+                            print("unsubscribed", email.email)
+                            email.is_unsubscribed = 1
+
+        db.session.commit()
     
-    service.is_unsubscribed = 1
-    db.session.commit()
+    except Exception as e:
+        print(repr(e))
+        return "Something went wrong. Please try again."
     
     return "You have been unsubscribed successfully."
 
@@ -1579,7 +1633,8 @@ def subscribe(token):
     for email in emails:
         email.is_unsubscribed = 0
     
-    service.is_unsubscribed = 0
+    if service:
+        service.is_unsubscribed = 0
     db.session.commit()
     
     return "You have been subscribed successfully."

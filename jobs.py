@@ -19,6 +19,10 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
             )
         
         action = Action.query.filter_by(id=actionid).first()
+
+        if action is None:
+            return
+        
         subject = action.subject
         fromname = action.fromname
         message = action.message
@@ -38,10 +42,14 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
         
         for email in emails:
             
-            if email.is_unsubscribed == 1:
+            try:
+                if email.is_unsubscribed == 1:
+                    continue
+            except Exception as e:
+                print("Failed to check is_unsubscribed:", str(e))
                 continue
-            
-            print(email.email)
+
+            print("Sending to", email.email)
             
             unsubscribe_link = WEB_HOST_IP + "/unsubscribe/" + email.unsubscribe_token
             serv = Uploadedservice.query.filter_by(unsubscribe_token=email.unsubscribe_token).first()
@@ -100,11 +108,20 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
                 
                 # Refer this https://developer.nylas.com/docs/email/improving-email-delivery/
                 time.sleep(30)
-                
-            db.session.commit()
+            
+            try:
+                db.session.commit()
+            except Exception as e:
+                print("Failed to commit db session:", str(e))
+                continue
         
         # Indicate job is finished
         job.status = "completed"
-        db.session.commit()
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            print("Failed to commit db session:", str(e))
+        
         
         

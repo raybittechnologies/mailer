@@ -25,11 +25,8 @@
                 {{ current_user.username }}
               </h5>
               <p class="mb-0 font-weight-bold text-sm">
-
                 {% if current_user.email %}
                   {{ current_user.email }}
-                {% else %}
-                  Authenticated with Github
                 {% endif %}
               </p>
             </div>
@@ -126,11 +123,17 @@
               <hr class="horizontal gray-light my-4">
               <ul class="list-group">
                 <li class="list-group-item border-0 ps-0 pt-0 text-sm"><strong class="text-dark">Name:</strong> &nbsp; {{ current_user.username }}</li>
-                <li class="list-group-item border-0 ps-0 text-sm"><strong class="text-dark">Mobile:</strong> &nbsp; </li>
                 <li class="list-group-item border-0 ps-0 text-sm"><strong class="text-dark">Email:</strong> &nbsp; {{ current_user.email }}</li>
-                <li class="list-group-item border-0 ps-0 text-sm"><strong class="text-dark">Location:</strong> &nbsp; </li>
+                {% if current_user.role == "user" %}
+                  <li class="list-group-item border-0 ps-0 text-sm"><strong class="text-dark">Current Plan:</strong> Normal </li>
+                {% elif current_user.role == "lite" %}
+                  <li class="list-group-item border-0 ps-0 text-sm"><strong class="text-dark">Current Plan:</strong> Lite : {{ user_credit }} Credit </li>
+                {% else %}
+                  <li class="list-group-item border-0 ps-0 text-sm"><strong class="text-dark">Current Plan:</strong> Premium </li>
+                {% endif %}
+                
               </ul>
-            </div>
+            </div>  
           </div>
         </div>
       </div>

@@ -86,8 +86,8 @@ class Config(object):
     SCHEDULER_JOBSTORES = {
         "default": SQLAlchemyJobStore(url=JobStore_DATABASE_URI)
     }
-    SCHEDULER_EXECUTORS = {"default": {"type": "threadpool", "max_workers": 20}}
-    SCHEDULER_JOB_DEFAULTS = {"coalesce": False, "max_instances": 10}
+    SCHEDULER_EXECUTORS = {"default": {"type": "threadpool", "max_workers": 5000}}
+    SCHEDULER_JOB_DEFAULTS = {"coalesce": False, "max_instances": 5000}
     SCHEDULER_API_ENABLED = True
     
 

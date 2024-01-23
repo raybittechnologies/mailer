@@ -123,7 +123,7 @@
                                             Status
                                         </th>
                                         <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
-                                            Type
+                                            Plan
                                         </th>
                                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                                             Action
@@ -158,22 +158,30 @@
                                                 {% endif %}
                                             </td>>
                                             <td>
-                                                {% if user.role == 'user' %}
-                                                    <span class="badge badge-sm bg-gradient-success">Normal</span>
+                                                {% if user.role == 'lite' %}
+                                                    <button class="btn bg-gradient-info btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        Lite {{ user.credit }}
+                                                    </button>
+                                                {% elif user.role == 'user' %}
+                                                    <button class="btn bg-gradient-success btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        Normal
+                                                    </button>
                                                 {% else %}
-                                                    <span class="badge badge-sm bg-gradient-primary">Premium</span>
+                                                    <button class="btn bg-gradient-primary btn-sm  dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                                        Premium
+                                                    </button>
                                                 {% endif %}
+                                                <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                                    <li><a class="dropdown-item " href="/admin/users/upgrade/lite/{{ user.id }}">Lite</a></li>
+                                                    <li><a class="dropdown-item " href="/admin/users/upgrade/normal/{{ user.id }}">Normal</a></li>
+                                                    <li><a class="dropdown-item " href="/admin/users/upgrade/premium/{{ user.id }}">Premium</a></li>
+                                                </ul>
                                             </td>
                                             <td class="align-middle text-center text-sm">
                                                 {% if user.state == 'pending' %}
                                                     <a href="/admin/users/approve/{{ user.id }}" class="btn btn-sm btn-success">Approve</a>
                                                 {% else %}
                                                     <a href="/admin/users/inactive/{{ user.id }}" class="btn btn-sm btn-secondary">Inactive</a>
-                                                {% endif %}
-                                                {% if user.role == 'user' %}
-                                                    <a href="/admin/users/upgrade/{{ user.id }}" class="btn btn-sm btn-success ">Upgrade</a>
-                                                {% else %}
-                                                    <a href="/admin/users/downgrade/{{ user.id }}" class="btn btn-sm btn-secondary">Downgrade</a>
                                                 {% endif %}
                                                 <button data-bs-toggle="modal" data-bs-target="#deleteUserModal" onclick="deleteUser('{{ user.id }}')" class="btn btn-sm btn-danger">Delete</button>
                                             </td>

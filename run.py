@@ -13,11 +13,12 @@ from api_generator.commands import gen_api
 from flask_cors import CORS
 from apps.config import config_dict
 from apps import create_app, db, scheduler
-from apps.models import Service, Yelpurl
+from apps.models import Service, Yelpurl, UserCredit
 from apps.authentication.models import Users
 from apps.home.emailler import send_email
 from dotenv import load_dotenv
 from werkzeug.middleware.proxy_fix import ProxyFix
+import datetime
 
 load_dotenv()
 
@@ -55,7 +56,34 @@ CORS(app)
 # When using Ngrok, uncomment the following lines
 app.wsgi_app = ProxyFix(app.wsgi_app)
 
+
 scheduler.start()
+
+# Lite users. 30 credits per day
+@scheduler.task('cron', id='job_manage_credit', hour=0, minute=0)
+def job_manage_credit():
+    print("Daily job started", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f"))
+    with scheduler.app.app_context():
+        user_credits = UserCredit.query.all()
+        user_initial_credit = 30
+
+        for user_credit in user_credits:
+            cur_datetime = datetime.datetime.utcnow()
+            last_updated = user_credit.update_datetime
+            diff = (cur_datetime + datetime.timedelta(minutes=1)) - last_updated # it might be run earlier a few milliseconds so added 1 minute margin
+            days = diff.days    
+
+            if int(days) == 30: # 30 days
+                user_credit.credit += 30
+
+                services = Service.query.filter_by(user_id = id, is_credited=0).all()
+
+                for idx, service in enumerate(services):
+                    if idx < user_initial_credit:
+                        service.is_credited = 1
+
+        db.session.commit()
+        
 
 @app.route('/msg', methods=['POST'])
 def msg1():
@@ -81,7 +109,21 @@ def msg1():
         try:
             print("=========", data['venue'] if type(data) == 'str' else data['venue'][0],  "=========")
             existing_url = Service.query.filter_by(url_id=data['url_id'], user_id=data['user_id'], biz_id=data['bizId']).first()
+
             if existing_url is None:
+                user = db.session.get(Users, int(data['user_id']))
+
+                if user.role == 'lite':
+                    user_credit = UserCredit.query.filter_by(userid=data['user_id']).first()
+                    credited_count = Service.query.filter_by(user_id=data['user_id'], is_credited=1).count()
+                    if user_credit.credit > credited_count:
+                        is_credited = 1
+                    else:
+                        is_credited = 0
+                
+                else:
+                    is_credited = 1
+                
                 new_service = Service(
                     name= data['venue'] if type(data) == 'str' else data['venue'][0],
                     venue_type= data['venuetype'] if type(data) == 'str' else data['venuetype'][0],
@@ -99,7 +141,8 @@ def msg1():
                     fbemail2=data['FacebookEmail2'],
                     url_id=data['url_id'],
                     user_id=data['user_id'],
-                    biz_id=data['bizId']
+                    biz_id=data['bizId'],
+                    is_credited=is_credited
                 )
                 db.session.add(new_service)
                 db.session.commit()

@@ -14,14 +14,14 @@
                 <div class="card-body">
                     <form method="post" action="{{ url_for('home_blueprint.url') }}">
                          <div class="form-group">
-                            <label class="small mb-1" for="category">Name</label>
-                            <input value="{{ data.name }}" class="form-control py-1" id="name" name="name" type="text"
-                                   placeholder="Enter name" required/>
+                            <label class="small mb-1" for="category">Business Type</label>
+                            <input class="form-control py-1" id="business" name="business" type="text"
+                                   placeholder="things to do, nail salons, plumbers, Live Music" required/>
                         </div>
                         <div class="form-group">
-                            <label class="small mb-1" for="category">Url</label>
-                            <input value="{{ data.url }}" class="form-control py-1" id="url" name="url" type="text"
-                                   placeholder="Enter Url (For Multiple URLs enter comma seperated)" required/>
+                            <label class="small mb-1" for="category">Location</label>
+                            <input class="form-control py-1" id="location" name="location" type="text"
+                                   placeholder="address, neighborhood, city, state or zip" required/>
                         </div>
                         <div class="form-group d-flex align-items-center justify-content-between mt-4 mb-0">
                             <button class="btn btn-danger" type="submit">Start Processes</button>
