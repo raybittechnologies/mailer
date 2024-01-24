@@ -113,9 +113,9 @@
                             // Create action buttons HTML'
                             var unsubscribe_token = row.unsubscribe_token;
                             if (row.is_unsubscribed) {
-                                button = '<button class="btn bg-gradient-success btn-sm">Subscribe</button>';
+                                button = '<button class="btn bg-gradient-success btn-sm" unsub_token="' + unsubscribe_token + '" >Subscribe</button>';
                             } else {
-                                button = '<button class="btn bg-gradient-danger btn-sm">Unsubscribe</button>';
+                                button = '<button class="btn bg-gradient-danger btn-sm" unsub_token="' + unsubscribe_token + '">Unsubscribe</button>';
                             }
 
                             return button;
@@ -127,9 +127,8 @@
         );
         
         $('#filtersTable').on('click', 'button', event => {
-            let data = dataTable.row($(event.target).closest('tr')).data();
             // console.log(data)
-            var unsubscribe_token = data.unsubscribe_token;
+            const unsubscribe_token = event.target.getAttribute("unsub_token");
             if (event.target.innerText === "UNSUBSCRIBE") { 
                 url = "/unsubscribe/" + unsubscribe_token;
             } else {

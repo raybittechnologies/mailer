@@ -224,7 +224,7 @@
                             // Create action buttons HTML'
                             var campaignid = row.campaignid;
                             var buttons = '<a class="btn btn-success btn-sm" href="/campaign/view/' + campaignid + '">View</a> ' +
-                                '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteCampaignModal" type="submit">Delete</button>';
+                                '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" id="camp_' + id + '" data-bs-target="#deleteCampaignModal" type="submit">Delete</button>';
                                 
                             return buttons;
                         }
@@ -235,10 +235,10 @@
         );
         
         $('#filtersTable').on('click', 'button', event => {
-            let data = dataTable.row($(event.target).closest('tr')).data();
             // console.log(data)
             if (event.target.innerText === "DELETE") {
-                document.getElementById("delete-modal-campid").value = data.id;
+                const id = event.target.id.split("_")[1];
+                document.getElementById("delete-modal-campid").value = id;
             } else {
                 console.log(event.target.innerText)
             }

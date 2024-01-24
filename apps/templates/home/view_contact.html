@@ -17,7 +17,6 @@
         <div class="card shadow-lg border-0 rounded-lg">
             <div class="card-header"><h3 class="text-center font-weight-light my-1">Contacts</h3></div>
             <div class="card-body">
-                    <p class="text-center font-weight-light my-4">* When you click <strong>unsubscribe</strong>, it applies to associated services which has same address or same phone number.</p>
                     <table style="width:100%" id="filtersTable" class="table table-striped table-bordered nowrap">
                         <thead>
                         <tr>
@@ -155,7 +154,7 @@
                         render: function (id, type, row) {
                             // Create action buttons HTML
                             var buttons = 
-                                '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteServiceModal" >Delete</button>';
+                                '<button class="btn btn-danger btn-sm" id="' + id + '" data-bs-toggle="modal" data-bs-target="#deleteServiceModal" >Delete</button>';
                             return buttons;
                         }
                     }
@@ -166,27 +165,20 @@
         $('#filtersTable').DataTable().buttons().container().appendTo('#example_wrapper .col-md-6:eq(0)');
 
         $('#filtersTable').on('click', 'button', event => {
-            let data = dataTable.row($(event.target).closest('tr')).data();
-            // console.log(data)
+            const id = event.target.id;
             if (event.target.innerText === "DELETE") {
-                document.getElementById("delete-modal-serviceid").value = data.id;
+                document.getElementById("delete-modal-serviceid").value = id;
             } else {
                 console.log(event.target.innerText)
             }
         });
 
         $('#filtersTable').on('click', 'input', event => {
-            
             const id = event.target.id;
             const unsubscribe_token = event.target.alt;
-            var checkBox = document.getElementById(id);
-
-            // console.log(id, unsubscribe_token, checkBox.checked);
-            // console.log(data, checkBox.checked)
             var url = '';
-            // var unsubscribe_token = data.unsubscribe_token
 
-            if (checkBox.checked) {
+            if (event.target.checked) {
                 url = "/subscribe/" + unsubscribe_token
             } else {
                 url = "/unsubscribe/" + unsubscribe_token;

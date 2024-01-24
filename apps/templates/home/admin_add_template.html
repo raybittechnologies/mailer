@@ -158,9 +158,9 @@
                             // Create action buttons HTML
                             var tid = ""; 
                             tid = row.tempid;
-                            var buttons = '<button class="btn btn-facebook btn-sm" data-bs-toggle="modal" data-bs-target="#addNewTemplateModalMessage" >Edit</button> ' +
+                            var buttons = '<button class="btn btn-facebook btn-sm" id="edit_' + id + '" value="' + row.template_name + '" data-bs-toggle="modal" alt="' + row.template_desc + '"  data-bs-target="#addNewTemplateModalMessage" >Edit</button> ' +
                                 '<a class="btn btn-success btn-sm" href="/template/view/' + tid + '">View</a> ' +
-                                '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteTemplateModal" type="submit">Delete</button>';
+                                '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" id="' + id + '" data-bs-target="#deleteTemplateModal" type="submit">Delete</button>';
                                 
                             return buttons;
                         }
@@ -171,31 +171,30 @@
         );
         
         $('#filtersTable').on('click', 'button', event => {
-            let data = dataTable.row($(event.target).closest('tr')).data();
-            // console.log(data)
             if (event.target.innerText === "EDIT") {
-                document.getElementById("template-name").value = data.template_name;
-                document.getElementById("template-description").innerHTML = data.template_desc;
-                document.getElementById("tempid").value = data.id;
+                id = event.target.id.split("edit_")[1];
+                console.log(id) ;
+                document.getElementById("template-name").value = event.target.value;
+                document.getElementById("template-description").innerHTML = event.target.getAttribute('alt');
+                document.getElementById("tempid").value = id;
                 document.getElementById("add-template-button").innerHTML = "Save";
             } else if (event.target.innerText === "DELETE") {
-                document.getElementById("delete-modal-tempid").value = data.id;
+                id = event.target.id;
+                document.getElementById("delete-modal-tempid").value = id;
             } else {
                 console.log(event.target.innerText)
             }
         });
 
         $('#filtersTable').on('click', 'input', event => {
-            let data = dataTable.row($(event.target).closest('tr')).data();
-            var checkBox = document.getElementById("flexSwitchCheckDefault" + data.id)
-            // console.log(data, checkBox.checked)
-
+            const id = event.target.id.split("flexSwitchCheckDefault")[1];
+            // console.log(id);
             // Fetch action data
             fetch("/admin/update/template", {
                 method: 'POST',
                 body: JSON.stringify({
-                    status : checkBox.checked,
-                    tempid : data.id,
+                    status : event.target.checked,
+                    tempid : id,
                 }),
                 headers: { 'Content-type': 'application/json' }
             }).then(response => {

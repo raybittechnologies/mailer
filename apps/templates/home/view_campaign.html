@@ -58,6 +58,25 @@
               </div>
             </div>
         </div>
+        <div class="modal fade" id="retryJobModal" tabindex="-1" role="dialog" aria-labelledby="retryJobModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="retryJobModalLabel">Are you sure to retry this automation?</h5>
+                  <button type="button" class="btn-close text-dark" id="close-retryjob-modal" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <form action="/automation/retry" style="display: contents" method="post"> 
+                    <input type="hidden" name="jobid" id="retry-modal-jobid"/>
+                    <div class="modal-footer">
+                        <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <input class="btn btn-success" type="submit" tabindex="0" value="Retry">
+                    </div>
+                </form>
+              </div>
+            </div>
+        </div>
     </div>
 
 {% endblock content %}
@@ -126,8 +145,10 @@
                             // Create action buttons HTML'
                             var job_id = row.job_id;
                             var buttons = '<a class="btn btn-success btn-sm" href="/automation/view/' + job_id + '">View</a> ' +
-                                '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteJobModal" >Delete</button>';
-                                
+                                '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" job_id="' + job_id +'" data-bs-target="#deleteJobModal" >Delete</button>';
+                            if (row.status == "failed") {
+                                buttons += ' <button class="btn btn-facebook btn-sm" data-bs-toggle="modal" job_id="' + job_id +'" data-bs-target="#retryJobModal" >Retry</button>';
+                            }
                             return buttons;
                         }
                     }
@@ -137,10 +158,12 @@
         );
         
         $('#filtersTable').on('click', 'button', event => {
-            let data = dataTable.row($(event.target).closest('tr')).data();
-            // console.log(data)
             if (event.target.innerText === "DELETE") {
-                document.getElementById("delete-modal-jobid").value = data.job_id;
+                const jobid = event.target.getAttribute("job_id");
+                document.getElementById("delete-modal-jobid").value = jobid;
+            } else if (event.target.innerText === "RETRY") {
+                const jobid = event.target.getAttribute("job_id");
+                document.getElementById("retry-modal-jobid").value = jobid;
             } else {
                 console.log(event.target.innerText)
             }
@@ -153,6 +176,52 @@
             $('#close-deletejob-modal').click();
 
             fetch('/automation/delete',{
+                method: 'POST',
+                headers : { 'Content-Type': 'application/json' },
+                body: JSON.stringify({"jobid" : jobid}),
+            })
+            .then((response) => {
+                if(!response.ok)
+                    return response.text().then(text => { throw new Error(text) })
+                else
+                    return response.json()
+            })
+            .then((data) => {
+                if (data.success) {
+                    // console.log(data);
+                    dataTable.ajax.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: data.message,
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                } else {
+                    console.log(data.message);
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Oops...",
+                        text: data.message,
+                    });
+                }
+            })
+            .catch((err) => {
+                console.log(err);
+                Swal.fire({
+                    icon: "warning",
+                    title: "Oops...",
+                    text: data.message,
+                });
+            })
+        });
+
+        $('#retryJobModal').on('submit', function(e) { //use on if jQuery 1.7+
+            e.preventDefault();  //prevent form from submitting
+            const jobid = document.getElementById("retry-modal-jobid").value;
+
+            $('#close-retryjob-modal').click();
+
+            fetch('/automation/retry',{
                 method: 'POST',
                 headers : { 'Content-Type': 'application/json' },
                 body: JSON.stringify({"jobid" : jobid}),

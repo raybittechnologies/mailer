@@ -354,9 +354,9 @@ def contact_delete():
 def view_contact(id):
     userid = current_user.id
     uploaded_file = Uploadedcontactfile.query.filter_by(id=id, user_id=userid).first()
-    file_desc = uploaded_file.description
-    
+
     if uploaded_file:
+        file_desc = uploaded_file.description
         return render_template('home/view_contact.html', fileid=id, file_desc=file_desc)
         
     else:
@@ -1533,6 +1533,51 @@ def job_delete():
     return {"success": True, 'message': "Job deleted successfully."}
 
 
+@blueprint.route('/automation/retry', methods=['POST'])
+@login_required 
+def job_retry():
+    try:
+        jobid = request.json['jobid']
+        job = Automation.query.filter_by(job_id=jobid).first()
+        job.status = "pending"
+        
+        emails = Email.query.filter_by(job_id=jobid).all()
+
+        for email in emails:
+            email.is_sent = 0
+            email.is_opened = 0
+            email.is_unsubscribed = 0
+            email.is_replied = 0
+        
+        job_starttime = datetime.datetime.now() + timedelta(seconds=30)
+        job_start_utctime = datetime.datetime.utcnow() + timedelta(seconds=30)
+        job.action_datetime = job_start_utctime
+
+        action_id = job.action_id
+
+        job = {
+            "id" : jobid,
+            'trigger' : 'date',
+            "run_date" : job_starttime.strftime("%Y-%m-%d %H:%M:%S"),
+            "func" : "jobs:email_automation_job",
+            "args" : (current_user.nylas_access_token, action_id, jobid, current_user.email)
+        }
+        try:
+            scheduler.add_job(**job) # TODO: Uncomment this line
+            print("created job again", jobid)
+        except Exception as e:
+            print("Failed to create job", str(e))
+            return {"success": False, "message": "Something went wrong. Please try again."}
+            
+        db.session.commit()
+        return {"success": True, 'message': "Job rescheduled successfully."}
+    
+    except Exception as e:
+        print(repr(e))
+        return {"success": False, "message": "Something went wrong. Please try again."}
+    
+
+
 @blueprint.route('/campaign/view/<campaignid>', methods=['GET'])
 @login_required 
 def campaign_view(campaignid):
@@ -1574,8 +1619,20 @@ def get_emails(jobid):
     return jsonify(temp_list)
 
 
-@blueprint.route('/unsubscribe/<token>', methods=['GET'])
-def unsubscribe(token):
+@blueprint.route('/unsubscribe/choose', methods=['GET'])
+def unsubscribe_choose():
+    id = request.args.get('_id')
+    token = request.args.get('token')
+    WEB_HOST_IP = os.getenv("WEB_HOST_IP")
+    return render_template('home/unsubscribe_choose.html', token=token, domain=WEB_HOST_IP, id=id)
+
+
+@blueprint.route('/unsubscribe/all', methods=['GET'])
+def unsubscribe_all():
+
+    token = request.args.get('token')
+    id = request.args.get('_id')
+
     emails = Email.query.filter_by(unsubscribe_token=token).all()
     service = Uploadedservice.query.filter_by(unsubscribe_token=token).first()
     
@@ -1588,7 +1645,7 @@ def unsubscribe(token):
             address = service.address
             if address:
                 # Unsubscribe all emails from this address : same business
-                services = Uploadedservice.query.filter_by(address=address, user_id = current_user.id).all()
+                services = Uploadedservice.query.filter_by(address=address, user_id = id).all()
                 for service in services:
                     # Unsubscribe all service with this address
                     service.is_unsubscribed = 1
@@ -1622,6 +1679,21 @@ def unsubscribe(token):
         print(repr(e))
         return "Something went wrong. Please try again."
     
+    return "You have been unsubscribed successfully."
+
+@blueprint.route('/unsubscribe/<token>', methods=['GET'])
+def unsubscribe(token):
+    emails = Email.query.filter_by(unsubscribe_token=token).all()
+    service = Uploadedservice.query.filter_by(unsubscribe_token=token).first()
+    
+    for email in emails:
+        email.is_unsubscribed = 1
+    
+    if service:
+        service.is_unsubscribed = 1
+    
+    db.session.commit()
+
     return "You have been unsubscribed successfully."
 
 
