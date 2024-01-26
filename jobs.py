@@ -1,11 +1,12 @@
 import time
 from apps import scheduler, db
 from flask_login import current_user
-from apps.models import Email, Automation, Action, Template, Uploadedservice
+from apps.models import Email, Automation, Action, Template, Uploadedservice, UserCredit, Service
 from apps.home.emailler import send_email_via_nylas, send_email_via_mailtrap
 from nylas import APIClient
 from jinja2 import Template as JT
 import os
+from datetime import datetime, timedelta
     
 def email_automation_job(nylas_token, actionid, jobid, useremail):
     
@@ -124,4 +125,25 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
             print("Failed to commit db session:", str(e))
         
         
-        
+def job_manage_credit():
+    print("Daily job started", datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f"))
+    with scheduler.app.app_context():
+        user_credits = UserCredit.query.all()
+        user_initial_credit = 30
+
+        for user_credit in user_credits:
+            cur_datetime = datetime.utcnow()
+            last_updated = user_credit.update_datetime
+            diff = (cur_datetime + timedelta(minutes=1)) - last_updated # it might be run earlier a few milliseconds so added 1 minute margin
+            days = diff.days    
+
+            if int(days) == 30: # 30 days
+                user_credit.credit += 30
+                user_id = user_credit.userid
+                services = Service.query.filter_by(user_id = user_id, is_credited=0).all()
+
+                for idx, service in enumerate(services):
+                    if idx < user_initial_credit:
+                        service.is_credited = 1
+
+        db.session.commit()

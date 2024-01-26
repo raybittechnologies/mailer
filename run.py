@@ -59,31 +59,33 @@ app.wsgi_app = ProxyFix(app.wsgi_app)
 
 scheduler.start()
 
-# Lite users. 30 credits per day
-@scheduler.task('cron', id='job_manage_credit', hour=0, minute=0)
-def job_manage_credit():
-    print("Daily job started", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f"))
-    with scheduler.app.app_context():
-        user_credits = UserCredit.query.all()
-        user_initial_credit = 30
+# User credit job
+job_id = 'job_manage_credit'
+job = {
+        "id" : job_id,
+        'trigger' : 'cron',
+        'hour' : 0,
+        'minute' : 0,
+        "func" : "jobs:job_manage_credit",
+        "args" : ()
+    }
 
-        for user_credit in user_credits:
-            cur_datetime = datetime.datetime.utcnow()
-            last_updated = user_credit.update_datetime
-            diff = (cur_datetime + datetime.timedelta(minutes=1)) - last_updated # it might be run earlier a few milliseconds so added 1 minute margin
-            days = diff.days    
+if scheduler.get_job(job_id) is None:
+    try:
+        scheduler.add_job(**job) # TODO: Uncomment this line
+        print("Created Credit job ", "job_manage_credit")
+    except Exception as e:
+        print("Failed to create job", str(e))
 
-            if int(days) == 30: # 30 days
-                user_credit.credit += 30
+else:
+    print("job_manage_credit already exists")
+    try:
+        scheduler.remove_job(job_id)
+        scheduler.add_job(**job) # TODO: Uncomment this line
+        print("Created Credit job ", "job_manage_credit")
+    except Exception as e:
+        print("Failed to create job", str(e))
 
-                services = Service.query.filter_by(user_id = id, is_credited=0).all()
-
-                for idx, service in enumerate(services):
-                    if idx < user_initial_credit:
-                        service.is_credited = 1
-
-        db.session.commit()
-        
 
 @app.route('/msg', methods=['POST'])
 def msg1():

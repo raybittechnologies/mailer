@@ -98,7 +98,7 @@ def url():
 
         existing_url = Yelpurl.query.filter_by(product_url=url, userid=current_user.id).first()
         if existing_url is None:
-            new_url = Yelpurl(product_url=url, userid=current_user.id, state="idle", name=encoded_business)
+            new_url = Yelpurl(product_url=url, userid=current_user.id, state="idle", name=business)
             db.session.add(new_url)
             db.session.commit()
             
@@ -216,14 +216,10 @@ def complete_process():
 @login_required
 def fetching():
     id = request.args.get('id')
-    page_data = get_page_data()
     yelpurl = Yelpurl.query.get(id)
     
     if yelpurl.state == "running":
-        return render_template('home/fetch_url_data.html', segment='url', API_GENERATOR=len(API_GENERATOR),
-                            page_data=page_data,
-                            current_url=yelpurl
-                            )
+        return render_template('home/fetch_url_data.html', segment='url', current_url=yelpurl )
     else:
         return redirect(url_for('home_blueprint.url_view', id=id))
     
