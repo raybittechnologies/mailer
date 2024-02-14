@@ -135,12 +135,76 @@ def url_history():
     return jsonify(url_list)
 
 
-@blueprint.route('/viwe_url_history/<int:url_id>')
+@blueprint.route('/view_url_history/<int:url_id>')
 @login_required
-def viwe_url_history(url_id):
+def view_url_history(url_id):
     # Return only the urls that are credited
-    user_urls = Service.query.filter_by(url_id=url_id, user_id=current_user.id, is_credited=1).all()
+    user_urls = Service.query.filter_by(url_id=url_id, user_id=current_user.id).all()
     # print(user_urls)
+    url_list = []
+    for url_entry in user_urls:
+        url_data = {
+            "id": url_entry.id,
+            "name": url_entry.name,
+            "venue_type": url_entry.venue_type,
+            "website": url_entry.website,
+            "phone": url_entry.phone,
+            "address": url_entry.address,
+            "facebook": url_entry.facebook,
+            "instagram": url_entry.instagram,
+            "twitter": url_entry.twitter,
+            "email1": url_entry.email1,
+            "email2": url_entry.email2,
+            "email3": url_entry.email3,
+            "email4": url_entry.email4,
+            "fbemail1": url_entry.fbemail1,
+            "fbemail2": url_entry.fbemail2,
+            "bademail": url_entry.bademail,
+            "url_id": url_entry.url_id,
+            "user_id": url_entry.user_id,
+        }
+        url_list.append(url_data)
+    return jsonify(url_list)
+
+
+@blueprint.route('/view_scraped_data', methods=['GET'])
+@login_required
+def view_scraped_data():
+    
+    # Return only the services that are not credited
+    user_urls = Service.query.filter_by(user_id=current_user.id, is_credited=0).limit(10).all()
+    url_list = []
+    for url_entry in user_urls:
+        url_data = {
+            "id": url_entry.id,
+            "name": url_entry.name,
+            "venue_type": url_entry.venue_type,
+            "website": url_entry.website,
+            "phone": url_entry.phone,
+            "address": url_entry.address,
+            # "facebook": url_entry.facebook,
+            # "instagram": url_entry.instagram,
+            # "twitter": url_entry.twitter,
+            # "email1": url_entry.email1,
+            # "email2": url_entry.email2,
+            # "email3": url_entry.email3,
+            # "email4": url_entry.email4,
+            # "fbemail1": url_entry.fbemail1,
+            # "fbemail2": url_entry.fbemail2,
+            # "bademail": url_entry.bademail,
+            "url_id": url_entry.url_id,
+            "user_id": url_entry.user_id,
+        }
+        url_list.append(url_data)
+    return jsonify(url_list)
+
+
+@blueprint.route('/view_credited_data', methods=['GET'])
+@login_required
+def view_credited_data():
+    
+    # Return only the services that are not credited
+    user_urls = Service.query.filter_by(user_id=current_user.id, is_credited=1).all()
     url_list = []
     for url_entry in user_urls:
         url_data = {
@@ -171,12 +235,56 @@ def viwe_url_history(url_id):
 @login_required
 def history():
     if current_user.role == "lite":
-        user_credit = UserCredit.query.filter_by(userid=current_user.id).first()
-        credit = user_credit.credit
+        credit = UserCredit.query.filter_by(userid=current_user.id).first().credit
+        consumed = Service.query.filter_by(user_id=current_user.id, is_credited=1).count()
+        available_credit = credit - consumed
+        
+        return render_template('home/view_scraped_data.html', segment='history', available_credit=available_credit, user_credit=credit, consumed=consumed)
     else:
-        credit = None
+        return render_template('home/view_urls.html', segment='history')
+    
 
-    return render_template('home/view_urls.html', segment='history', credit=credit)
+@blueprint.route('/view_credited')
+@login_required
+def view_credited():
+    credited = Service.query.filter_by(user_id=current_user.id, is_credited=1).count()
+    return render_template('home/view_credited_data.html', segment='history', credited=credited)
+
+
+@blueprint.route('/update/credit', methods=['POST'])
+@login_required
+def credit_service():
+    serviceid = request.json['id']
+    action = request.json['action']
+
+    user_credit = db.session.query(UserCredit).filter_by(userid = current_user.id).first()
+
+    if user_credit is None:
+        message = "Could not find credit info!"
+        return {"success": False, 'message': message}
+
+    credited_services = Service.query.filter_by(user_id = current_user.id, is_credited = 1).count()
+    user_available_credit = user_credit.credit - credited_services
+    service = Service.query.get(serviceid)
+
+    if action == 'plus':
+        if user_available_credit > 0:
+            service.is_credited = 1
+            message = f"Service '{service.name}' is credited successfully."
+            available_credit = user_available_credit - 1
+
+            db.session.commit()
+            return {"success": True, 'message': message, "available_credit" : available_credit, "user_credit" : user_credit.credit }
+        
+        else:
+            return {"success": False, 'message': "You consumed all credit. You can not add more services."}
+    else:
+        service.is_credited = 2
+        message = f"Service '{service.name}' is not credited."
+        available_credit = user_available_credit
+        db.session.commit()
+        return {"success": True, 'message': message, "available_credit" : available_credit, "user_credit" : user_credit.credit }
+
 
 
 @blueprint.route('/fetch/<int:id>', methods=['GET', 'POST'])
@@ -272,12 +380,16 @@ def upload_contact():
         services = []
         df.fillna("", inplace=True)
         for idx, item in df.iterrows():
-            venue = item['venue']
-            venue_type = item['type']
-            website = item['website']
-            phone = item['phone']
-            address = item['address']
-            facebook = item['facebook']
+            try:
+                venue = item['venue']
+                venue_type = item['type']
+                website = item['website']
+                phone = item['phone']
+                address = item['address']
+                facebook = item['facebook']
+            except Exception as e:
+                print(repr(e))
+                continue
             
             if item['email1'] != "" and check_blacklisted(item['email1'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email1'].strip(), user_id = current_user.id, file_id=file_id)
@@ -357,12 +469,43 @@ def view_contact(id):
         
     else:
         return render_template('home/page-404.html')
+    
+@blueprint.route('/masterview', methods=['GET'])
+@login_required
+def view_all_contact():
+    return render_template('home/view_all_contact.html')
         
         
 @blueprint.route('/contacts/list/<int:id>', methods=['GET'])
 @login_required
 def contacts_list(id):
     services = Uploadedservice.query.filter_by(user_id=current_user.id, file_id=id).order_by(Uploadedservice.create_datetime.desc()).all()
+    all_services = []
+
+    for service in services:
+        data = {
+            'id': service.id,
+            'name': service.name,
+            'venue_type': service.venue_type,
+            'email': service.email,
+            'is_bad' : service.is_bad,
+            'create_datetime' : service.create_datetime,
+            'is_unsubscribed' : service.is_unsubscribed,
+            'unsubscribe_token' : service.unsubscribe_token,
+            'website': service.website,
+            'phone': service.phone,
+            'address': service.address,
+            'facebook': service.facebook,
+            
+        }
+        all_services.append(data)
+
+    return jsonify(all_services)
+
+@blueprint.route('/contacts/all', methods=['GET'])
+@login_required
+def contacts_all_list():
+    services = Uploadedservice.query.filter_by(user_id=current_user.id).order_by(Uploadedservice.create_datetime.desc()).all()
     all_services = []
 
     for service in services:
@@ -408,7 +551,7 @@ def service_delete():
 @login_required
 def url_view(id):
     yelpurl = Yelpurl.query.get(id)
-    return render_template('home/view_url_data.html', segment='url', current_url=yelpurl)
+    return render_template('home/view_url_data.html', segment='history', current_url=yelpurl)
     
 @blueprint.route('/url/delete', methods=['POST'])
 @login_required
@@ -580,6 +723,57 @@ def admin_users():
                            )
 
 
+@blueprint.route('/admin/users_credit', methods=['GET'])
+@login_required
+@role_required('admin')
+def admin_users_credit():
+    return render_template("home/admin_users_credit.html", segment='users_credit')
+
+
+@blueprint.route('/admin/get_users_credit', methods=['GET'])
+@login_required
+@role_required('admin')
+def get_users_credit():
+    # users = Users.query.filter(Users.role != "admin").join(UserCredit, UserCredit.userid == Users.id, isouter=False).all()
+
+    users = db.session.query(Users, UserCredit).filter(Users.role == "lite").join(UserCredit, Users.id == UserCredit.userid, isouter=False).all()
+    user_list = []
+
+    for user in users:
+        user_data = {
+            'id': user[0].id,
+            'username': user[0].username,
+            'email': user[0].email,
+            'update_datetime': user[1].update_datetime,
+            'credit': user[1].credit
+        }
+        user_list.append(user_data)
+
+    return jsonify(user_list)
+
+@blueprint.route('/admin/update/credit', methods=['POST'])
+@login_required 
+@role_required('admin')
+def update_credit():
+    userid = request.form['userid']
+    user_credit = request.form['user-credit']
+    
+    if userid:
+        temp = UserCredit.query.filter(UserCredit.userid == userid).first()
+        temp.credit = user_credit
+
+        credited_services = Service.query.filter_by(user_id = userid, is_credited = 1).count()
+
+        if int(user_credit) < credited_services:
+            limit = credited_services - user_credit
+            services = Service.query.filter_by(user_id = userid, is_credited = 1).limit(limit).all()
+            for service in services:
+                service.is_credited = 0
+        
+    db.session.commit()
+    return redirect(url_for('home_blueprint.admin_users_credit'))
+    
+
 @blueprint.route('/admin/profile', methods=['POST', 'GET'])
 @login_required
 @role_required('admin')
@@ -653,11 +847,6 @@ def inactive_user(id):
 def upgrade_user_premium(id):
     user = Users.query.get(id)
     user.role = "premium"
-    
-    services = db.session.query(Service).filter_by(user_id = id).all()
-    for service in services:
-        service.is_credited = 1
-
     db.session.commit()
     return redirect(url_for("home_blueprint.admin_users"))
 
@@ -680,14 +869,6 @@ def upgrade_user_lite(id):
         user_credit = UserCredit(userid=id, credit=user_initial_credit)
         db.session.add(user_credit)
 
-    services = db.session.query(Service).filter_by(user_id = id).all()
-
-    for idx, service in enumerate(services):
-        if idx < user_initial_credit:
-            service.is_credited = 1
-        else:
-            service.is_credited = 0
-
     db.session.commit()
     return redirect(url_for("home_blueprint.admin_users"))
 
@@ -698,11 +879,6 @@ def upgrade_user_lite(id):
 def upgrade_user_normal(id):
     user = Users.query.get(id)
     user.role = "user"
-    
-    services = db.session.query(Service).filter_by(user_id = id).all()
-    for service in services:
-        service.is_credited = 1
-
     db.session.commit()
     return redirect(url_for("home_blueprint.admin_users"))
 
@@ -738,7 +914,7 @@ def add_user():
                                    )
 
         user = Users(**request.form)
-        user.role = "user"
+        user.role = "premium"
         user.state = "pending"
         db.session.add(user)
         db.session.commit()

@@ -115,17 +115,6 @@ def msg1():
             if existing_url is None:
                 user = db.session.get(Users, int(data['user_id']))
 
-                if user.role == 'lite':
-                    user_credit = UserCredit.query.filter_by(userid=data['user_id']).first()
-                    credited_count = Service.query.filter_by(user_id=data['user_id'], is_credited=1).count()
-                    if user_credit.credit > credited_count:
-                        is_credited = 1
-                    else:
-                        is_credited = 0
-                
-                else:
-                    is_credited = 1
-                
                 new_service = Service(
                     name= data['venue'] if type(data) == 'str' else data['venue'][0],
                     venue_type= data['venuetype'] if type(data) == 'str' else data['venuetype'][0],
@@ -144,7 +133,6 @@ def msg1():
                     url_id=data['url_id'],
                     user_id=data['user_id'],
                     biz_id=data['bizId'],
-                    is_credited=is_credited
                 )
                 db.session.add(new_service)
                 db.session.commit()

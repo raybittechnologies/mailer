@@ -1,0 +1,255 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} {% endblock title %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.3.2/css/fixedHeader.bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+{% endblock stylesheets %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row col-12">
+        <div class="card shadow-lg border-0 rounded-lg">
+            <div class="card-header"><h3 class="text-center font-weight-light my-1">Contacts</h3></div>
+            <div class="card-body">
+                    <table style="width:100%" id="filtersTable" class="table table-striped table-bordered nowrap">
+                        <thead>
+                        <tr>
+                            <th>Venue</th>
+                            <th>Email</th>
+                            <th>VenuType</th>
+                            <th>Phone</th>
+                            <th>Address</th>
+                            <th>Website</th>
+                            <th>Facebook</th>
+                            <th>Subscribed</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <!-- Rows will be added dynamically using JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% include "includes/footer.html" %}
+        
+        <div class="modal fade" id="deleteServiceModal" tabindex="-1" role="dialog" aria-labelledby="deleteServiceModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="deleteServiceModalLabel">Are you sure to delete this service?</h5>
+                  <button type="button" class="btn-close text-dark" id="close-deletejob-modal" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <form action="/service/delete" style="display: contents" method="post"> 
+                    <input type="hidden" name="jobid" id="delete-modal-serviceid"/>
+                    <div class="modal-footer">
+                        <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <input class="btn btn-danger" type="submit" value="Delete">
+                    </div>
+                </form>
+              </div>
+            </div>
+        </div>
+
+    </div>
+
+{% endblock content %}
+
+<!-- Specific JS goes HERE -->
+{% block javascripts %}
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap.min.js"></script>
+<script src="https://cdn.datatables.net/fixedheader/3.3.2/js/dataTables.fixedHeader.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.4.1/js/responsive.bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // Initialize DataTable
+        var dataTable = $('#filtersTable').DataTable({
+                responsive: true,
+                dom: 'Bfrtip',
+                columnDefs: [
+                    {
+                        target: [2, 5, 6],
+                        visible: false,
+                    }
+                ],
+                buttons: [
+                    {
+                        extend: 'excel',
+                        filename: 'master_list',
+                        exportOptions: {
+                            columns: [ 0, 1, 2, 3, 4, 5, 6, 7]
+                        },
+                        title: null
+                    },
+                    {
+                        extend: 'csv',
+                        filename: 'master_list',
+                        exportOptions: {
+                            columns: [ 0, 1, 2, 3, 4, 5, 6, 7]
+                        }
+                    }],
+                order : [],
+                ajax: {
+                    url: '/contacts/all',
+                    dataSrc: ''
+                },
+                columns: [
+                    //{#{data: 'id'},#}
+                    {data: 'name'},
+                    {data: 'email'},
+                    {data: 'venue_type'},
+                    {data: 'phone'},
+                    {data: 'address'},
+                    {
+                        data: 'website',
+                        render: function (website, type, row) {
+                            return website ? '<a href="' + website + '" target="_blank" >' + website + ' </a>' : ''
+                        },
+                    },
+                    {
+                        data: 'facebook',
+                        render: function (facebook, type, row) {
+                            return facebook ? '<a href="' + facebook + '" target="_blank" >' + facebook + ' </a>' : ''
+                        },
+                    },
+                    {
+                        data: 'is_unsubscribed',
+                        render : function (is_unsubscribed, type, row) {
+                            var  label = ""
+                            var id = row.id;
+                            
+                            var chekced = '';
+                            var label = '';
+                            if (is_unsubscribed) {
+                                label = '<label class="badge bg-danger">Unsubscribed</label>'
+                            } else {
+                                label = '<label class="badge bg-success">Subscribed</label>'
+                            }
+                            checked = !is_unsubscribed ? 'checked' : '';
+                            var publish_state = '<div class="form-check form-switch">' + 
+                                                    '<input class="form-check-input" type="checkbox" alt="' + row.unsubscribe_token + '" id="flexSwitchCheckDefault' + id +'" ' + checked + '>' + label +
+                                                '</div>';
+                            return publish_state
+                        }
+                    },
+                    {
+                        data: 'id', // Assuming the id property is present in your data
+                        render: function (id, type, row) {
+                            // Create action buttons HTML
+                            var buttons = 
+                                '<button class="btn btn-danger btn-sm" id="' + id + '" data-bs-toggle="modal" data-bs-target="#deleteServiceModal" >Delete</button>';
+                            return buttons;
+                        }
+                    }
+                ]
+            },
+        );
+        
+        $('#filtersTable').DataTable().buttons().container().appendTo('#example_wrapper .col-md-6:eq(0)');
+
+        $('#filtersTable').on('click', 'button', event => {
+            const id = event.target.id;
+            if (event.target.innerText === "DELETE") {
+                document.getElementById("delete-modal-serviceid").value = id;
+            } else {
+                console.log(event.target.innerText)
+            }
+        });
+
+        $('#filtersTable').on('click', 'input', event => {
+            const id = event.target.id;
+            const unsubscribe_token = event.target.alt;
+            var url = '';
+
+            if (event.target.checked) {
+                url = "/subscribe/" + unsubscribe_token
+            } else {
+                url = "/unsubscribe/" + unsubscribe_token;
+            }
+            // Fetch action data
+            fetch(url, {
+                method: 'GET',
+            }).then(response => {
+                    if(!response.ok)
+                        return response.text().then(text => { throw new Error(text) })
+                    else
+                        return response.text()
+                })
+                .then(data => {
+                    //handle data
+                    // console.log(data)
+                    dataTable.ajax.reload();
+                })
+                .catch(error => {
+                    //handle error
+                    console.log(error);
+                });
+
+        });
+
+        $('#deleteServiceModal').on('submit', function(e) { //use on if jQuery 1.7+
+            e.preventDefault();  //prevent form from submitting
+            const serviceid = document.getElementById("delete-modal-serviceid").value;
+
+            $('#close-deletejob-modal').click();
+
+            fetch('/service/delete',{
+                method: 'POST',
+                headers : { 'Content-Type': 'application/json' },
+                body: JSON.stringify({"serviceid" : serviceid}),
+            })
+            .then((response) => {
+                if(!response.ok)
+                    return response.text().then(text => { throw new Error(text) })
+                else
+                    return response.json()
+            })
+            .then((data) => {
+                if (data.success) {
+                    // console.log(data);
+                    dataTable.ajax.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: data.message,
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                } else {
+                    console.log(data.message);
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Oops...",
+                        text: data.message,
+                    });
+                }
+            })
+            .catch((err) => {
+                console.log(err);
+                Swal.fire({
+                    icon: "warning",
+                    title: "Oops...",
+                    text: data.message,
+                });
+            })
+        });
+
+    });
+</script>
+{% endblock javascripts %}

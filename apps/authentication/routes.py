@@ -112,7 +112,7 @@ def register():
 
         # else we can create the user
         user = Users(**request.form)
-        user.role = "user"
+        user.role = "premium"
         user.state = "pending"
         db.session.add(user)
         db.session.commit()

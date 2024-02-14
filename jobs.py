@@ -29,7 +29,7 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
         message = action.message
         jinja_temp = JT(message)
         
-        emails = Email.query.filter_by(job_id=jobid).all()
+        emails = Email.query.filter_by(job_id=jobid, is_unsubscribed=0).all()
         WEB_HOST_IP = os.environ.get('WEB_HOST_IP')
         
         job = Automation.query.filter_by(job_id=jobid).first()
@@ -43,12 +43,12 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
         
         for email in emails:
             
-            try:
-                if email.is_unsubscribed == 1:
-                    continue
-            except Exception as e:
-                print("Failed to check is_unsubscribed:", str(e))
-                continue
+            # try:
+            #     if email.is_unsubscribed == 1:
+            #         continue
+            # except Exception as e:
+            #     print("Failed to check is_unsubscribed: ", email.email,  str(e))
+            #     continue
 
             print("Sending to", email.email)
             
@@ -129,7 +129,6 @@ def job_manage_credit():
     print("Daily job started", datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f"))
     with scheduler.app.app_context():
         user_credits = UserCredit.query.all()
-        user_initial_credit = 30
 
         for user_credit in user_credits:
             cur_datetime = datetime.utcnow()
@@ -139,11 +138,5 @@ def job_manage_credit():
 
             if int(days) == 30: # 30 days
                 user_credit.credit += 30
-                user_id = user_credit.userid
-                services = Service.query.filter_by(user_id = user_id, is_credited=0).all()
-
-                for idx, service in enumerate(services):
-                    if idx < user_initial_credit:
-                        service.is_credited = 1
 
         db.session.commit()

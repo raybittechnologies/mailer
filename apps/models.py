@@ -50,7 +50,7 @@ class Service(db.Model):
     url_id = db.Column(db.String(255), nullable=False)
     user_id = db.Column(db.String(255), nullable=False)
     biz_id = db.Column(db.String(255), nullable=False)
-    is_credited = db.Column(db.Integer, default=0)
+    is_credited = db.Column(db.Integer, default=0) # 1: credited, 0: not credited 2 : ignored
     
     __table_args__ = (
         db.Index('sevice-idx', "url_id", "user_id", "biz_id", unique=True), 
