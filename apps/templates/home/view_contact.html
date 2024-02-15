@@ -22,6 +22,9 @@
                         <tr>
                             <th>Venue</th>
                             <th>Email</th>
+                            <th>FirstName</th>
+                            <th>CustomText</th>
+                            <th>OriginalEmail</th>
                             <th>VenuType</th>
                             <th>Phone</th>
                             <th>Address</th>
@@ -85,7 +88,7 @@
                 dom: 'Bfrtip',
                 columnDefs: [
                     {
-                        target: [2, 5, 6],
+                        target: [5, 6, 7, 8, 9],
                         visible: false,
                     }
                 ],
@@ -94,7 +97,7 @@
                         extend: 'excel',
                         filename: '{{ file_desc }}',
                         exportOptions: {
-                            columns: [ 0, 1, 2, 3, 4, 5, 6, 7]
+                            columns: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
                         },
                         title: null
                     },
@@ -102,7 +105,7 @@
                         extend: 'csv',
                         filename: '{{ file_desc }}',
                         exportOptions: {
-                            columns: [ 0, 1, 2, 3, 4, 5, 6, 7]
+                            columns: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
                         }
                     }],
                 order : [],
@@ -114,6 +117,9 @@
                     //{#{data: 'id'},#}
                     {data: 'name'},
                     {data: 'email'},
+                    {data : "firstname"},
+                    {data : "customtext"},
+                    {data : "originalemail"},
                     {data: 'venue_type'},
                     {data: 'phone'},
                     {data: 'address'},

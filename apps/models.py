@@ -72,6 +72,9 @@ class Uploadedservice(db.Model):
     phone = db.Column(db.String(20), index=True)
     address = db.Column(db.String(1024), index=True)
     facebook = db.Column(db.String(255))
+    firstname = db.Column(db.String(255))
+    customtext = db.Column(db.String(1024))
+    originalemail = db.Column(db.String(255))
     
     __table_args__ = (
         db.UniqueConstraint('email', 'user_id', name='unique-service'),
@@ -171,6 +174,9 @@ class Email(db.Model):
     unsubscribe_token = db.Column(db.String(128), nullable=False, index=True) # it is synced with unsubscribe_token in Uploadedservice table
     is_replied = db.Column(db.Integer, default=0)
     mail_id = db.Column(db.String(255), index=True)
+    firstname = db.Column(db.String(255))
+    customtext = db.Column(db.String(1024))
+    originalemail = db.Column(db.String(255))
     
     
 class UserCredit(db.Model):

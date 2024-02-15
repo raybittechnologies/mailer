@@ -1,4 +1,10 @@
 
 ## Deploy on server
 1. Change WEB HOST IP when deploy
-2. Commentout Proxyfix
+
+
+## Migrate DB 
+flask db upgrade
+
+## How to make migration
+flask db migrate -m "logs"

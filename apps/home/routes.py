@@ -145,7 +145,7 @@ def view_url_history(url_id):
     for url_entry in user_urls:
         url_data = {
             "id": url_entry.id,
-            "name": url_entry.name,
+            "venue": url_entry.name,
             "venue_type": url_entry.venue_type,
             "website": url_entry.website,
             "phone": url_entry.phone,
@@ -162,6 +162,9 @@ def view_url_history(url_id):
             "bademail": url_entry.bademail,
             "url_id": url_entry.url_id,
             "user_id": url_entry.user_id,
+            "firstname": "",
+            "customtext": "",
+            "originalemail": "",
         }
         url_list.append(url_data)
     return jsonify(url_list)
@@ -387,56 +390,77 @@ def upload_contact():
                 phone = item['phone']
                 address = item['address']
                 facebook = item['facebook']
+                firstname = item['firstname']
+                customtext = item['customtext']
+                originalemail = item['originalemail']
             except Exception as e:
                 print(repr(e))
                 continue
             
-            if item['email1'] != "" and check_blacklisted(item['email1'].strip()):
+            if item['email1'].strip() != "" and check_blacklisted(item['email1'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email1'].strip(), user_id = current_user.id, file_id=file_id)
                 service.website = website
                 service.phone = phone
                 service.address = address
                 service.facebook = facebook
+                service.firstname = firstname
+                service.customtext = customtext
+                service.originalemail = originalemail
                 services.append(service)
                 
-            if item['email2'] != "" and check_blacklisted(item['email2'].strip()):
+            if item['email2'].strip() != "" and check_blacklisted(item['email2'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email2'].strip(), user_id = current_user.id, file_id=file_id)
                 service.website = website
                 service.phone = phone
                 service.address = address
                 service.facebook = facebook
+                service.firstname = firstname
+                service.customtext = customtext
+                service.originalemail = originalemail
                 services.append(service)
                 
-            if item['email3'] != "" and check_blacklisted(item['email3'].strip()):
+            if item['email3'].strip() != "" and check_blacklisted(item['email3'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email3'].strip(), user_id = current_user.id, file_id=file_id)
                 service.website = website
                 service.phone = phone
                 service.address = address
                 service.facebook = facebook
+                service.firstname = firstname
+                service.customtext = customtext
+                service.originalemail = originalemail
                 services.append(service)
                 
-            if item['email4'] != "" and check_blacklisted(item['email4'].strip()):
+            if item['email4'].strip() != "" and check_blacklisted(item['email4'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email4'].strip(), user_id = current_user.id, file_id=file_id)
                 service.website = website
                 service.phone = phone
                 service.address = address
                 service.facebook = facebook
+                service.firstname = firstname
+                service.customtext = customtext
+                service.originalemail = originalemail
                 services.append(service)
                 
-            if item['facebookemail1'] != "" and check_blacklisted(item['facebookemail1'].strip()):
+            if item['facebookemail1'].strip() != "" and check_blacklisted(item['facebookemail1'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['facebookemail1'].strip(), user_id = current_user.id, file_id=file_id)
                 service.website = website
                 service.phone = phone
                 service.address = address
                 service.facebook = facebook
+                service.firstname = firstname
+                service.customtext = customtext
+                service.originalemail = originalemail
                 services.append(service)
                 
-            if item['facebookemail2'] != "" and check_blacklisted(item['facebookemail2'].strip()):
+            if item['facebookemail2'].strip() != "" and check_blacklisted(item['facebookemail2'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['facebookemail2'].strip(), user_id = current_user.id, file_id=file_id)
                 service.website = website
                 service.phone = phone
                 service.address = address
                 service.facebook = facebook
+                service.firstname = firstname
+                service.customtext = customtext
+                service.originalemail = originalemail
                 services.append(service)
         
         db.session.bulk_save_objects(services)
@@ -450,9 +474,7 @@ def contact_delete():
     file_id = int(request.form['fileid'])
     file = Uploadedcontactfile.query.get(file_id)
     db.session.delete(file)
-    
     Uploadedservice.query.filter_by(file_id=file_id).delete()
-        
     db.session.commit()
     return redirect(url_for('home_blueprint.upload_contact'))
         
@@ -496,7 +518,9 @@ def contacts_list(id):
             'phone': service.phone,
             'address': service.address,
             'facebook': service.facebook,
-            
+            'firstname': service.firstname,
+            'customtext': service.customtext,
+            'originalemail': service.originalemail
         }
         all_services.append(data)
 
@@ -1391,7 +1415,10 @@ def admin_action_test():
     
     test_service = {
         "venue" : "Servcie Name",
-        "unsubscribe_link" : "unsubscribe_link"
+        "unsubscribe_link" : "unsubscribe_link_test",
+        "firstname" : "firstname",
+        "customtext" : "customtext",
+        "originalemail" : "originalemail"
     }
     
     SENDER_MAIL = os.environ.get('SENDER_MAIL')
@@ -1415,7 +1442,10 @@ def action_test():
     
     test_service = {
         "venue" : "Servcie Name",
-        "unsubscribe_link" : "unsubscribe_link"
+        "unsubscribe_link" : "unsubscribe_link",
+        "firstname" : "firstname",
+        "customtext" : "customtext",
+        "originalemail" : "originalemail"
     }
     
     receiver = current_user.email
@@ -1439,6 +1469,25 @@ def action_test():
     except Exception as e:
         print(repr(e))
         return {"success": False, "message": str(e)}
+    
+
+@blueprint.route('/action/get', methods=['POST'])
+@login_required 
+def get_action():
+    actionid = request.json['id']
+    action = Action.query.filter_by(id=actionid).first()
+
+    action_data = {
+        "id" : action.id,
+        "action_name" : action.action_name,
+        "subject" : action.subject,
+        "fromname" : action.fromname,
+        "message" : action.message,
+        "waitdays" : action.waitdays
+    }
+
+    return jsonify(action_data)
+
     
     
 @blueprint.route('/webhook', methods=['POST', "GET"])
@@ -1604,6 +1653,9 @@ def create_campaign():
                 email.venue = service.name
                 email.job_id = group.job_id
                 email.unsubscribe_token = service.unsubscribe_token
+                email.firstname = service.firstname
+                email.customtext = service.customtext
+                email.originalemail = service.originalemail
                 emails.append(email)
     
     campaign = Campaign()
@@ -1931,3 +1983,7 @@ def newpassword(token):
         else:
             return render_template('home/page-404.html')
         
+
+@blueprint.route('/privacy', methods=['GET'])
+def privacy():
+    return render_template('home/privacy.html', segment="privacy")

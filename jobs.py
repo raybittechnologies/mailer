@@ -53,15 +53,22 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
             print("Sending to", email.email)
             
             unsubscribe_link = WEB_HOST_IP + "/unsubscribe/choose?token=" + str(email.unsubscribe_token) + "&_id=" + str(action.userid)
-            serv = Uploadedservice.query.filter_by(unsubscribe_token=email.unsubscribe_token).first()
+            # serv = Uploadedservice.query.filter_by(unsubscribe_token=email.unsubscribe_token).first()
             
-            if serv is None:
-                continue
+            # if serv is None:
+            #     continue
             
-            venue = serv.name
+            venue = email.venue
+            firstname = email.firstname
+            customtext = email.customtext
+            originalemail = email.originalemail
+
             service = {
                 "venue" : venue,
-                "unsubscribe_link" : unsubscribe_link
+                "unsubscribe_link" : unsubscribe_link,
+                "firstname" : firstname if firstname else "", 
+                "customtext" : customtext if customtext else "",
+                "originalemail" : originalemail if originalemail else ""
             }
             try:
                 mail_body = jinja_temp.render(service)

@@ -38,8 +38,10 @@
                         <th>facebookemail1</th>
                         <th>facebookemail2</th>
                         <th>facebook</th>
+                        <th>firstname</th>
+                        <th>customtext</th>
+                        <th>originalemail</th>
                         <th>bademail</th>
-
                     </tr>
                     </thead>
                     <tbody>
@@ -68,8 +70,8 @@
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script> -->
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.colVis.min.js"></script>
@@ -96,12 +98,6 @@
                             title: null
                         },
                         {
-                            extend: 'pdf',
-                            filename: '{{ current_url.name }}',
-                            orientation: 'landscape',
-                            pageSize: 'LEGAL'
-                        },
-                        {
                             extend: 'colvis',
                             filename: '{{ current_url.name }}'
                         }
@@ -111,7 +107,7 @@
                         dataSrc: ''
                     },
                     columns: [
-                        {data: 'name', defaultContent : ""},
+                        {data: 'venue', defaultContent : ""},
                         {data: 'phone', defaultContent : ""},
                         {data: 'address', defaultContent : ""},
                         {data: 'venue_type', defaultContent : ""},
@@ -133,7 +129,10 @@
                                 return '<a href="' + facebook + '" target="_blank" >' + facebook + ' </a>'
                             },
                         },
-                        {data: 'bademail', defaultContent : ""},
+                        {data: 'firstname', defaultContent : ""},
+                        {data: 'customtext', defaultContent : ""},
+                        {data: 'originalemail', defaultContent : ""},
+                        {data: 'bademail', defaultContent : ""}
                     ]
                 },
             );
