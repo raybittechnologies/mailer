@@ -31,7 +31,7 @@ def pass_data(item):
     print("Processes", response.text)
     
 
-def yelp_scraper_run(url, user_name, user_id, id):
+def yelp_scraper_run(url, user_id, id):
     # url = urllib.parse.unquote(url).replace("+", " ") # Needed when using pure request query string
     try:
         find_desc = url.split("find_desc=")[1].split("&")[0]

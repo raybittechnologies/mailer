@@ -96,7 +96,7 @@ def msg1():
         url_id = request.json['id']
         user = db.session.get(Users, int(user_id))
         user_email = user.email
-        user_name = user.username
+        user_name = user.email
         
         SENDER_MAIL = os.environ.get('SENDER_MAIL')
         print("Send email to", user_email, "from", SENDER_MAIL)

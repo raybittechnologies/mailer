@@ -69,10 +69,6 @@
 
                     {{ form.hidden_tag() }}
 
-                      <label>Username</label>
-                      <div class="mb-3">
-                        {{ form.username(placeholder="Username", class="form-control") }}
-                      </div>
                       <label>Email</label>
                       <div class="mb-3">
                         {{ form.email(placeholder="Email", class="input form-control", type="email") }}
@@ -80,6 +76,10 @@
                       <label>Password</label>
                       <div class="mb-3">
                         {{ form.password(placeholder="Password", class="form-control", type="password") }}
+                      </div>
+                      <label>Confirm Password</label>
+                      <div class="mb-3">
+                        {{ form.confirm(placeholder="Repeat Password", class="form-control", type="password") }}
                       </div>
 
                       <div class="text-center">

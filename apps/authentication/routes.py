@@ -53,13 +53,11 @@ def login():
     if flask.request.method == 'POST':
 
         # read form data
-        username = request.form['username']
+        email = request.form['email'].lower()
         password = request.form['password']
-        # print(username, password)
-        #return 'Login: ' + username + ' / ' + password
 
         # Locate user
-        user = Users.query.filter_by(username=username).first()
+        user = Users.query.filter_by(email=email).first()
         # Check the password
         if user and user.state == "pending":
             # user is not approved
@@ -74,7 +72,7 @@ def login():
 
         # Something (user or pass) is not ok
         return render_template('accounts/login.html',
-                               msg='Wrong user or password',
+                               msg='Wrong email or password',
                                form=login_form)
 
     if current_user.is_authenticated:
@@ -91,16 +89,7 @@ def register():
     create_account_form = CreateAccountForm(request.form)
     if 'register' in request.form:
 
-        username = request.form['username']
-        email = request.form['email']
-
-        # Check usename exists
-        user = Users.query.filter_by(username=username).first()
-        if user:
-            return render_template('accounts/register.html',
-                                   msg='Username already registered',
-                                   success=False,
-                                   form=create_account_form)
+        email = request.form['email'].lower()
 
         # Check email exists
         user = Users.query.filter_by(email=email).first()
@@ -110,20 +99,31 @@ def register():
                                    success=False,
                                    form=create_account_form)
 
-        # else we can create the user
-        user = Users(**request.form)
-        user.role = "premium"
-        user.state = "pending"
-        db.session.add(user)
-        db.session.commit()
+        if create_account_form.validate():
+            # else we can create the user
+            print(request.form)
+            user = Users(**request.form)
+            user.email = email
+            user.role = "premium"
+            user.username = email
+            user.state = "pending"
+            db.session.add(user)
+            db.session.commit()
 
-        # Delete user from session
-        logout_user()
+            print("User created successfully")
+            # Delete user from session
+            logout_user()
 
-        return render_template('accounts/register.html',
-                               msg='User created successfully.',
-                               success=True,
-                               form=create_account_form)
+            return render_template('accounts/register.html',
+                                msg='User created successfully.',
+                                success=True,
+                                form=create_account_form)
+        else:
+            print(create_account_form.errors)
+            return render_template('accounts/register.html',
+                                msg='Password not matching. Please try again.',
+                                success=False,
+                                form=create_account_form)
 
     else:
         return render_template('accounts/register.html', form=create_account_form)
@@ -143,7 +143,8 @@ def post():
                         'success': False
                     }, 400
         # validate input
-        user = Users.query.filter_by(username=data.get('username')).first()
+        email = data.get('email').lower()
+        user = Users.query.filter_by(email=email).first()
         if user and verify_pass(data.get('password'), user.password):
             try:
 

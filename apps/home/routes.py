@@ -110,6 +110,13 @@ def url():
         else:
             print("already present in db")
             message = "This url is already reistered."
+
+            if current_user.role == "lite":
+                credit = UserCredit.query.filter_by(userid=current_user.id).first().credit
+                consumed = Service.query.filter_by(user_id=current_user.id, is_credited=1).count()
+                available_credit = credit - consumed
+                return render_template('home/view_scraped_data.html', segment='history', available_credit=available_credit, user_credit=credit, consumed=consumed, message=message)
+            
             return render_template('home/view_urls.html', segment='history', message=message )
         
     else:
@@ -307,7 +314,7 @@ def fetch(id):
         db.session.commit()
         # run scraper
         try:
-            executor.submit(lets_start, urls, current_user.username, current_user.id, id)
+            executor.submit(lets_start, urls, current_user.id, id)
         except:
             print("something went wrong")
         
@@ -660,20 +667,20 @@ def get_admin_data():
     return page_data
 
 
-def lets_start(urls, user_name, user_id, id):
+def lets_start(urls, user_id, id):
     process = multiprocessing.Process(target=starting,
-                                      args=(urls, user_name, user_id, id))
+                                      args=(urls, user_id, id))
     process.start()
 
     process.join()
 
 
-def starting(urls, user_name, user_id, id):
+def starting(urls, user_id, id):
     if len(urls) > 0:
         
         WEB_HOST_IP = os.getenv("WEB_HOST_IP")
         for url in urls:
-            yelp_scraper_run(url, user_name, user_id, id)
+            yelp_scraper_run(url, user_id, id)
         
         response = requests.post(f'{WEB_HOST_IP}/complete', json={'id': id})
         response = requests.post(f'{WEB_HOST_IP}/msg', json={'result': "completed", 'id' : id, 'user_id' : user_id})
@@ -682,25 +689,20 @@ def starting(urls, user_name, user_id, id):
 
 @blueprint.route('/admin/register', methods=['POST'])
 def register():
-    username = request.json.get('name')
-    email = request.json.get('email')
+    # username = request.json.get('name')
+    email = request.json.get('email').lower()
     password = request.json.get('password')
-    role = request.json.get('role', 'user')
+    role = request.json.get('role', 'premium')
 
-    if not username or not email or not password or not role:
+    if not email or not password or not role:
         return jsonify({'message': 'Missing required fields'}), 400
 
-    user = Users.query.filter_by(username=username).first()
-    if user:
-        return jsonify({'message': 'Username already registered'}), 400
-
-    # Check email exists
     user = Users.query.filter_by(email=email).first()
     if user:
-        return jsonify({'message': 'Email already registered'}), 400
+        return jsonify({'message': 'Already registered user'}), 400
 
     # else we can create the user
-    user = Users(username=username, email=email, password=password, role=role)
+    user = Users(username=email, email=email, password=password, role=role)
     db.session.add(user)
     db.session.commit()
     return jsonify({'message': 'User registered successfully'}), 201
@@ -710,7 +712,7 @@ def register():
 def admin_login():
     logout_user()
     if request.method == 'POST':
-        email = request.form['email']
+        email = request.form['email'].lower()
         password = request.form['password']
         user = Users.query.filter_by(email=email, role="admin").first()
         # Check the password
@@ -913,19 +915,8 @@ def upgrade_user_normal(id):
 def add_user():
     create_account_form = CreateAccountForm(request.form)
     if request.method == 'POST':
-        print(request.form)
-        username = request.form['username']
-        email = request.form['email']
-
-        # Check username exists
-        user = Users.query.filter_by(username=username).first()
-        if user:
-            return render_template('home/admin_add_user.html',
-                                   msg='Username already registered',
-                                   success=False,
-                                   form=create_account_form,
-                                   segment="add_user"
-                                   )
+        # print(request.form)
+        email = request.form['email'].lower()
 
         # Check email exists
         user = Users.query.filter_by(email=email).first()
@@ -937,12 +928,22 @@ def add_user():
                                    segment="add_user"
                                    )
 
-        user = Users(**request.form)
-        user.role = "premium"
-        user.state = "pending"
-        db.session.add(user)
-        db.session.commit()
-        return redirect(url_for('home_blueprint.admin_users'))
+        if create_account_form.validate():
+            user = Users(**request.form)
+            user.username = email
+            user.role = "premium"
+            user.state = "pending"
+            db.session.add(user)
+            db.session.commit()
+            return redirect(url_for('home_blueprint.admin_users'))
+        else:
+            print(create_account_form.errors)
+            return render_template('home/admin_add_user.html',
+                                   msg=create_account_form.errors['password'][0],
+                                   success=False,
+                                   form=create_account_form,
+                                   segment="add_user"
+                                   )
     else:
         return render_template('home/admin_add_user.html',
                                form=create_account_form,
@@ -1938,8 +1939,7 @@ def subscribe(token):
 @blueprint.route('/passwordreset', methods=['GET', 'POST'])
 def passwordreset():
     if request.method == 'POST':
-        print("here")
-        email = request.form['email']
+        email = request.form['email'].lower()
         user = Users.query.filter_by(email=email).first()
         
         if user:
