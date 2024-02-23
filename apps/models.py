@@ -183,6 +183,7 @@ class UserCredit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     userid = db.Column(db.Integer)
     credit = db.Column(db.Integer)
+    monthly_credit = db.Column(db.Integer, default=30)
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
     update_datetime = db.Column(db.DateTime(), onupdate=datetime.datetime.utcnow, default=datetime.datetime.utcnow)
     

@@ -24,7 +24,8 @@
                     <thead>
                     <tr>
                         <th>Email</th>
-                        <th>Credit</th>
+                        <th>Current Credit</th>
+                        <th>Monthly Credit</th>
                         <th>Last Updated On</th>
                         <th>Action</th>
                     </tr>
@@ -56,8 +57,12 @@
                                 <input type="text" class="form-control" name="user-email" id="user-email" readonly>
                             </div>
                             <div class="form-group">
-                                <label for="recipient-name" class="col-form-label">User Credit:</label>
-                                <input type="number" min="1" class="form-control" id="user-credit" name="user-credit" required>
+                                <label for="recipient-name" class="col-form-label">Monthly Credit:</label>
+                                <input type="number" min="1" class="form-control" id="user-monthly-credit" name="user-monthly-credit" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="recipient-name" class="col-form-label">Bonus Credit:</label>
+                                <input type="number" min="0" class="form-control" id="user-bonus-credit" name="user-bonus-credit" value="0" required>
                             </div>
                             <div class="form-group">
                                 <input type="text" class="form-control" id="userid" name="userid" hidden>
@@ -96,7 +101,7 @@
                 order : [],
                 columnDefs: [
                 {
-                    target: 2,
+                    target: 3,
                     render: DataTable.render.datetime()
                 }],
                 ajax: {
@@ -107,6 +112,7 @@
                     //{#{data: 'id'},#}
                     {data: 'email'},
                     {data: 'credit'},
+                    {data: 'monthly_credit'},
                     {data: 'update_datetime'},
                     {   
                         data: 'id', // Assuming the id property is present in your data
@@ -124,7 +130,7 @@
             
             if (event.target.innerText === "EDIT") {
                 document.getElementById("user-email").value = data.email;
-                document.getElementById("user-credit").value = data.credit;
+                document.getElementById("user-monthly-credit").value = data.monthly_credit;
                 document.getElementById("userid").value = data.id;
             } else {
                 console.log(event.target.innerText)

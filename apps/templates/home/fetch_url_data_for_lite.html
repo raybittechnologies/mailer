@@ -1,0 +1,161 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} {% endblock title %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.3.2/css/fixedHeader.bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.bootstrap.min.css">
+{% endblock stylesheets %}
+
+{% block content %}
+
+    <div class="container-fluid py-4">
+        <div class="container mt-5">
+            <div class="d-flex justify-content-center align-items-center min-vh-10">
+                {% if current_url.state == "completed" %}
+                    <div>
+                        <h2 id="para">Completed</h2>
+
+                        <a style="display: block" id="btnview" href="/url/view/{{ current_url.id }}"
+                           class="btn btn-danger btn-sm">View Data</a>
+                    </div>
+                {% else %}
+                    <div>
+                        <img id="loader" height="100px" width="100ox" src="../../static/assets/img/loading.gif"
+                             alt="Centered Image"
+                             class="img-fluid">
+                        <br/>
+                        {#                        <a id="btnstop" href="" class="btn btn-danger btn-sm">Stop</a>#}
+                        <h2 id="para"></h2>
+                        <a style="display: none" id="btnview" href="/url/view/{{ current_url.id }}"
+                           class="btn btn-danger btn-sm">View Data</a>
+                        <a style="display: block" id="btnstop" href="/process_stop/{{ current_url.id }}"
+                               class="btn btn-danger btn-sm">Stop Process</a>
+                    </div>
+
+                    <div>
+
+                    </div>
+
+                {% endif %}
+            </div>
+            {# <div class="card-header"><h3 class="text-center font-weight-light my-4">My URLs</h3></div>#}
+
+            <div class="card-body">
+                <table style="width:100%" id="filtersTable" class="table table-striped table-bordered nowrap">
+                    <thead>
+                    <tr>
+                        <th>venue</th>
+                        <th>phone</th>
+                        <th>address</th>
+                        <th>type</th>
+                        <th>website</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <!-- Rows will be added dynamically using JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% include "includes/footer.html" %}
+
+    </div>
+
+{% endblock content %}
+
+<!-- Specific JS goes HERE -->
+{% block javascripts %}
+    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap.min.js"></script>
+    <script src="https://cdn.datatables.net/fixedheader/3.3.2/js/dataTables.fixedHeader.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.4.1/js/responsive.bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        Swal.fire(
+            'Processes Started!',
+            'We will email when your results are ready to be downloaded! Please allow up to 10min for every 240 records. Feel free to navigate away from this page',
+            'success'
+        );
+        $(document).ready(function () {
+            // Initialize DataTable
+            //$('#filtersTable').DataTable(
+                //{responsive: true},
+            //);
+        });
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        var alarm = new Audio("static/assets/sounds/Twinkle.mp3");
+        
+        var loaderImage = document.getElementById("loader");
+        var paraElement = document.getElementById("para");
+        var btnView = document.getElementById("btnview");
+        var btnStop = document.getElementById("btnstop");
+      
+        var dataTable = $('#filtersTable').DataTable({
+            responsive: true,
+            order : [],
+            
+            ajax: {
+                url: '/view_url_history/{{ current_url.id }}',
+                dataSrc: ''
+            },
+            columns: [
+                {data: 'venue', defaultContent : ""},
+                {data: 'phone', defaultContent : ""},
+                {data: 'address', defaultContent : ""},
+                {data: 'venue_type', defaultContent : ""},
+                {
+                    data: 'website',
+                    render: function (website, type, row) {
+                        return '<a href="' + website + '" target="_blank">' + website + ' </a>'
+                    },
+                }
+            ]
+        }
+    );
+        
+    var interval = setInterval(function () {
+        fetch('/check_state',{
+            method: 'POST',
+            headers : { 'Content-Type': 'application/json' },
+            body: JSON.stringify({id : '{{ current_url.id }}' }),
+        })
+        .then((response) => {
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+            return response.text(); // Extract the response body as text
+        })
+        .then((res) => {
+            running_status = res;
+            console.log(running_status)
+
+            if (running_status == "completed") {
+                btnstop_ = document.getElementById("btnstop");
+                loaderImage.style.display = "none";
+                btnStop.style.display = "none";
+                btnView.style.display = "block";
+                
+                paraElement.textContent = "Process Completed";
+                alarm.play()
+                clearInterval(interval);
+            }
+        })
+        .catch((err) => {
+            console.log(err)
+        });
+        dataTable.ajax.reload();
+    }, 2000);
+    
+
+    </script>
+{% endblock javascripts %}

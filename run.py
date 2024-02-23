@@ -56,8 +56,8 @@ CORS(app)
 # When using Ngrok, uncomment the following lines
 app.wsgi_app = ProxyFix(app.wsgi_app)
 
-
-scheduler.start()
+if not scheduler.running: # Clause suggested by @CyrilleMODIANO
+    scheduler.start()
 
 # User credit job
 job_id = 'job_manage_credit'

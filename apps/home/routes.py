@@ -157,22 +157,25 @@ def view_url_history(url_id):
             "website": url_entry.website,
             "phone": url_entry.phone,
             "address": url_entry.address,
-            "facebook": url_entry.facebook,
-            "instagram": url_entry.instagram,
-            "twitter": url_entry.twitter,
-            "email1": url_entry.email1,
-            "email2": url_entry.email2,
-            "email3": url_entry.email3,
-            "email4": url_entry.email4,
-            "fbemail1": url_entry.fbemail1,
-            "fbemail2": url_entry.fbemail2,
-            "bademail": url_entry.bademail,
             "url_id": url_entry.url_id,
             "user_id": url_entry.user_id,
-            "firstname": "",
-            "customtext": "",
-            "originalemail": "",
         }
+
+        if current_user.role != "lite":
+            url_data['facebook'] = url_entry.facebook
+            url_data['instagram'] = url_entry.instagram
+            url_data['twitter'] = url_entry.twitter
+            url_data['email1'] = url_entry.email1
+            url_data['email2'] = url_entry.email2
+            url_data['email3'] = url_entry.email3
+            url_data['email4'] = url_entry.email4
+            url_data['fbemail1'] = url_entry.fbemail1
+            url_data['fbemail2'] = url_entry.fbemail2
+            url_data['bademail'] = url_entry.bademail
+            url_data['firstname'] = url_entry.firstname
+            url_data['customtext'] = url_entry.customtext
+            url_data['originalemail'] = url_entry.originalemail
+
         url_list.append(url_data)
     return jsonify(url_list)
 
@@ -337,7 +340,10 @@ def fetching():
     yelpurl = Yelpurl.query.get(id)
     
     if yelpurl.state == "running":
-        return render_template('home/fetch_url_data.html', segment='url', current_url=yelpurl )
+        if current_user.role == "lite":
+            return render_template('home/fetch_url_data_for_lite.html', segment='url', current_url=yelpurl )
+        else:
+            return render_template('home/fetch_url_data.html', segment='url', current_url=yelpurl )
     else:
         return redirect(url_for('home_blueprint.url_view', id=id))
     
@@ -581,8 +587,19 @@ def service_delete():
 @blueprint.route('/url/view/<int:id>', methods=['GET', 'POST'])
 @login_required
 def url_view(id):
-    yelpurl = Yelpurl.query.get(id)
-    return render_template('home/view_url_data.html', segment='history', current_url=yelpurl)
+    user_id = Yelpurl.query.get(id).userid
+    user = Users.query.get(user_id)
+
+    if user.role == "lite":
+        credit = UserCredit.query.filter_by(userid=current_user.id).first().credit
+        consumed = Service.query.filter_by(user_id=current_user.id, is_credited=1).count()
+        available_credit = credit - consumed
+        return render_template('home/view_scraped_data.html', segment='history', available_credit=available_credit, user_credit=credit, consumed=consumed)
+    
+    else:
+        yelpurl = Yelpurl.query.get(id)
+        return render_template('home/view_url_data.html', segment='history', current_url=yelpurl)
+    
     
 @blueprint.route('/url/delete', methods=['POST'])
 @login_required
@@ -612,7 +629,17 @@ def process_state(id):
     yelpurl = Yelpurl.query.get(int(id))
     yelpurl.state = "completed"
     db.session.commit()
-    return redirect(url_for('home_blueprint.url_view', id=id))
+
+    if current_user.role == "lite":
+        
+        credit = UserCredit.query.filter_by(userid=current_user.id).first().credit
+        consumed = Service.query.filter_by(user_id=current_user.id, is_credited=1).count()
+        available_credit = credit - consumed
+        
+        return render_template('home/view_scraped_data.html', segment='history', available_credit=available_credit, user_credit=credit, consumed=consumed)
+    
+    else:
+        return redirect(url_for('home_blueprint.url_view', id=id))
 
 
 @blueprint.route('/check_state', methods=['POST'])
@@ -771,7 +798,8 @@ def get_users_credit():
             'username': user[0].username,
             'email': user[0].email,
             'update_datetime': user[1].update_datetime,
-            'credit': user[1].credit
+            'credit': user[1].credit,
+            'monthly_credit': user[1].monthly_credit,
         }
         user_list.append(user_data)
 
@@ -782,16 +810,18 @@ def get_users_credit():
 @role_required('admin')
 def update_credit():
     userid = request.form['userid']
-    user_credit = request.form['user-credit']
-    
+    user_monthly_credit = int(request.form['user-monthly-credit'])
+    user_bonus_credit = int(request.form['user-bonus-credit'])
+
     if userid:
         temp = UserCredit.query.filter(UserCredit.userid == userid).first()
-        temp.credit = user_credit
+        temp.monthly_credit = user_monthly_credit 
+        temp.credit = temp.credit + user_bonus_credit
 
         credited_services = Service.query.filter_by(user_id = userid, is_credited = 1).count()
 
-        if int(user_credit) < credited_services:
-            limit = credited_services - user_credit
+        if temp.credit + user_bonus_credit < credited_services:
+            limit = credited_services - temp.credit - user_bonus_credit
             services = Service.query.filter_by(user_id = userid, is_credited = 1).limit(limit).all()
             for service in services:
                 service.is_credited = 0

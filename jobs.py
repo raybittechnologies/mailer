@@ -140,10 +140,12 @@ def job_manage_credit():
         for user_credit in user_credits:
             cur_datetime = datetime.utcnow()
             last_updated = user_credit.update_datetime
+            montly_credit = user_credit.monthly_credit
             diff = (cur_datetime + timedelta(minutes=1)) - last_updated # it might be run earlier a few milliseconds so added 1 minute margin
             days = diff.days    
 
             if int(days) == 30: # 30 days
-                user_credit.credit += 30
+                user_credit.credit += montly_credit
 
         db.session.commit()
+        
