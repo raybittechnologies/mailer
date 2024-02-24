@@ -115,7 +115,7 @@ def url():
                 credit = UserCredit.query.filter_by(userid=current_user.id).first().credit
                 consumed = Service.query.filter_by(user_id=current_user.id, is_credited=1).count()
                 available_credit = credit - consumed
-                return render_template('home/view_scraped_data.html', segment='history', available_credit=available_credit, user_credit=credit, consumed=consumed, message=message)
+                return render_template('home/view_scraped_data.html', segment='history', available_credit=available_credit, user_credit=credit, consumed=consumed, current_url_id=existing_url.id)
             
             return render_template('home/view_urls.html', segment='history', message=message )
         
@@ -152,7 +152,6 @@ def view_url_history(url_id):
     for url_entry in user_urls:
         url_data = {
             "id": url_entry.id,
-            "venue": url_entry.name,
             "venue_type": url_entry.venue_type,
             "website": url_entry.website,
             "phone": url_entry.phone,
@@ -162,6 +161,7 @@ def view_url_history(url_id):
         }
 
         if current_user.role != "lite":
+            url_data['venue'] = url_entry.name
             url_data['facebook'] = url_entry.facebook
             url_data['instagram'] = url_entry.instagram
             url_data['twitter'] = url_entry.twitter
@@ -172,20 +172,17 @@ def view_url_history(url_id):
             url_data['fbemail1'] = url_entry.fbemail1
             url_data['fbemail2'] = url_entry.fbemail2
             url_data['bademail'] = url_entry.bademail
-            url_data['firstname'] = url_entry.firstname
-            url_data['customtext'] = url_entry.customtext
-            url_data['originalemail'] = url_entry.originalemail
 
         url_list.append(url_data)
     return jsonify(url_list)
 
 
-@blueprint.route('/view_scraped_data', methods=['GET'])
+@blueprint.route('/view_scraped_data/<int:url_id>', methods=['GET'])
 @login_required
-def view_scraped_data():
+def view_scraped_data(url_id):
     
     # Return only the services that are not credited
-    user_urls = Service.query.filter_by(user_id=current_user.id, is_credited=0).limit(10).all()
+    user_urls = Service.query.filter_by(user_id=current_user.id, url_id=url_id, is_credited=0).limit(10).all()
     url_list = []
     for url_entry in user_urls:
         url_data = {
@@ -212,12 +209,12 @@ def view_scraped_data():
     return jsonify(url_list)
 
 
-@blueprint.route('/view_credited_data', methods=['GET'])
+@blueprint.route('/view_credited_data/<int:url_id>', methods=['GET'])
 @login_required
-def view_credited_data():
+def view_credited_data(url_id):
     
     # Return only the services that are not credited
-    user_urls = Service.query.filter_by(user_id=current_user.id, is_credited=1).all()
+    user_urls = Service.query.filter_by(user_id=current_user.id, url_id=url_id, is_credited=1).all()
     url_list = []
     for url_entry in user_urls:
         url_data = {
@@ -247,21 +244,14 @@ def view_credited_data():
 @blueprint.route('/history', methods=['POST', 'GET'])
 @login_required
 def history():
-    if current_user.role == "lite":
-        credit = UserCredit.query.filter_by(userid=current_user.id).first().credit
-        consumed = Service.query.filter_by(user_id=current_user.id, is_credited=1).count()
-        available_credit = credit - consumed
-        
-        return render_template('home/view_scraped_data.html', segment='history', available_credit=available_credit, user_credit=credit, consumed=consumed)
-    else:
-        return render_template('home/view_urls.html', segment='history')
+    return render_template('home/view_urls.html', segment='history')
     
 
-@blueprint.route('/view_credited')
+@blueprint.route('/view_credited/<int:url_id>')
 @login_required
-def view_credited():
-    credited = Service.query.filter_by(user_id=current_user.id, is_credited=1).count()
-    return render_template('home/view_credited_data.html', segment='history', credited=credited)
+def view_credited(url_id):
+    credited = Service.query.filter_by(user_id=current_user.id, url_id=url_id, is_credited=1).count()
+    return render_template('home/view_credited_data.html', segment='history', credited=credited, url_id=url_id)
 
 
 @blueprint.route('/update/credit', methods=['POST'])
@@ -594,7 +584,7 @@ def url_view(id):
         credit = UserCredit.query.filter_by(userid=current_user.id).first().credit
         consumed = Service.query.filter_by(user_id=current_user.id, is_credited=1).count()
         available_credit = credit - consumed
-        return render_template('home/view_scraped_data.html', segment='history', available_credit=available_credit, user_credit=credit, consumed=consumed)
+        return render_template('home/view_scraped_data.html', segment='history', available_credit=available_credit, user_credit=credit, consumed=consumed, current_url_id=id)
     
     else:
         yelpurl = Yelpurl.query.get(id)
@@ -636,7 +626,7 @@ def process_state(id):
         consumed = Service.query.filter_by(user_id=current_user.id, is_credited=1).count()
         available_credit = credit - consumed
         
-        return render_template('home/view_scraped_data.html', segment='history', available_credit=available_credit, user_credit=credit, consumed=consumed)
+        return render_template('home/view_scraped_data.html', segment='history', available_credit=available_credit, user_credit=credit, consumed=consumed, current_url_id=id)
     
     else:
         return redirect(url_for('home_blueprint.url_view', id=id))

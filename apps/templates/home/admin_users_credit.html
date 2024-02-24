@@ -118,7 +118,7 @@
                         data: 'id', // Assuming the id property is present in your data
                         render: function (id, type, row) {
                             // Create action buttons HTML
-                            var buttons = '<button class="btn btn-facebook btn-sm"  data-bs-toggle="modal" data-bs-target="#editCreditModal" >Edit</button> '
+                            var buttons = '<button class="btn btn-facebook btn-sm" data-email="' + row.email + '" data-userid="' + id +'" data-user-m-credit="' + row.monthly_credit +'"  data-bs-toggle="modal" data-bs-target="#editCreditModal" >Edit</button> '
                             return buttons;
                         }
                     }
@@ -126,12 +126,14 @@
             },
         );
         $('#filtersTable').on('click', 'button', event => {
-            let data = dataTable.row($(event.target).closest('tr')).data();
-            
+            let email = event.target.getAttribute('data-email');
+            let userid = event.target.getAttribute('data-userid');
+            let monthly_credit = event.target.getAttribute('data-user-m-credit');
+
             if (event.target.innerText === "EDIT") {
-                document.getElementById("user-email").value = data.email;
-                document.getElementById("user-monthly-credit").value = data.monthly_credit;
-                document.getElementById("userid").value = data.id;
+                document.getElementById("user-email").value = email;
+                document.getElementById("user-monthly-credit").value = monthly_credit;
+                document.getElementById("userid").value = userid;
             } else {
                 console.log(event.target.innerText)
             }

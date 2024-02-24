@@ -78,6 +78,10 @@
                     dom: 'Bfrtip',
                     buttons: [
                         {
+                            extend: 'copy',
+                            title: null
+                        },
+                        {
                             extend: 'csv',
                             filename: 'credited_data_{{credited}}',
                         },
@@ -88,7 +92,7 @@
                         }
                     ],
                     ajax: {
-                        url: '/view_credited_data',
+                        url: '/view_credited_data/{{ url_id}}',
                         dataSrc: ''
                     },
                     columns: [
