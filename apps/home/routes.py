@@ -818,6 +818,7 @@ def get_users_credit():
             'update_datetime': user[1].update_datetime,
             'credit': user[1].credit,
             'monthly_credit': user[1].monthly_credit,
+            'available_credit': user[1].credit - Service.query.filter_by(user_id=user[0].id, is_credited=1).count(),
         }
         user_list.append(user_data)
 

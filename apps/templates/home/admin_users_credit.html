@@ -25,6 +25,7 @@
                     <tr>
                         <th>Email</th>
                         <th>Current Credit</th>
+                        <th>Available Credit</th>
                         <th>Monthly Credit</th>
                         <th>Last Updated On</th>
                         <th>Action</th>
@@ -101,7 +102,7 @@
                 order : [],
                 columnDefs: [
                 {
-                    target: 3,
+                    target: 4,
                     render: DataTable.render.datetime()
                 }],
                 ajax: {
@@ -112,6 +113,7 @@
                     //{#{data: 'id'},#}
                     {data: 'email'},
                     {data: 'credit'},
+                    {data: 'available_credit'},
                     {data: 'monthly_credit'},
                     {data: 'update_datetime'},
                     {   
