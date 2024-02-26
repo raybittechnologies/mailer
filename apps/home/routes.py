@@ -192,16 +192,6 @@ def view_scraped_data(url_id):
             "website": url_entry.website,
             "phone": url_entry.phone,
             "address": url_entry.address,
-            # "facebook": url_entry.facebook,
-            # "instagram": url_entry.instagram,
-            # "twitter": url_entry.twitter,
-            # "email1": url_entry.email1,
-            # "email2": url_entry.email2,
-            # "email3": url_entry.email3,
-            # "email4": url_entry.email4,
-            # "fbemail1": url_entry.fbemail1,
-            # "fbemail2": url_entry.fbemail2,
-            # "bademail": url_entry.bademail,
             "url_id": url_entry.url_id,
             "user_id": url_entry.user_id,
         }
@@ -240,6 +230,37 @@ def view_credited_data(url_id):
         url_list.append(url_data)
     return jsonify(url_list)
 
+@blueprint.route('/view_master_credited_data', methods=['GET'])
+@login_required
+def view_master_credited_data():
+    
+    # Return only the services that are not credited
+    user_urls = Service.query.filter_by(user_id=current_user.id, is_credited=1).all()
+    url_list = []
+    for url_entry in user_urls:
+        url_data = {
+            "id": url_entry.id,
+            "name": url_entry.name,
+            "venue_type": url_entry.venue_type,
+            "website": url_entry.website,
+            "phone": url_entry.phone,
+            "address": url_entry.address,
+            "facebook": url_entry.facebook,
+            "instagram": url_entry.instagram,
+            "twitter": url_entry.twitter,
+            "email1": url_entry.email1,
+            "email2": url_entry.email2,
+            "email3": url_entry.email3,
+            "email4": url_entry.email4,
+            "fbemail1": url_entry.fbemail1,
+            "fbemail2": url_entry.fbemail2,
+            "bademail": url_entry.bademail,
+            "url_id": url_entry.url_id,
+            "user_id": url_entry.user_id,
+        }
+        url_list.append(url_data)
+    return jsonify(url_list)
+
 
 @blueprint.route('/history', methods=['POST', 'GET'])
 @login_required
@@ -252,6 +273,13 @@ def history():
 def view_credited(url_id):
     credited = Service.query.filter_by(user_id=current_user.id, url_id=url_id, is_credited=1).count()
     return render_template('home/view_credited_data.html', segment='history', credited=credited, url_id=url_id)
+
+
+@blueprint.route('/view_master_credited')
+@login_required
+def view_master_credited():
+    credited = Service.query.filter_by(user_id=current_user.id, is_credited=1).count()
+    return render_template('home/view_master_credited_data.html', segment='history', credited=credited)
 
 
 @blueprint.route('/update/credit', methods=['POST'])
