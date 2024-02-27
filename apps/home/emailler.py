@@ -25,7 +25,43 @@ def send_email(user_email, sender_email, url_id, user_name):
 
     # create client and send
     client = mt.MailtrapClient(token=MAILTRAP_API_KEY)
-    client.send(mail)
+    response = client.send(mail)
+    if not response['success']:
+        print(response)
+        
+    return response['success']
+
+
+def send_cancel_membership_email(user_email):
+    MAILTRAP_API_KEY = os.environ.get('MAILTRAP_API_KEY')
+    SENDER_MAIL = os.environ.get('SENDER_MAIL')
+
+    # create mail object
+    mail = mt.Mail(
+        sender=mt.Address(email=SENDER_MAIL, name=user_email),
+        to=[mt.Address(email=SENDER_MAIL, name="Admin")],
+        subject="Request for Membership Cancellation",
+        html=f"""
+            <!doctype html>
+            <html>
+            <head>
+                <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+            </head>
+            <body style="font-family: sans-serif;">
+                <p>Request for Membership Cancellation</p>
+                <p>User Email: {user_email}</p>
+            </body>
+            </html>
+        """
+    )
+
+    # create client and send
+    client = mt.MailtrapClient(token=MAILTRAP_API_KEY)
+    response = client.send(mail)
+    if not response['success']:
+        print(response)
+        
+    return response['success']
 
 
 def send_test_email(subject, fromname, body, receiver, sender):

@@ -20,18 +20,18 @@
                     <table style="width:100%" id="filtersTable" class="table table-striped table-bordered nowrap">
                         <thead>
                         <tr>
-                            <th>Venue</th>
-                            <th>Email</th>
-                            <th>FirstName</th>
-                            <th>CustomText</th>
-                            <th>OriginalEmail</th>
-                            <th>VenuType</th>
-                            <th>Phone</th>
-                            <th>Address</th>
-                            <th>Website</th>
-                            <th>Facebook</th>
-                            <th>Subscribed</th>
-                            <th>Actions</th>
+                            <th>venue</th>
+                            <th>email</th>
+                            <th>firstname</th>
+                            <th>customtext</th>
+                            <th>originalemail</th>
+                            <th>type</th>
+                            <th>phone</th>
+                            <th>address</th>
+                            <th>website</th>
+                            <th>facebook</th>
+                            <th>subscribed</th>
+                            <th>actions</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -114,15 +114,14 @@
                     dataSrc: ''
                 },
                 columns: [
-                    //{#{data: 'id'},#}
-                    {data: 'name'},
-                    {data: 'email'},
-                    {data : "firstname"},
-                    {data : "customtext"},
-                    {data : "originalemail"},
-                    {data: 'venue_type'},
-                    {data: 'phone'},
-                    {data: 'address'},
+                    {data: 'name', defaultContent : ""},
+                    {data: 'email', defaultContent : ""},
+                    {data : "firstname", defaultContent : ""},
+                    {data : "customtext", defaultContent : ""},
+                    {data : "originalemail", defaultContent : ""},
+                    {data: 'venue_type', defaultContent : ""},
+                    {data: 'phone', defaultContent : ""},
+                    {data: 'address', defaultContent : ""},
                     {
                         data: 'website',
                         render: function (website, type, row) {

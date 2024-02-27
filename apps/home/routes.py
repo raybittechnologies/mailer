@@ -24,7 +24,7 @@ from sqlalchemy.sql import Insert
 from concurrent.futures import ThreadPoolExecutor
 from apps.authentication.forms import LoginForm, CreateAccountForm
 from flask_dance.contrib.nylas import nylas
-from apps.home.emailler import send_test_email, send_email_via_nylas, send_password_reset_email
+from apps.home.emailler import *
 from apps.authentication.util import generate_job_id
 from nylas import APIClient
 
@@ -395,7 +395,7 @@ def upload_contact():
     elif request.method == "POST":
         if not os.path.exists(upload_folder):
             os.makedirs(upload_folder)
-            
+
         f = request.files['file'] 
         filepath = os.path.join(upload_folder, f.filename)
         f.save(filepath)
@@ -404,7 +404,15 @@ def upload_contact():
             df = pd.read_csv(filepath)
         elif ".xlsx" in f.filename:
             df = pd.read_excel(filepath)
-        
+        else:
+            return {"success": False, "message": "File type not supported."}
+
+        columns  = ['venue', 'type', 'website', 'phone', 'address', 'facebook', 'firstname', 'customtext', 'originalemail']
+        for col in columns:
+            if col not in df.columns:
+                print(col, "not in columns")
+                return {"success": False, "message": "Formatting issue - check that spreadsheet columns are in original format/order, and then re-upload. Missing column: " + col}
+
         description = request.form['description']
         contact_file = Uploadedcontactfile(filename=f.filename, filepath=filepath, description=description, user_id=current_user.id)
         db.session.add(contact_file)
@@ -414,21 +422,28 @@ def upload_contact():
         services = []
         df.fillna("", inplace=True)
         for idx, item in df.iterrows():
-            try:
-                venue = item['venue']
-                venue_type = item['type']
-                website = item['website']
-                phone = item['phone']
-                address = item['address']
-                facebook = item['facebook']
-                firstname = item['firstname']
-                customtext = item['customtext']
-                originalemail = item['originalemail']
-            except Exception as e:
-                print(repr(e))
-                continue
-            
-            if item['email1'].strip() != "" and check_blacklisted(item['email1'].strip()):
+            venue = item['venue']
+            venue_type = item['type']
+            website = item['website']
+            phone = item['phone']
+            address = item['address']
+            facebook = item['facebook']
+            firstname = item['firstname']
+            customtext = item['customtext']
+            originalemail = item['originalemail']
+
+            if item.get('email') and item['email'].strip() != "" and check_blacklisted(item['email'].strip()):
+                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email'].strip(), user_id = current_user.id, file_id=file_id)
+                service.website = website
+                service.phone = phone
+                service.address = address
+                service.facebook = facebook
+                service.firstname = firstname
+                service.customtext = customtext
+                service.originalemail = originalemail
+                services.append(service)
+
+            if item.get('email1') and item['email1'].strip() != "" and check_blacklisted(item['email1'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email1'].strip(), user_id = current_user.id, file_id=file_id)
                 service.website = website
                 service.phone = phone
@@ -439,7 +454,7 @@ def upload_contact():
                 service.originalemail = originalemail
                 services.append(service)
                 
-            if item['email2'].strip() != "" and check_blacklisted(item['email2'].strip()):
+            if item.get('email2')  and item['email2'].strip() != "" and check_blacklisted(item['email2'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email2'].strip(), user_id = current_user.id, file_id=file_id)
                 service.website = website
                 service.phone = phone
@@ -450,7 +465,7 @@ def upload_contact():
                 service.originalemail = originalemail
                 services.append(service)
                 
-            if item['email3'].strip() != "" and check_blacklisted(item['email3'].strip()):
+            if item.get('email3')  and item['email3'].strip() != "" and check_blacklisted(item['email3'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email3'].strip(), user_id = current_user.id, file_id=file_id)
                 service.website = website
                 service.phone = phone
@@ -461,7 +476,7 @@ def upload_contact():
                 service.originalemail = originalemail
                 services.append(service)
                 
-            if item['email4'].strip() != "" and check_blacklisted(item['email4'].strip()):
+            if item.get('email4')  and item['email4'].strip() != "" and check_blacklisted(item['email4'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email4'].strip(), user_id = current_user.id, file_id=file_id)
                 service.website = website
                 service.phone = phone
@@ -472,7 +487,7 @@ def upload_contact():
                 service.originalemail = originalemail
                 services.append(service)
                 
-            if item['facebookemail1'].strip() != "" and check_blacklisted(item['facebookemail1'].strip()):
+            if item.get('facebookemail1')  and item['facebookemail1'].strip() != "" and check_blacklisted(item['facebookemail1'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['facebookemail1'].strip(), user_id = current_user.id, file_id=file_id)
                 service.website = website
                 service.phone = phone
@@ -483,7 +498,7 @@ def upload_contact():
                 service.originalemail = originalemail
                 services.append(service)
                 
-            if item['facebookemail2'].strip() != "" and check_blacklisted(item['facebookemail2'].strip()):
+            if item.get('facebookemail2')  and item['facebookemail2'].strip() != "" and check_blacklisted(item['facebookemail2'].strip()):
                 service = Uploadedservice(name=venue, venue_type=venue_type, email=item['facebookemail2'].strip(), user_id = current_user.id, file_id=file_id)
                 service.website = website
                 service.phone = phone
@@ -496,7 +511,8 @@ def upload_contact():
         
         db.session.bulk_save_objects(services)
         db.session.commit()
-        return redirect(url_for('home_blueprint.upload_contact'))
+
+        return {"success": True, "message": "File uploaded successfully."}
         
         
 @blueprint.route('/contact/delete', methods=['POST'])
@@ -1481,6 +1497,18 @@ def admin_action_test():
     
     else:
         return {"success": False}
+    
+
+@blueprint.route('/cancel_membership')
+@login_required
+def cancel_membership():
+    
+    if send_cancel_membership_email(current_user.email):
+        return "Cancellation request sent successfully. We will contact you soon."
+    
+    else:
+        return "Failed to send request. Please try again later."
+
     
 
 @blueprint.route('/action/test', methods=['POST'])
