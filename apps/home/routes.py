@@ -411,7 +411,7 @@ def upload_contact():
         for col in columns:
             if col not in df.columns:
                 print(col, "not in columns")
-                return {"success": False, "message": "Formatting issue - check that spreadsheet columns are in original format/order, and then re-upload. Missing column: " + col}
+                return {"success": False, "message": " Keep column names/order EXACTLY how they are here, and no more and no less!. Missing column: " + col}
 
         description = request.form['description']
         contact_file = Uploadedcontactfile(filename=f.filename, filepath=filepath, description=description, user_id=current_user.id)
@@ -949,8 +949,7 @@ def upgrade_user_lite(id):
     user = Users.query.get(id)
     user.role = "lite"
 
-    # User initial credit = 30
-    user_initial_credit = 30
+    user_initial_credit = 10
 
     user_credit = UserCredit.query.filter_by(userid=id).first()
     if user_credit:
