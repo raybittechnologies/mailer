@@ -2062,4 +2062,8 @@ def newpassword(token):
 
 @blueprint.route('/privacy', methods=['GET'])
 def privacy():
-    return render_template('home/privacy.html', segment="privacy")
+    return render_template('home/privacy_policy.html', segment="privacy")
+
+@blueprint.route('/terms', methods=['GET'])
+def terms():
+    return render_template('home/terms_of_service.html', segment="terms")

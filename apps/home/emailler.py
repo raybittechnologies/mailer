@@ -38,7 +38,7 @@ def send_cancel_membership_email(user_email):
 
     # create mail object
     mail = mt.Mail(
-        sender=mt.Address(email=SENDER_MAIL, name=user_email),
+        sender=mt.Address(email=SENDER_MAIL),
         to=[mt.Address(email=SENDER_MAIL, name="Admin")],
         subject="Request for Membership Cancellation",
         html=f"""
