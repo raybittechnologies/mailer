@@ -131,15 +131,33 @@
                 {% else %}
                   <li class="list-group-item border-0 ps-0 text-sm"><strong class="text-dark">Current Plan:</strong> Premium </li>
                 {% endif %}
-                <a class="btn bg-gradient-danger btn-sm" target="_blank" href="/cancel_membership">
-                  <i class="fas fa-user-edit text-secondary text-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Cancel Membership"></i> Cancel Membership
+                <a class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#deleteServiceModal">
+                  <i class="fas fa-user-edit text-primary text-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Cancel Membership"></i> Cancel Membership
                 </a>
               </ul>
             </div>  
           </div>
         </div>
       </div>
-
+      <div class="modal fade" id="deleteServiceModal" tabindex="-1" role="dialog" aria-labelledby="deleteServiceModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="deleteServiceModalLabel">Are you sure to unsubscribe this service?</h5>
+              <button type="button" class="btn-close text-dark" id="close-deletejob-modal" data-bs-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <p>Email  <a class="text-info" href="mailto:info@soundheartmusic.com?subject=Request membership cancellation">info@soundheartmusic.com</a> to initiate your account cancellation</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Ok</button>
+            </div>
+            </form>
+          </div>
+        </div>
+    </div>
       {% include "includes/footer.html" %}
 
     </div>
