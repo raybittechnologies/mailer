@@ -13,12 +13,13 @@ from api_generator.commands import gen_api
 from flask_cors import CORS
 from apps.config import config_dict
 from apps import create_app, db, scheduler
-from apps.models import Service, Yelpurl, UserCredit
+from apps.models import Service, Yelpurl, FirstName
 from apps.authentication.models import Users
 from apps.home.emailler import send_email
 from dotenv import load_dotenv
 from werkzeug.middleware.proxy_fix import ProxyFix
 import datetime
+from apps.home.utils import extract_first_name
 
 load_dotenv()
 
@@ -134,6 +135,26 @@ def msg1():
                     user_id=data['user_id'],
                     biz_id=data['bizId'],
                 )
+
+                for idx, email in enumerate([data['Email1'], data['Email2'], data['Email3'], data['Email4'], data['FacebookEmail1'], data['FacebookEmail2']]):
+
+                    if email:
+                        fn = db.session.query(FirstName).filter_by(email=email).first()
+                        if fn is None:
+                            first_name = extract_first_name(email)
+                            
+                            new_first_name = FirstName(
+                                email=data['Email1'],
+                                first_name=first_name
+                            )
+                            db.session.add(new_first_name)
+                            db.session.commit()
+
+                        else:
+                            first_name = fn.first_name
+
+                        setattr(new_service, f"first_name{idx+1}", first_name)
+                
                 db.session.add(new_service)
                 db.session.commit()
             else:

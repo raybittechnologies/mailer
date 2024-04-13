@@ -50,6 +50,7 @@
                 </div>
             </div>
         </div>
+        
         {% include "includes/footer.html" %}
 
     </div>
@@ -103,7 +104,7 @@
             e.preventDefault();  //prevent form from submitting
             const form = e.currentTarget;
             const formData = new FormData(form);
-    
+            
             fetch('/upload_contact',{
                 method: 'POST',
                 body: formData

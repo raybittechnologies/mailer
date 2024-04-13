@@ -30,13 +30,18 @@
                         <th>type</th>
                         <th>website</th>
                         <th>email1</th>
+                        <th>firstname1</th>
                         <th>email2</th>
+                        <th>firstname2</th>
                         <th>email3</th>
+                        <th>firstname3</th>
                         <th>email4</th>
+                        <th>firstname4</th>
                         <th>facebookemail1</th>
+                        <th>firstname5</th>
                         <th>facebookemail2</th>
+                        <th>firstname6</th>
                         <th>facebook</th>
-                        <th>firstname</th>
                         <th>customtext</th>
                         <th>originalemail</th>
                         <th>bademail</th>
@@ -117,18 +122,53 @@
                             },
                         },
                         {data: 'email1', defaultContent : ""},
+                        {
+                            data: 'first_name1', 
+                            render : function (first_name1, type, row) {
+                                return  first_name1 == 'None' ?  ''  : first_name1;
+                            },
+                        },
                         {data: 'email2', defaultContent : ""},
+                        {
+                            data: 'first_name2', 
+                            render: function (first_name2, type, row) {
+                                return  first_name2 == 'None' ?  ''  : first_name2;
+                            },
+                        },
                         {data: 'email3', defaultContent : ""},
+                        {
+                            data: 'first_name3', 
+                            render: function (first_name3, type, row) {
+                                return  first_name3 == 'None' ?  ''  : first_name3;
+                            },
+                        },
                         {data: 'email4', defaultContent : ""},
+                        {
+                            data: 'first_name4', 
+                            render: function (first_name4, type, row) {
+                                return  first_name4 == 'None' ?  ''  : first_name4;
+                            },
+                        },
                         {data: 'fbemail1', defaultContent : ""},
+                        {
+                            data: 'first_name5', 
+                            render: function (first_name5, type, row) {
+                                return  first_name5 == 'None' ?  ''  : first_name5;
+                            },
+                        },
                         {data: 'fbemail2', defaultContent : ""},
+                        {
+                            data: 'first_name6', 
+                            render: function (first_name6, type, row) {
+                                return  first_name6 == 'None' ?  ''  : first_name6;
+                            },
+                        },
                         {
                             data: 'facebook',
                             render: function (facebook, type, row) {
                                 return '<a href="' + facebook + '" target="_blank" >' + facebook + ' </a>'
                             },
                         },
-                        {data: 'firstname', defaultContent : ""},
                         {data: 'customtext', defaultContent : ""},
                         {data: 'originalemail', defaultContent : ""},
                         {data: 'bademail', defaultContent : ""}

@@ -59,14 +59,14 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
             #     continue
             
             venue = email.venue
-            firstname = email.firstname
+            firstname = email.firstname if email.firstname and email.firstname != "None" else ""
             customtext = email.customtext
             originalemail = email.originalemail
 
             service = {
                 "venue" : venue,
                 "unsubscribe_link" : unsubscribe_link,
-                "firstname" : firstname if firstname else "", 
+                "firstname" : firstname,
                 "customtext" : customtext if customtext else "",
                 "originalemail" : originalemail if originalemail else ""
             }

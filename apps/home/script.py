@@ -218,7 +218,7 @@ def get_fb_info(url):
             response = scraper.get("https://www.musictunnelktv.com/home", timeout=10)
         
         else:
-            response = scraper.get(url, proxies=proxies, verify=verify, timeout=10)
+            response = scraper.get(url, proxies=proxies, verify=verify, timeout=60)
             
     except Exception as e:
         print(url , str(e))
@@ -292,7 +292,7 @@ def get_fb_info(url):
             #     print(str(e))
             #     break
             try:
-                response = scraper.get(FB_link, proxies=proxies, verify=verify, timeout=15)
+                response = scraper.get(FB_link, proxies=proxies, verify=verify, timeout=60)
             except Exception as e:
                 print(FB_link, str(e))
                 break
@@ -351,6 +351,6 @@ def find_emails(html):
     emails = re.findall(email_regex, html)
     emails = list(set( [ email.lower() for email in emails] ))
     filtered_emails = [
-        email  for email in emails if not email[-4:] in ['.jpg', '.png'] and check_blacklisted(email)]
+        email  for email in emails if check_blacklisted(email)]
     return filtered_emails
     

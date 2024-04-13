@@ -51,6 +51,13 @@ class Service(db.Model):
     user_id = db.Column(db.String(255), nullable=False)
     biz_id = db.Column(db.String(255), nullable=False)
     is_credited = db.Column(db.Integer, default=0) # 1: credited, 0: not credited 2 : ignored
+    first_name1 = db.Column(db.String(255))
+    first_name2 = db.Column(db.String(255))
+    first_name3 = db.Column(db.String(255))
+    first_name4 = db.Column(db.String(255))
+    first_name5 = db.Column(db.String(255))
+    first_name6 = db.Column(db.String(255))
+
     
     __table_args__ = (
         db.Index('sevice-idx', "url_id", "user_id", "biz_id", unique=True), 
@@ -61,7 +68,7 @@ class Uploadedservice(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
     venue_type = db.Column(db.String(1024))
-    email =  db.Column(db.String(255))
+    email =  db.Column(db.String(255), index=True)
     is_bad =  db.Column(db.Integer, default=0)
     user_id = db.Column(db.String(255))
     file_id = db.Column(db.String(255))
@@ -186,4 +193,10 @@ class UserCredit(db.Model):
     monthly_credit = db.Column(db.Integer, default=10)
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
     update_datetime = db.Column(db.DateTime(), onupdate=datetime.datetime.utcnow, default=datetime.datetime.utcnow)
+
+
+class FirstName(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), index=True, unique=True)
+    first_name = db.Column(db.String(255))
     

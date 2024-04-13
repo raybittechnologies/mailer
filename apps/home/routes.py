@@ -147,7 +147,6 @@ def url_history():
 def view_url_history(url_id):
     # Return only the urls that are credited
     user_urls = Service.query.filter_by(url_id=url_id, user_id=current_user.id).all()
-    # print(user_urls)
     url_list = []
     for url_entry in user_urls:
         url_data = {
@@ -172,6 +171,12 @@ def view_url_history(url_id):
             url_data['fbemail1'] = url_entry.fbemail1
             url_data['fbemail2'] = url_entry.fbemail2
             url_data['bademail'] = url_entry.bademail
+            url_data['first_name1'] = url_entry.first_name1
+            url_data['first_name2'] = url_entry.first_name2
+            url_data['first_name3'] = url_entry.first_name3
+            url_data['first_name4'] = url_entry.first_name4
+            url_data['first_name5'] = url_entry.first_name5
+            url_data['first_name6'] = url_entry.first_name6
 
         url_list.append(url_data)
     return jsonify(url_list)
@@ -407,11 +412,11 @@ def upload_contact():
         else:
             return {"success": False, "message": "File type not supported."}
 
-        columns  = ['venue', 'type', 'website', 'phone', 'address', 'facebook', 'firstname', 'customtext', 'originalemail']
+        columns  = ['venue', 'type', 'website', 'phone', 'address', 'facebook', 'customtext', 'originalemail']
         for col in columns:
             if col not in df.columns:
                 print(col, "not in columns")
-                return {"success": False, "message": " Keep column names/order EXACTLY how they are here, and no more and no less!. Missing column: " + col}
+                return {"success": False, "message": "Keep column names/order EXACTLY how they are here, and no more and no less!. Missing column: " + col}
 
         description = request.form['description']
         contact_file = Uploadedcontactfile(filename=f.filename, filepath=filepath, description=description, user_id=current_user.id)
@@ -428,87 +433,28 @@ def upload_contact():
             phone = item['phone']
             address = item['address']
             facebook = item['facebook']
-            firstname = item['firstname']
             customtext = item['customtext']
             originalemail = item['originalemail']
+            # email = item['email'].strip() if item.get('email') else ""
+            email1 = item['email1'].strip() if item.get('email1') else ""
+            email2 = item['email2'].strip() if item.get('email2') else ""
+            email3 = item['email3'].strip() if item.get('email3') else ""
+            email4 = item['email4'].strip() if item.get('email4') else ""
+            facebookemail1 = item['facebookemail1'].strip() if item.get('facebookemail1') else ""
+            facebookemail2 = item['facebookemail2'].strip() if item.get('facebookemail2') else ""
 
-            if item.get('email') and item['email'].strip() != "" and check_blacklisted(item['email'].strip()):
-                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email'].strip(), user_id = current_user.id, file_id=file_id)
-                service.website = website
-                service.phone = phone
-                service.address = address
-                service.facebook = facebook
-                service.firstname = firstname
-                service.customtext = customtext
-                service.originalemail = originalemail
-                services.append(service)
+            for idx, email in enumerate([email1, email2, email3, email4, facebookemail1, facebookemail2]):
+                if email and check_blacklisted(email):
+                    service = Uploadedservice(name=venue, venue_type=venue_type, email=email, user_id = current_user.id, file_id=file_id)
+                    service.website = website
+                    service.phone = phone
+                    service.address = address
+                    service.facebook = facebook
+                    service.customtext = customtext
+                    service.originalemail = originalemail
+                    service.firstname = item['firstname' + str(idx+1)]
+                    services.append(service)
 
-            if item.get('email1') and item['email1'].strip() != "" and check_blacklisted(item['email1'].strip()):
-                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email1'].strip(), user_id = current_user.id, file_id=file_id)
-                service.website = website
-                service.phone = phone
-                service.address = address
-                service.facebook = facebook
-                service.firstname = firstname
-                service.customtext = customtext
-                service.originalemail = originalemail
-                services.append(service)
-                
-            if item.get('email2')  and item['email2'].strip() != "" and check_blacklisted(item['email2'].strip()):
-                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email2'].strip(), user_id = current_user.id, file_id=file_id)
-                service.website = website
-                service.phone = phone
-                service.address = address
-                service.facebook = facebook
-                service.firstname = firstname
-                service.customtext = customtext
-                service.originalemail = originalemail
-                services.append(service)
-                
-            if item.get('email3')  and item['email3'].strip() != "" and check_blacklisted(item['email3'].strip()):
-                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email3'].strip(), user_id = current_user.id, file_id=file_id)
-                service.website = website
-                service.phone = phone
-                service.address = address
-                service.facebook = facebook
-                service.firstname = firstname
-                service.customtext = customtext
-                service.originalemail = originalemail
-                services.append(service)
-                
-            if item.get('email4')  and item['email4'].strip() != "" and check_blacklisted(item['email4'].strip()):
-                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['email4'].strip(), user_id = current_user.id, file_id=file_id)
-                service.website = website
-                service.phone = phone
-                service.address = address
-                service.facebook = facebook
-                service.firstname = firstname
-                service.customtext = customtext
-                service.originalemail = originalemail
-                services.append(service)
-                
-            if item.get('facebookemail1')  and item['facebookemail1'].strip() != "" and check_blacklisted(item['facebookemail1'].strip()):
-                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['facebookemail1'].strip(), user_id = current_user.id, file_id=file_id)
-                service.website = website
-                service.phone = phone
-                service.address = address
-                service.facebook = facebook
-                service.firstname = firstname
-                service.customtext = customtext
-                service.originalemail = originalemail
-                services.append(service)
-                
-            if item.get('facebookemail2')  and item['facebookemail2'].strip() != "" and check_blacklisted(item['facebookemail2'].strip()):
-                service = Uploadedservice(name=venue, venue_type=venue_type, email=item['facebookemail2'].strip(), user_id = current_user.id, file_id=file_id)
-                service.website = website
-                service.phone = phone
-                service.address = address
-                service.facebook = facebook
-                service.firstname = firstname
-                service.customtext = customtext
-                service.originalemail = originalemail
-                services.append(service)
-        
         db.session.bulk_save_objects(services)
         db.session.commit()
 
