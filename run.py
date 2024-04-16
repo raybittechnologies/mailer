@@ -138,11 +138,15 @@ def msg1():
 
                 for idx, email in enumerate([data['Email1'], data['Email2'], data['Email3'], data['Email4'], data['FacebookEmail1'], data['FacebookEmail2']]):
 
-                    if email:
+                    if email and email.strip() != "":
                         fn = db.session.query(FirstName).filter_by(email=email).first()
                         if fn is None:
+                            email = email.split('@')[0]
                             first_name = extract_first_name(email)
-                            
+
+                            if first_name != "None" and first_name.lower() in data['venue'].lower(): # Check if first name is in venue name
+                                first_name = "None"
+                                
                             new_first_name = FirstName(
                                 email=data['Email1'],
                                 first_name=first_name

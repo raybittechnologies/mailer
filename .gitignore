@@ -6,3 +6,5 @@ info.txt
 __pycache__/
 apps_origin/
 uploads/
+*.db
+*.sqlite3
