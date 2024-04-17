@@ -117,7 +117,7 @@ def msg1():
                 user = db.session.get(Users, int(data['user_id']))
 
                 new_service = Service(
-                    name= data['venue'] if type(data) == 'str' else data['venue'][0],
+                    name= data['venue'] if isinstance(data, str) else data['venue'][0],
                     venue_type= data['venuetype'] if type(data) == 'str' else data['venuetype'][0],
                     website=data['website'],
                     phone=data['Phone'],
@@ -137,18 +137,19 @@ def msg1():
                 )
 
                 for idx, email in enumerate([data['Email1'], data['Email2'], data['Email3'], data['Email4'], data['FacebookEmail1'], data['FacebookEmail2']]):
-
-                    if email and email.strip() != "":
+                    email = str(email).strip()
+                    if email:
                         fn = db.session.query(FirstName).filter_by(email=email).first()
                         if fn is None:
-                            email = email.split('@')[0]
-                            first_name = extract_first_name(email)
+                            email_str = email.split('@')[0]
+                            first_name = extract_first_name(email_str)
+                            venue = data['venue'] if isinstance(data, str) else data['venue'][0]
 
-                            if first_name != "None" and first_name.lower() in data['venue'].lower(): # Check if first name is in venue name
+                            if first_name != "None" and first_name.lower() in venue.lower(): # Check if first name is in venue name
                                 first_name = "None"
                                 
                             new_first_name = FirstName(
-                                email=data['Email1'],
+                                email=email,
                                 first_name=first_name
                             )
                             db.session.add(new_first_name)
@@ -157,6 +158,7 @@ def msg1():
                         else:
                             first_name = fn.first_name
 
+                        # add first names to service
                         setattr(new_service, f"first_name{idx+1}", first_name)
                 
                 db.session.add(new_service)

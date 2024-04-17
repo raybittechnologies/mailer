@@ -17,7 +17,7 @@ load_dotenv()
 
 import os
 openai_api_key=os.getenv("OPENAI_API_KEY")
-print(openai_api_key)
+# print(openai_api_key)
 
 blacklist = ['@email.com', '@example.com','@domain.com','@godaddy.com','@address.com','@filler.com','@xyz.com','@newsletter.com','@mystore.com', 'example@gmail.com', '@sentry', 'mail@mail.com', '@mail.com', 'example@mail.com', '.png', '.jpg']
 
@@ -32,15 +32,16 @@ def check_blacklisted(email):
 
 def extract_first_name(email):
     '''
-    Use the LLM to extract the first name from the given email.
+    Use the LLM to extract the first name from the given text.
     '''
-    template = """Extract the first names from the given list of email addresses. The email address is: {email}.
+    template = """Extract the first name from the given text. The text is: {email}.
                   Do not add any attributes, Do NOT add any additional words. 
                   Just First Name of Person only. If there is no first name of person then return 'None'."""
     
     prompt = PromptTemplate(template=template, input_variables=["email"])
 
     llm_chain = LLMChain(prompt=prompt, llm=llm)
+        
     output = llm_chain.invoke(input=email)
     return output['text']
 
