@@ -147,11 +147,21 @@ def msg1():
 
                             if first_name != "None" and first_name.lower() in venue.lower(): # Check if first name is in venue name
                                 first_name = "None"
+                            
+                            if "none" in first_name.lower():
+                                first_name = "None"
+                            
+                            if 'admin' in first_name.lower():
+                                first_name = "None"
+                            
+                            if 'info' in first_name.lower():
+                                first_name = "None"
                                 
                             new_first_name = FirstName(
                                 email=email,
                                 first_name=first_name
                             )
+
                             db.session.add(new_first_name)
                             db.session.commit()
 
