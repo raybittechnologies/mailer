@@ -2013,3 +2013,72 @@ def privacy():
 @blueprint.route('/terms', methods=['GET'])
 def terms():
     return render_template('home/terms_of_service.html', segment="terms")
+
+
+
+@blueprint.route('/admin/connected_accounts', methods=['GET'])
+@login_required
+@role_required('admin')
+def connected_accounts():
+        return render_template('home/admin_connected_accounts.html', segment="connected_accounts")
+
+
+@blueprint.route('/admin/get_connected_accounts', methods=['GET'])
+@login_required
+@role_required('admin')
+def get_connected_accounts():
+        
+    nylas = APIClient(
+        client_id=current_app.config['NYLAS_OAUTH_CLIENT_ID'],
+        client_secret=current_app.config["NYLAS_OAUTH_CLIENT_SECRET"],
+    )
+
+    accounts = nylas.accounts.all()
+    connected_accounts = []
+
+    for account in accounts:
+        user_email = account.email.lower()
+        user_id = Users.query.filter_by(email=user_email).first()
+        data = {
+            "id" : account.account_id,
+            "account_id" : account.account_id,
+            "email" : account.email,
+            "sync_state" : account.sync_state,
+        }
+        
+        if user_id:
+            automations_count = Automation.query.filter((Automation.userid == user_id.id) & ((Automation.status == "pending") | (Automation.status == "running"))).count()
+            data.update({"user_id" : user_id.id, "automations_count" : automations_count})
+        else:
+            data.update({"user_id" : None, "automations_count" : 0})
+
+        connected_accounts.append(data)
+    
+    return jsonify(connected_accounts)
+
+
+@blueprint.route('/admin/disconnect_account', methods=['POST'])
+@login_required
+@role_required('admin')
+def disconnect_account():
+    account_id = request.json['account_id']
+    email = request.json['email']
+
+    try:
+        nylas = APIClient(
+            client_id=current_app.config['NYLAS_OAUTH_CLIENT_ID'],
+            client_secret=current_app.config["NYLAS_OAUTH_CLIENT_SECRET"],
+        )
+        
+        nylas.accounts.delete(account_id)
+
+        user = Users.query.filter_by(email=email).first()
+        if user:
+            user.nylas_access_token = None
+            db.session.commit()
+
+        return {"success": True, "message": "Account removed successfully."}
+
+    except Exception as e:
+        print(repr(e))
+        return {"success": False, "message": "Failed to remove account."}

@@ -1,0 +1,178 @@
+{% extends 'layouts/admin.html' %}
+
+{% block title %}Admin {% endblock title %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.3.2/css/fixedHeader.bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+{% endblock stylesheets %}
+
+{% block content %}
+
+    <div class="container-fluid py-4">
+        
+        <div class="container mt-5">
+            <div class="card col shadow-lg border-0 rounded-lg">
+                <div class="card-header"><h3 class="text-center font-weight-light my-4">Connected Accounts</h3></div>
+                <div class="card-body">
+                <table style="width:100%" id="filtersTable" class="table table-striped table-bordered nowrap">
+                    <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Automations</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <!-- Rows will be added dynamically using JavaScript -->
+                    </tbody>
+                </table>
+                </div>
+            </div>
+        </div>
+
+        {% include "includes/footer.html" %}
+        <div class="col-md-6 col-xl-6">
+            <!-- Modal -->
+            <div class="modal fade" id="deleteConnectModal" tabindex="-1" role="dialog" aria-labelledby="deleteConnectModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="exampleModalLabel">Are you sure to remove this connect?</h5>
+                            <button type="button" class="btn-close text-dark" id="delete-disconnect-close-modal" data-bs-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <form action="/admin/disconnect_account" style="display: contents" method="post"> 
+                            <input type="hidden" name="email" id="user-email"/>
+                            <input type="hidden" name="account_id" id="data-account-id"/>
+                            <div class="modal-footer">
+                                <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <input class="btn btn-danger" type="submit" value="Remove">
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
+
+<!-- Specific JS goes HERE -->
+{% block javascripts %}
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap.min.js"></script>
+<script src="https://cdn.datatables.net/fixedheader/3.3.2/js/dataTables.fixedHeader.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.4.1/js/responsive.bootstrap.min.js"></script>
+<script>
+
+        
+    $(document).ready(function () {
+        // Initialize DataTable
+        var dataTable = $('#filtersTable').DataTable({
+                responsive: true,
+                pageLength: 100,
+                order : [[2, 'asc']],
+                ajax: {
+                    url: '/admin/get_connected_accounts',
+                    dataSrc: ''
+                },
+                columns: [
+                    //{#{data: 'id'},#}
+                    {data: 'email'},
+                    { 
+                        data: 'sync_state',
+                        render : function (sync_state, type, row) {
+                            return sync_state === "running" ? '<span class="badge bg-gradient-success">Running</span>' : '<span class="badge bg-gradient-secondary">Stopped</span>';
+                        }
+                    },
+                    {data: 'automations_count'},
+                    {   
+                        data: 'account_id', // Assuming the id property is present in your data
+                        render: function (account_id, type, row) {
+                            // Create action buttons HTML
+                            var buttons = '<button class="btn btn-danger btn-sm" data-email="' + row.email + '" data-account-id="' + account_id +'"  data-bs-toggle="modal" data-bs-target="#deleteConnectModal" >Remove</button> '
+                            return buttons;
+                        }
+                    }
+                ]
+            },
+        );
+        $('#filtersTable').on('click', 'button', event => {
+            let email = event.target.getAttribute('data-email');
+            let account_id = event.target.getAttribute('data-account-id');
+
+            if (event.target.innerText === "REMOVE") {
+                document.getElementById("user-email").value = email;
+                document.getElementById("data-account-id").value = account_id;
+                console.log(email, account_id)
+            } else {
+                console.log(event.target.innerText)
+            }
+        });
+
+        $('#deleteConnectModal').on('submit', function(e) { //use on if jQuery 1.7+
+            e.preventDefault();  //prevent form from submitting
+            const email = document.getElementById("user-email").value;
+            const account_id = document.getElementById("data-account-id").value;
+
+            console.log(email, account_id);
+
+            $('#delete-disconnect-close-modal').click();
+
+            fetch('/admin/disconnect_account',{
+                method: 'POST',
+                headers : { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    "account_id" : account_id,
+                    "email" : email
+                }),
+            })
+            .then((response) => {
+                if(!response.ok)
+                    return response.text().then(text => { throw new Error(text) })
+                else
+                    return response.json()
+            })
+            .then((data) => {
+                if (data.success) {
+                    // console.log(data);
+                    dataTable.ajax.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: data.message,
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                } else {
+                    console.log(data.message);
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Cannot remove this account!",
+                        text: data.message,
+                    });
+                }
+            })
+            .catch((err) => {
+                console.log(err);
+                Swal.fire({
+                    icon: "warning",
+                    title: "Oops...",
+                    text: data.message,
+                });
+            })
+        });
+
+    });
+</script>
+{% endblock javascripts %}
