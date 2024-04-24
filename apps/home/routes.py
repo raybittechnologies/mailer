@@ -412,7 +412,7 @@ def upload_contact():
         else:
             return {"success": False, "message": "File type not supported."}
 
-        columns  = ['venue', 'type', 'website', 'phone', 'address', 'facebook', 'customtext', 'originalemail']
+        columns  = ['venue', 'type', 'website', 'phone', 'address', 'facebook', 'customtext', 'originalemail'] + ['firstname' + str(i) for i in range(1, 7)] + ['email' + str(i) for i in range(1, 5)] + ['facebookemail' + str(i) for i in range(1, 3)]
         for col in columns:
             if col not in df.columns:
                 print(col, "not in columns")
@@ -2062,7 +2062,7 @@ def get_connected_accounts():
 @role_required('admin')
 def disconnect_account():
     account_id = request.json['account_id']
-    email = request.json['email']
+    email = request.json['email'].lower()
 
     try:
         nylas = APIClient(

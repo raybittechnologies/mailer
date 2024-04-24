@@ -93,7 +93,8 @@
                     { 
                         data: 'sync_state',
                         render : function (sync_state, type, row) {
-                            return sync_state === "running" ? '<span class="badge bg-gradient-success">Running</span>' : '<span class="badge bg-gradient-secondary">Stopped</span>';
+                            const states = ['running', 'downloading', 'valid', 'running', 'partial'];
+                            return states.includes(sync_state)  ? '<span class="badge bg-gradient-success">Connected</span>' : '<span class="badge bg-gradient-secondary">Stopped</span>';
                         }
                     },
                     {data: 'automations_count'},
