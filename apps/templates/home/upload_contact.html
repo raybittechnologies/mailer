@@ -128,10 +128,9 @@
                 } else {
                     console.log(data.message);
                     Swal.fire({
-                        icon: "warning",
-                        title: "Oops...",
-                        text: data.message,
-                        footer: '<a target="_blank" href="https://docs.google.com/spreadsheets/d/17OascTooyDV8vijaqE6442ML4YfOLdBk1Fi0XnSUcrg/export?format=xlsx&gid=0">Download example excel.</a>'
+                        icon: "error",
+                        // title: data.message,
+                        html: '<h4>' + data.message + '</h4> <br> Download <a target="_blank" href="https://docs.google.com/spreadsheets/d/17OascTooyDV8vijaqE6442ML4YfOLdBk1Fi0XnSUcrg/export?format=xlsx&gid=0">"Upload Template"</a> Here'
                     });
                 }
             })
