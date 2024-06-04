@@ -24,7 +24,7 @@ class Book(db.Model):
 class Yelpurl(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(254))
-    product_url = db.Column(db.String(1024))
+    product_url = db.Column(db.Text)
     userid = db.Column(db.Integer)
     state = db.Column(db.String(20))
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, index=True)
@@ -35,9 +35,9 @@ class Service(db.Model):
     name = db.Column(db.String(255))
     venue_type = db.Column(db.String(255))
     website = db.Column(db.String(1024))
-    phone = db.Column(db.String(20))
+    phone = db.Column(db.String(120))
     address = db.Column(db.String(1024))
-    facebook = db.Column(db.String(255))
+    facebook = db.Column(db.Text)
     instagram = db.Column(db.String(255))
     twitter = db.Column(db.String(255))
     email1 = db.Column(db.String(255))
@@ -76,12 +76,12 @@ class Uploadedservice(db.Model):
     unsubscribe_token = db.Column(db.String(128), nullable=False, default=generate_unsubscribe_token, index=True)
     is_unsubscribed = db.Column(db.Integer, default=0)
     website = db.Column(db.String(1024))
-    phone = db.Column(db.String(20), index=True)
-    address = db.Column(db.String(1024), index=True)
-    facebook = db.Column(db.String(255))
+    phone = db.Column(db.String(120), index=True)
+    address = db.Column(db.String(191), index=True)
+    facebook = db.Column(db.Text)
     firstname = db.Column(db.String(255))
     customtext = db.Column(db.String(1024))
-    originalemail = db.Column(db.String(255))
+    originalemail = db.Column(db.Text)
     
     __table_args__ = (
         db.UniqueConstraint('email', 'user_id', name='unique-service'),
@@ -140,7 +140,7 @@ class Action(db.Model):
     action_name = db.Column(db.String(255))
     subject = db.Column(db.String(255))
     fromname = db.Column(db.String(255))
-    message = db.Column(db.String)
+    message = db.Column(db.Text)
     waitdays = db.Column(db.Integer)
     tempid = db.Column(db.Integer)
     userid = db.Column(db.Integer)
@@ -163,8 +163,8 @@ class Automation(db.Model):
 class Campaign(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     campaignid = db.Column(db.String(32))
-    contact_name = db.Column(db.Integer)
-    templatename = db.Column(db.Integer)
+    contact_name = db.Column(db.String(255))
+    templatename = db.Column(db.String(255))
     userid = db.Column(db.Integer)
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
     

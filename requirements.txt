@@ -23,3 +23,5 @@ WTForms-Alchemy==0.18.0
 langchain==0.1.14
 langchain-openai==0.1.1
 kor
+mysql-connector-python
+pymysql

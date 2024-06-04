@@ -77,10 +77,10 @@ def index():
             
     return render_template('home/index.html', segment='index', API_GENERATOR=len(API_GENERATOR), page_data=page_data )
 
-
-@compiles(Insert, "sqlite")
-def sqlite_insert_ignore(insert, compiler, **kw):
-    return compiler.visit_insert(insert.prefix_with("OR IGNORE"), **kw)
+# https://github.com/sqlalchemy/sqlalchemy/issues/5374
+@compiles(Insert, "mysql")
+def mysql_insert_ignore(insert, compiler, **kw):
+    return compiler.visit_insert(insert.prefix_with("IGNORE"), **kw)
 
 @blueprint.route('/url', methods=['POST', 'GET'])
 @login_required

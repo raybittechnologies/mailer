@@ -24,7 +24,7 @@ class Users(db.Model, UserMixin):
     oauth_github  = db.Column(db.String(100), nullable=True)
     nylas_access_token = db.Column(db.String(32))
 
-    api_token     = db.Column(db.String(100))
+    api_token     = db.Column(db.String(255))
     api_token_ts  = db.Column(db.Integer)   
     state         = db.Column(db.String(10)) 
     password_reset_token = db.Column(db.String(128)) 
