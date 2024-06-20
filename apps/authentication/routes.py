@@ -22,6 +22,7 @@ from apps import db, login_manager
 from apps.authentication import blueprint
 from apps.authentication.forms import LoginForm, CreateAccountForm
 from apps.authentication.models import Users
+from apps.models import UserCampaignSetting
 
 from apps.authentication.util import verify_pass, generate_token
 
@@ -108,6 +109,12 @@ def register():
             user.username = email
             user.state = "pending"
             db.session.add(user)
+
+            db.session.flush()
+            # Add settins for user
+            user_settings = UserCampaignSetting(userid=user.id)
+            db.session.add(user_settings)
+
             db.session.commit()
 
             print("User created successfully")

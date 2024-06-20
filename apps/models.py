@@ -199,4 +199,11 @@ class FirstName(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), index=True, unique=True)
     first_name = db.Column(db.String(255))
-    
+
+
+class UserCampaignSetting(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    userid = db.Column(db.Integer)
+    emails_daily_limit = db.Column(db.Integer, default=150)
+    create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
+    update_datetime = db.Column(db.DateTime(), onupdate=datetime.datetime.utcnow, default=datetime.datetime.utcnow)

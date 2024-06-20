@@ -123,7 +123,11 @@
               <hr class="horizontal gray-light my-4">
               <ul class="list-group">
                 <li class="list-group-item border-0 ps-0 pt-0 text-sm"><strong class="text-dark">Name:</strong> &nbsp; {{ current_user.username }}</li>
-                <li class="list-group-item border-0 ps-0 text-sm"><strong class="text-dark">Email:</strong> &nbsp; {{ current_user.email }}</li>
+                <li class="list-group-item border-0 ps-0 text-sm"><strong class="text-dark">Email:</strong> &nbsp; {{ current_user.email }}
+                  <a class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#updateEmailModal">
+                    <i class="fas fa-envelope text-primary text-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Update Email"> Update </i>
+                  </a>
+                </li>
                 {% if current_user.role == "user" %}
                   <li class="list-group-item border-0 ps-0 text-sm"><strong class="text-dark">Current Plan:</strong> Normal </li>
                 {% elif current_user.role == "lite" %}
@@ -157,7 +161,32 @@
             </form>
           </div>
         </div>
-    </div>
+      </div>
+      
+      <div class="modal fade" id="updateEmailModal" tabindex="-1" role="dialog" aria-labelledby="dupdateEmailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="updateEmailModalLabel">Update Email</h5>
+                <button type="button" class="btn-close text-dark" id="close-modal" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <form id="update-email-form" action="/update_email" method="post">
+                <div class="modal-body">
+                  <div class="form-group">
+                      <label for="new-email" class="col-form-label">New Email:</label>
+                      <input type="email" class="form-control" id="new-email"  name="new-email" required></input>
+                  </div>
+                </div>
+                <div class="modal-footer form-group">
+                    <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn bg-gradient-primary" id="create-campaign-button" >Update</button>
+                </div>
+            </form>
+          </div>
+        </div>
+      </div>
       {% include "includes/footer.html" %}
 
     </div>
@@ -165,4 +194,63 @@
 {% endblock content %}
 
 <!-- Specific JS goes HERE --> 
-{% block javascripts %}{% endblock javascripts %}
+{% block javascripts %}
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+
+<script>
+  
+  $(document).ready(function () {
+
+    $('#update-email-form').on('submit', function(e) { //use on if jQuery 1.7+
+          e.preventDefault();  //prevent form from submitting
+          const new_email = document.getElementById("new-email").value;
+
+          $('#close-modal').click();
+
+          fetch('/update_email',{
+              method: 'POST',
+              headers : { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  "new_email" : new_email,
+              }),
+          })
+          .then((response) => {
+              if(!response.ok)
+                  return response.text().then(text => { throw new Error(text) })
+              else
+                  return response.json()
+          })
+          .then((data) => {
+              if (data.success) {
+                  console.log(data);
+                  Swal.fire({
+                      icon: 'success',
+                      title: data.message,
+                      showConfirmButton: false,
+                      text : "Will logout in 2 seconds!",
+                      timer: 2000
+                  });
+                  
+                  setTimeout(() => {
+                      window.location.href = "/logout";
+                  }, 2000);
+
+              } else {
+                  console.log(data.message);
+                  Swal.fire({
+                      icon: "warning",
+                      title: "Something wrong in updating email!",
+                      text: data.message,
+                  });
+              }
+          })
+          .catch((err) => {
+              console.log(err);
+          })
+      });
+
+  });
+</script>
+
+
+{% endblock javascripts %}

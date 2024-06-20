@@ -711,6 +711,9 @@ def register():
     # else we can create the user
     user = Users(username=email, email=email, password=password, role=role)
     db.session.add(user)
+    db.session.flush()
+    user_settings = UserCampaignSetting(userid=user.id)
+    db.session.add(user_settings) 
     db.session.commit()
     return jsonify({'message': 'User registered successfully'}), 201
 
@@ -761,6 +764,13 @@ def admin_users():
 @role_required('admin')
 def admin_users_credit():
     return render_template("home/admin_users_credit.html", segment='users_credit')
+
+
+@blueprint.route('/admin/users_campaign_settings', methods=['GET'])
+@login_required
+@role_required('admin')
+def admin_users_campaign_settings():
+    return render_template("home/admin_users_campaign_settings.html", segment='users_campaign_settings')
 
 
 @blueprint.route('/admin/get_users_credit', methods=['GET'])
@@ -842,6 +852,7 @@ def delete_user():
         Action.query.filter_by(userid=userid).delete()
         Campaign.query.filter_by(userid=userid).delete()
         UserCredit.query.filter_by(userid=userid).delete()
+        UserCampaignSetting.query.filter_by(userid=userid).delete()
         
         db.session.commit()
     return redirect(url_for("home_blueprint.admin_users"))
@@ -944,6 +955,9 @@ def add_user():
             user.role = "premium"
             user.state = "pending"
             db.session.add(user)
+            db.session.flush()
+            user_settings = UserCampaignSetting(userid=user.id)
+            db.session.add(user_settings)
             db.session.commit()
             return redirect(url_for('home_blueprint.admin_users'))
         else:
@@ -1352,10 +1366,14 @@ def get_users_workflow():
                 'create_datetime' : temp.create_datetime
             }
             contacts_list.append(temp_data)
+
+        user_settings = UserCampaignSetting.query.filter_by(userid=userid).first()
+        emails_daily_limit = user_settings.emails_daily_limit
             
         data = {
             "templates" : temp_list,
-            "contacts" : contacts_list
+            "contacts" : contacts_list,
+            "emails_daily_limit" : emails_daily_limit
         }
         
         return jsonify(data)
@@ -1594,7 +1612,6 @@ def campaigns():
         db.session.commit()
         return redirect(url_for('home_blueprint.add_template'))
     else:
-        
         return render_template('home/campaigns.html', segment="campaigns")
     
     
@@ -1604,8 +1621,9 @@ def create_campaign():
     
     workflow_id = request.json['workflow_id']
     contactfile_id = request.json['contactfile_id']
+    max_emails_per_day = request.json['max_emails_per_day']
     # number of emails in a Group is 150 , so we need to divide emails into groups
-    group_size = 150
+    group_size = max_emails_per_day
     
     # automations = Automation.query.filter( (Automation.userid == current_user.id), (Automation.status != "completed")).all()
     # if len(automations) > 0:
@@ -1980,9 +1998,25 @@ def passwordreset():
         
     else:
         return render_template('home/password_reset.html', segment="passwordreset")
+    
+
+@blueprint.route('/update_email', methods=['POST'])
+def update_email():
+    email = request.json['new_email'].lower()
+    user = Users.query.filter_by(email=email).first()
+    if user:
+        return {"success": False, "message": "This email is already registered."}
+    
+    user = Users.query.get(current_user.id)
+    user.email = email
+    db.session.commit()
+    return {"success": True, "message": "Email updated successfully."}
+    
+
 
 @blueprint.route('/newpassword/<token>', methods=['GET', 'POST'])
 def newpassword(token):
+    
     
     if request.method == "GET":
         user = Users.query.filter_by(password_reset_token=token).first()
@@ -2082,3 +2116,37 @@ def disconnect_account():
     except Exception as e:
         print(repr(e))
         return {"success": False, "message": "Failed to remove account."}
+
+
+
+@blueprint.route('/admin/get_users_campaign_settings', methods=['GET'])
+@login_required
+@role_required('admin')
+def get_users_campaign_settings():
+    users = db.session.query(Users, UserCampaignSetting).filter(Users.role != "admin").join(UserCampaignSetting, Users.id == UserCampaignSetting.userid, isouter=False).all()
+    user_list = []
+
+    for user in users:
+        user_data = {
+            'id': user[0].id,
+            'email': user[0].email,
+            'update_datetime': user[1].update_datetime,
+            'emails_daily_limit': user[1].emails_daily_limit,
+        }
+        user_list.append(user_data)
+
+    return jsonify(user_list)
+
+@blueprint.route('/admin/update/campaign_settings', methods=['POST'])
+@login_required 
+@role_required('admin')
+def update_campaign_setting():
+    userid = request.form['userid']
+    emails_daily_limit = int(request.form['emails-daily-limit'])
+
+    if userid:
+        temp = UserCampaignSetting.query.filter(UserCampaignSetting.userid == userid).first()
+        temp.emails_daily_limit = emails_daily_limit 
+
+    db.session.commit()
+    return redirect(url_for('home_blueprint.admin_users_campaign_settings'))
