@@ -1623,7 +1623,7 @@ def create_campaign():
     contactfile_id = request.json['contactfile_id']
     max_emails_per_day = request.json['max_emails_per_day']
     # number of emails in a Group is 150 , so we need to divide emails into groups
-    group_size = max_emails_per_day
+    group_size = int(max_emails_per_day)
     
     # automations = Automation.query.filter( (Automation.userid == current_user.id), (Automation.status != "completed")).all()
     # if len(automations) > 0:
@@ -2009,6 +2009,9 @@ def update_email():
     
     user = Users.query.get(current_user.id)
     user.email = email
+    # reset nylas access token
+    user.nylas_access_token = None
+
     db.session.commit()
     return {"success": True, "message": "Email updated successfully."}
     
