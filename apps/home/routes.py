@@ -779,7 +779,7 @@ def admin_users_campaign_settings():
 def get_users_credit():
     # users = Users.query.filter(Users.role != "admin").join(UserCredit, UserCredit.userid == Users.id, isouter=False).all()
 
-    users = db.session.query(Users, UserCredit).filter(Users.role == "lite").join(UserCredit, Users.id == UserCredit.userid, isouter=False).all()
+    users = db.session.query(Users, UserCredit).filter(Users.role == "lite", Users.state == "approved").join(UserCredit, Users.id == UserCredit.userid, isouter=False).all()
     user_list = []
 
     for user in users:
