@@ -40,6 +40,12 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
         # Indicate job is running
         job.status = "running"
         db.session.commit()
+
+        emails_count = len(emails)
+
+        total_minutes_of_a_day = 24 * 60
+        minutes_per_email = total_minutes_of_a_day // emails_count
+        wait_seconds = minutes_per_email * 60
         
         for email in emails:
             
@@ -115,7 +121,7 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
                 email.mail_id = message_id
                 
                 # Refer this https://developer.nylas.com/docs/email/improving-email-delivery/
-                time.sleep(30)
+                time.sleep(wait_seconds)
             
             try:
                 db.session.commit()
