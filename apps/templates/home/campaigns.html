@@ -17,7 +17,7 @@
     <div class="container-fluid py-4">
         
         <div class="container mt-5">
-            <button class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#creatCampaignModalMessage" onclick="createCampaign()" >Create campaign</button>
+            <button class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#creatCampaignModalMessage" {% if current_user.nylas_access_token %} onclick="createCampaign()"{% endif %}  >Create campaign</button>
             <div class="card col shadow-lg border-0 rounded-lg">
                 <div class="card-header"><h3 class="text-center font-weight-light my-4">My Campaign</h3></div>
                 <div class="card-body">
@@ -52,30 +52,36 @@
                         </div>
                         <form id="create-campaign-form" action="/create/campaign" method="post">
                             <div class="modal-body">
-                                <div class="form-group">
-                                    <label for="select-contacts" class="col-form-label">Select Contacts:</label>
-                                    <select class="form-control form-select" id="select-contacts" name="select-contacts">
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="select-workflow" class="col-form-label">Select Workflow:</label>
-                                    <select class="form-control form-select" id="select-workflow" name="select-workflow">
-                                    </select>
-                                </div>
-                                <!-- <div class="form-group">
-                                    <label for="workflow-description" class="col-form-label">Description:</label>
-                                    <textarea type="text" class="form-control" id="workflow-description" name="workflow-description" readonly></textarea>
-                                </div> -->
-                                <div class="form-group">
-                                    <label for="max-emails-per-day" class="col-form-label">Max Emails Per Day:</label>
-                                    <input type="number" class="form-control" id="max-emails-per-day" min="1" max="" name="max-emails-per-day" required></input>
-                                </div>
-                                <p class="mb-4 mx-auto text-info" id="user-notification"></p>
+                                {% if current_user.nylas_access_token %}
+                                    <div class="form-group" >
+                                        <label for="select-contacts" class="col-form-label">Select Contacts:</label>
+                                        <select class="form-control form-select" id="select-contacts" name="select-contacts">
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="select-workflow" class="col-form-label">Select Workflow:</label>
+                                        <select class="form-control form-select" id="select-workflow" name="select-workflow">
+                                        </select>
+                                    </div>
+                                    <!-- <div class="form-group">
+                                        <label for="workflow-description" class="col-form-label">Description:</label>
+                                        <textarea type="text" class="form-control" id="workflow-description" name="workflow-description" readonly></textarea>
+                                    </div> -->
+                                    <div class="form-group">
+                                        <label for="max-emails-per-day" class="col-form-label">Max Emails Per Day:</label>
+                                        <input type="number" class="form-control" id="max-emails-per-day" min="1" max="" name="max-emails-per-day" required></input>
+                                    </div>
+                                    <p class="mb-4 mx-auto text-info" id="user-notification"></p>
+                                {% else %}
+                                    <a href='{{ url_for("nylas.login") }}' class="btn btn-primary">Connect EMAIL</a>
+                                {% endif %}
                             </div>
-                            <div class="modal-footer form-group">
-                                <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Close</button>
-                                <button type="submit" class="btn bg-gradient-primary" id="create-campaign-button" >Create</button>
-                            </div>
+                            {% if current_user.nylas_access_token %}
+                                <div class="modal-footer form-group">
+                                    <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="submit" class="btn bg-gradient-primary" id="create-campaign-button" >Create</button>
+                                </div>
+                            {% endif %}
                         </form>
                     </div>
                 </div>

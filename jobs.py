@@ -2,6 +2,7 @@ import time
 from apps import scheduler, db
 from flask_login import current_user
 from apps.models import Email, Automation, Action, Template, Uploadedservice, UserCredit, Service
+from apps.authentication.models import Users
 from apps.home.emailler import send_email_via_nylas, send_email_via_mailtrap
 from nylas import APIClient
 from jinja2 import Template as JT
@@ -40,8 +41,13 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
         # Indicate job is running
         job.status = "running"
         db.session.commit()
-
         emails_count = len(emails)
+
+        if emails_count == 0:
+            job.status = "completed"
+            print(jobid, "Emails count", len(emails))
+            db.session.commit()
+            return
 
         total_minutes_of_a_day = 24 * 60
         minutes_per_email = total_minutes_of_a_day // emails_count
@@ -96,7 +102,6 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
                     
                     if "401" in str(e):
                         job.status = "failed"
-                        db.session.commit()
                         subject = "Email Automation Failed"
                         fromname = "Robotic Booking Agent"
                         message = """<p><strong>Email Automation Failed.</strong></p>
@@ -110,6 +115,12 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
                                     <p>Best regards.</p>"""
                                     
                         send_email_via_mailtrap(subject, fromname, message, useremail)
+
+                        # delete user nyals token
+                        user = db.session.get(Users, int(action.userid))
+                        user.nylas_token = None
+                        db.session.commit()
+                        
                         return
                     
                     else:

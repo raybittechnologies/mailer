@@ -67,13 +67,17 @@
                     <span aria-hidden="true">&times;</span>
                   </button>
                 </div>
-                <form action="/automation/retry" style="display: contents" method="post"> 
-                    <input type="hidden" name="jobid" id="retry-modal-jobid"/>
-                    <div class="modal-footer">
-                        <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <input class="btn btn-success" type="submit" tabindex="0" value="Retry">
-                    </div>
-                </form>
+                {% if current_user.nylas_access_token %}
+                    <form action="/automation/retry" style="display: contents" method="post"> 
+                        <input type="hidden" name="jobid" id="retry-modal-jobid"/>
+                        <div class="modal-footer">
+                            <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <input class="btn btn-success" type="submit" tabindex="0" value="Retry">
+                        </div>
+                    </form>
+                {% else %}
+                    <a href='{{ url_for("nylas.login") }}' class="btn btn-primary">Connect EMAIL</a>
+                {% endif %}
               </div>
             </div>
         </div>
