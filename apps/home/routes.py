@@ -7,7 +7,7 @@ import pprint
 from apps.authentication.models import Users
 from apps.authentication.util import verify_pass, hash_pass
 from apps.home import blueprint
-from flask import render_template, request, jsonify, redirect, url_for, current_app
+from flask import render_template, request, jsonify, redirect, url_for, current_app, send_file
 from flask_login import login_required, current_user, logout_user, login_user
 from jinja2 import Template as JT
 
@@ -121,6 +121,67 @@ def url():
         
     else:
         return render_template('home/add_url.html', segment='url')
+
+# Export all data to excel file and download
+@blueprint.route('/export_all_data', methods=['GET'])
+@login_required
+def export_all_data():
+    services = Service.query.filter_by(user_id=current_user.id).all()
+    all_services = {}
+    # make differnt dataframe per url_id and save it to excel in different sheet
+
+    for service in services:
+        url_id = service.url_id
+        data = {
+            'venue' : service.name,
+            'phone': service.phone,
+            'address': service.address,
+            'venue_type': service.venue_type,
+            'website': service.website,
+            'email1' : service.email1,
+            'first_name1' : service.first_name1,
+            'email2' : service.email2,
+            'first_name2' : service.first_name2,
+            'email3' : service.email3,
+            'first_name3' : service.first_name3,
+            'email4' : service.email4,
+            'first_name4' : service.first_name4,
+            'fbemail1' : service.fbemail1,
+            'first_name5' : service.first_name5,
+            'fbemail2' : service.fbemail2,
+            'first_name6' : service.first_name6,
+            'facebook' : service.facebook,
+            'customtext' : "",
+            'originalemail' : "",
+            'bademail' : service.bademail
+
+        }
+
+        if url_id not in all_services:
+            all_services[url_id] = []
+        all_services[url_id].append(data)
+
+    if all_services:
+        upload_folder = "uploads"
+        server_file_path = os.path.join(upload_folder, f'all_services_{current_user.id}.xlsx')
+        
+        with pd.ExcelWriter(server_file_path) as writer:
+            for key, value in all_services.items():
+                product_url = Yelpurl.query.get(key).product_url.split(',')[0]
+                parsed_url = urllib.parse.urlparse(product_url)
+                business = urllib.parse.parse_qs(parsed_url.query)['find_desc'][0]
+                location = urllib.parse.parse_qs(parsed_url.query)['find_loc'][0]
+                sheet_name = f"{business} in {location}"
+                df = pd.DataFrame(value)
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+        
+        # get project root path
+        project_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        server_file_path = os.path.join(project_path, server_file_path)
+
+        return send_file(server_file_path, as_attachment=True)
+    
+    return "No data to export"
 
 
 @blueprint.route('/url_history')

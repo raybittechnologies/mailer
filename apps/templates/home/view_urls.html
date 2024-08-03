@@ -24,6 +24,9 @@
                     </div>
                 {% endif %}
                 <div class="card-body">
+                <!-- add button for export all data to excel -->
+                <a href="{{ url_for('home_blueprint.export_all_data') }}" target="_blank" class="btn btn-success bg-gradient-success">Export All Data</a>
+                
                 <table style="width:100%" id="filtersTable" class="table table-striped table-bordered nowrap">
                     <thead>
                     <tr>

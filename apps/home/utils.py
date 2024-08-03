@@ -19,7 +19,7 @@ import os
 openai_api_key=os.getenv("OPENAI_API_KEY")
 # print(openai_api_key)
 
-blacklist = ['@email.com', '@example.com','@domain.com','@godaddy.com','@address.com','@filler.com','@xyz.com','@newsletter.com','@mystore.com', 'example@gmail.com', '@sentry', 'mail@mail.com', '@mail.com', 'example@mail.com', '.png', '.jpg']
+blacklist = ['@email.com', '@example.com','@domain.com','@godaddy.com','@address.com','@filler.com','@xyz.com','@newsletter.com','@mystore.com', 'example@gmail.com', '@sentry', 'mail@mail.com', '@mail.com', 'example@mail.com', '.png', '.jpg', 'sentry.io', '@mysite.com', 'example@', 'sample@', 'donotreply@']
 
 llm = ChatOpenAI(
     model_name="gpt-3.5-turbo-0125",
