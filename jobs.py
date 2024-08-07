@@ -8,9 +8,8 @@ from nylas import APIClient
 from jinja2 import Template as JT
 import os
 from datetime import datetime, timedelta
-    
+
 def email_automation_job(nylas_token, actionid, jobid, useremail):
-    
     with scheduler.app.app_context():
         print("Automation job started", jobid)
         
@@ -76,11 +75,11 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
             originalemail = email.originalemail
 
             service = {
-                "venue" : venue,
-                "unsubscribe_link" : unsubscribe_link,
-                "firstname" : firstname,
-                "customtext" : customtext if customtext else "",
-                "originalemail" : originalemail if originalemail else ""
+                "venue": venue,
+                "unsubscribe_link": unsubscribe_link,
+                "firstname": firstname,
+                "customtext": customtext if customtext else "",
+                "originalemail": originalemail if originalemail else ""
             }
             try:
                 mail_body = jinja_temp.render(service)
@@ -116,7 +115,7 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
                                     
                         send_email_via_mailtrap(subject, fromname, message, useremail)
 
-                        # delete user nyals token
+                        # delete user nylas token
                         user = db.session.get(Users, int(action.userid))
                         user.nylas_token = None
                         db.session.commit()
@@ -131,24 +130,20 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
                 message_id = response['id']
                 email.mail_id = message_id
                 
+                db.session.commit()
+                
                 # Refer this https://developer.nylas.com/docs/email/improving-email-delivery/
                 time.sleep(wait_seconds)
-            
-            try:
-                db.session.commit()
-            except Exception as e:
-                print("Failed to commit db session:", str(e))
-                continue
         
         # Indicate job is finished
         job.status = "completed"
-
         try:
             db.session.commit()
         except Exception as e:
             print("Failed to commit db session:", str(e))
-        
-        
+        finally:
+            db.session.remove()
+
 def job_manage_credit():
     print("Daily job started", datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f"))
     with scheduler.app.app_context():
@@ -165,4 +160,4 @@ def job_manage_credit():
                 user_credit.credit += montly_credit
 
         db.session.commit()
-        
+        db.session.remove()

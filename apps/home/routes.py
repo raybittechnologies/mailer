@@ -473,7 +473,13 @@ def upload_contact():
         else:
             return {"success": False, "message": "File type not supported."}
 
-        columns  = ['venue', 'type', 'website', 'phone', 'address', 'facebook', 'customtext', 'originalemail'] + ['firstname' + str(i) for i in range(1, 7)] + ['email' + str(i) for i in range(1, 5)] + ['facebookemail' + str(i) for i in range(1, 3)]
+        columns  = ['venue', 'type', 'website', 'phone', 'address', 'facebook', 'customtext', 'originalemail']
+        if 'firstname' in df.columns and 'email' in df.columns:
+            columns += ['firstname']
+            columns += ['email']
+        else:
+            columns += ['firstname' + str(i) for i in range(1, 7)] + ['email' + str(i) for i in range(1, 5)] + ['facebookemail' + str(i) for i in range(1, 3)]
+
         for col in columns:
             if col not in df.columns:
                 print(col, "not in columns")
@@ -496,15 +502,15 @@ def upload_contact():
             facebook = item['facebook']
             customtext = item['customtext']
             originalemail = item['originalemail']
-            # email = item['email'].strip() if item.get('email') else ""
-            email1 = item['email1'].strip() if item.get('email1') else ""
-            email2 = item['email2'].strip() if item.get('email2') else ""
-            email3 = item['email3'].strip() if item.get('email3') else ""
-            email4 = item['email4'].strip() if item.get('email4') else ""
-            facebookemail1 = item['facebookemail1'].strip() if item.get('facebookemail1') else ""
-            facebookemail2 = item['facebookemail2'].strip() if item.get('facebookemail2') else ""
 
-            for idx, email in enumerate([email1, email2, email3, email4, facebookemail1, facebookemail2]):
+            if 'subscribed' in df.columns:
+                is_unsubscribed = 1 if item['subscribed'] == "Unsubscribed" else 0
+            else:
+                is_unsubscribed = 0
+                
+
+            if 'email' in df.columns:
+                email = item['email'].strip() if item.get('email') else ""
                 if email and check_blacklisted(email):
                     service = Uploadedservice(name=venue, venue_type=venue_type, email=email, user_id = current_user.id, file_id=file_id)
                     service.website = website
@@ -513,8 +519,30 @@ def upload_contact():
                     service.facebook = facebook
                     service.customtext = customtext
                     service.originalemail = originalemail
-                    service.firstname = item['firstname' + str(idx+1)]
+                    service.firstname = item['firstname']
+                    service.is_unsubscribed = is_unsubscribed
                     services.append(service)
+                    services.append(service)
+            
+            else:
+                email1 = item['email1'].strip() if item.get('email1') else ""
+                email2 = item['email2'].strip() if item.get('email2') else ""
+                email3 = item['email3'].strip() if item.get('email3') else ""
+                email4 = item['email4'].strip() if item.get('email4') else ""
+                facebookemail1 = item['facebookemail1'].strip() if item.get('facebookemail1') else ""
+                facebookemail2 = item['facebookemail2'].strip() if item.get('facebookemail2') else ""
+
+                for idx, email in enumerate([email1, email2, email3, email4, facebookemail1, facebookemail2]):
+                    if email and check_blacklisted(email):
+                        service = Uploadedservice(name=venue, venue_type=venue_type, email=email, user_id = current_user.id, file_id=file_id)
+                        service.website = website
+                        service.phone = phone
+                        service.address = address
+                        service.facebook = facebook
+                        service.customtext = customtext
+                        service.originalemail = originalemail
+                        service.firstname = item['firstname' + str(idx+1)]
+                        services.append(service)
 
         db.session.bulk_save_objects(services)
         db.session.commit()
@@ -600,6 +628,9 @@ def contacts_all_list():
             'phone': service.phone,
             'address': service.address,
             'facebook': service.facebook,
+            'firstname': service.firstname,
+            'customtext': service.customtext,
+            'originalemail': service.originalemail
             
         }
         all_services.append(data)

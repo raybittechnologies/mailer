@@ -40,4 +40,27 @@
 <!-- Specific JS goes HERE -->
 {% block javascripts %}
 
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script>
+    
+    $(document).ready(function () {
+        // Create the autocomplete object, restricting the search to geographical location types.
+        const autocomplete = new google.maps.places.Autocomplete(
+            document.getElementById('location'),
+            { 
+                types: ['geocode'],
+                componentRestrictions: { country: 'us' }    
+             }
+        );
+    
+        // When the user selects an address from the dropdown, populate the address fields in the form.
+        autocomplete.addListener('place_changed', function() {
+            const place = autocomplete.getPlace();
+            // You can use the place object to get details like the address, coordinates, etc.
+            console.log(place);
+        });
+    });
+
+
+</script>
 {% endblock javascripts %}
