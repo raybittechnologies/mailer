@@ -1894,39 +1894,65 @@ def job_delete():
 @login_required 
 def job_retry():
     try:
-        jobid = request.json['jobid']
-        job = Automation.query.filter_by(job_id=jobid).first()
-        job.status = "pending"
+        campaignid = request.json['campaignid']
+        # get all failed automations
+        failed_job = Automation.query.filter_by(campaignid=campaignid, status="failed").order_by(Automation.action_datetime).first()
+
+        if failed_job is None:
+            return {"success": False, "message": "No failed job found."}
+
+        first_failed_job_time = failed_job.action_datetime
+        pending_or_failed_automations = Automation.query.filter(Automation.campaignid==campaignid, Automation.action_datetime >= first_failed_job_time).all()
+
+        for automation in pending_or_failed_automations:
+            # If job is completed or running, then skip
+            if automation.status == "completed" or automation.status == "running":
+                continue
+
+            # print(automation.action_datetime)
+
+            jobid = automation.job_id
+            days_diff = (automation.action_datetime - first_failed_job_time).days
+
+            # print("days_diff", days_diff)   
+
+            if automation.status == "failed":
+                automation.status = "pending"  
+                emails = Email.query.filter_by(job_id=jobid).all()
+
+                for email in emails:
+                    email.is_sent = 0
+                    email.is_opened = 0
+                    email.is_unsubscribed = 0
+                    email.is_replied = 0
+                    db.session.commit()
         
-        emails = Email.query.filter_by(job_id=jobid).all()
+            job_starttime = datetime.datetime.now() + timedelta(days=days_diff, seconds=30)
+            job_start_utctime = datetime.datetime.utcnow() + timedelta(days=days_diff, seconds=30)
+            automation.action_datetime = job_start_utctime
 
-        for email in emails:
-            email.is_sent = 0
-            email.is_opened = 0
-            email.is_unsubscribed = 0
-            email.is_replied = 0
-        
-        job_starttime = datetime.datetime.now() + timedelta(seconds=30)
-        job_start_utctime = datetime.datetime.utcnow() + timedelta(seconds=30)
-        job.action_datetime = job_start_utctime
+            action_id = automation.action_id
 
-        action_id = job.action_id
+            # delete job from scheduler if exist
+            if scheduler.get_job(jobid):
+                scheduler.remove_job(jobid)
 
-        job = {
-            "id" : jobid,
-            'trigger' : 'date',
-            "run_date" : job_starttime.strftime("%Y-%m-%d %H:%M:%S"),
-            "func" : "jobs:email_automation_job",
-            "args" : (current_user.nylas_access_token, action_id, jobid, current_user.email)
-        }
-        try:
-            scheduler.add_job(**job) # TODO: Uncomment this line
-            print("created job again", jobid)
-        except Exception as e:
-            print("Failed to create job", str(e))
-            return {"success": False, "message": "Something went wrong. Please try again."}
+            job = {
+                "id" : jobid,
+                'trigger' : 'date',
+                "run_date" : job_starttime.strftime("%Y-%m-%d %H:%M:%S"),
+                "func" : "jobs:email_automation_job",
+                "args" : (current_user.nylas_access_token, action_id, jobid, current_user.email)
+            }
+            try:
+                scheduler.add_job(**job) # TODO: Uncomment this line
+                print("created job again", jobid)
+            except Exception as e:
+                print("Failed to create job", str(e))
+                return {"success": False, "message": "Something went wrong. Please try again."}
             
-        db.session.commit()
+            db.session.commit()
+
         return {"success": True, 'message': "Job rescheduled successfully."}
     
     except Exception as e:
@@ -2176,10 +2202,28 @@ def get_connected_accounts():
         }
         
         if user_id:
-            automations_count = Automation.query.filter((Automation.userid == user_id.id) & ((Automation.status == "pending") | (Automation.status == "running"))).count()
-            data.update({"user_id" : user_id.id, "automations_count" : automations_count})
+            automations = Automation.query.filter(Automation.userid == user_id.id).all()
+            all_automations = 0
+            completed_automations = 0
+            running_pending_automations = 0
+            for automation in automations:
+                if automation.status == "completed":
+                    completed_automations += 1
+                elif automation.status == "pending" or automation.status == "running":
+                    running_pending_automations += 1
+                
+                all_automations += 1
+
+            # print(account.email, "all_automations", all_automations, "completed_automations", completed_automations)
+            if all_automations == completed_automations:
+                status = "finished"
+            else:
+                status = "running"
+
+            data.update({"user_id" : user_id.id, "automations_count" : running_pending_automations, "status" : status})
         else:
-            data.update({"user_id" : None, "automations_count" : 0})
+            status = "finished"
+            data.update({"user_id" : None, "automations_count" : 0, "status" : status})
 
         connected_accounts.append(data)
     
@@ -2245,3 +2289,10 @@ def update_campaign_setting():
 
     db.session.commit()
     return redirect(url_for('home_blueprint.admin_users_campaign_settings'))
+
+
+@blueprint.route('/connect_email', methods=['GET'])
+@login_required
+def connect_email():
+    # redirect to nylas.login
+    return redirect(url_for('nylas.login'))

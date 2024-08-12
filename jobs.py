@@ -101,23 +101,32 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
                     
                     if "401" in str(e):
                         job.status = "failed"
-                        subject = "Email Automation Failed"
+                        subject = "Campaign Failed - Please re-connect Email EMAIL"
                         fromname = "Robotic Booking Agent"
-                        message = """<p><strong>Email Automation Failed.</strong></p>
+                        message = f"""    
+                        <p>Hi,</p>
+
+                        <p>The mailing robot was unable to send out your campaign just now. No need to worry, as this could happen for various reasons.</p>
+
+                        <p>Please reconnect your email by going to: :</p>
                         
-                                    <p>Your token is expired.</p>
-                                    
-                                    <p>Please contact support to reset your token and try again.</p>
-
-                                    <p>Sorry for this inconvenience.</p>
-
-                                    <p>Best regards.</p>"""
+                        <p>
+                            <a href="{WEB_HOST_IP}/connect_email" style="color: #1a73e8; text-decoration: none;">Connect Email</a>
+                        </p>
+                        
+                        <p>After that, please visit campaign page and click <strong> RETRY </strong>. your campaign will automatically restart where it left off, and any future scheduled e-mails will update their sends with a new updated schedule according to our best practices.</p>
+                        
+                        <p>Sorry for any inconvenience this may have caused.</p>
+                        
+                        <p>Thank you,</p>
+                        
+                        <p>Soundheart team (Robotic Booking Agent)</p>"""
                                     
                         send_email_via_mailtrap(subject, fromname, message, useremail)
 
                         # delete user nylas token
                         user = db.session.get(Users, int(action.userid))
-                        user.nylas_token = None
+                        user.nylas_access_token = None
                         db.session.commit()
                         
                         return
@@ -141,8 +150,7 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
             db.session.commit()
         except Exception as e:
             print("Failed to commit db session:", str(e))
-        finally:
-            db.session.remove()
+
 
 def job_manage_credit():
     print("Daily job started", datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f"))
@@ -160,4 +168,3 @@ def job_manage_credit():
                 user_credit.credit += montly_credit
 
         db.session.commit()
-        db.session.remove()

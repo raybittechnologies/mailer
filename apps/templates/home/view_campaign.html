@@ -20,6 +20,7 @@
             <div class="card col shadow-lg border-0 rounded-lg">
                 <div class="card-header"><h3 class="text-center font-weight-light my-4">My Campaign</h3></div>
                 <div class="card-body">
+                <button  class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#retryJobModal" >Retry</button>
                 <table style="width:100%" id="filtersTable" class="table table-striped table-bordered nowrap">
                     <thead>
                     <tr>
@@ -62,21 +63,24 @@
             <div class="modal-dialog modal-dialog-centered" role="document">
               <div class="modal-content">
                 <div class="modal-header">
-                  <h5 class="modal-title" id="retryJobModalLabel">Are you sure to retry this automation?</h5>
+                  <h5 class="modal-title" id="retryJobModalLabel">Are you sure to retry failed automations?</h5>
                   <button type="button" class="btn-close text-dark" id="close-retryjob-modal" data-bs-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                   </button>
                 </div>
                 {% if current_user.nylas_access_token %}
                     <form action="/automation/retry" style="display: contents" method="post"> 
-                        <input type="hidden" name="jobid" id="retry-modal-jobid"/>
+                        <!-- <p >it will reschedule all failed automations</p> -->
+                        <input type="hidden" name="campaignid" id="campaignid" value="{{ campaignid }}"/>
                         <div class="modal-footer">
                             <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
                             <input class="btn btn-success" type="submit" tabindex="0" value="Retry">
                         </div>
                     </form>
                 {% else %}
-                    <a href='{{ url_for("nylas.login") }}' class="btn btn-primary">Connect EMAIL</a>
+                    <div class="modal-footer">
+                        <a href='{{ url_for("nylas.login") }}' class="btn btn-primary">Connect EMAIL</a>
+                    </div>
                 {% endif %}
               </div>
             </div>
@@ -150,9 +154,9 @@
                             var job_id = row.job_id;
                             var buttons = '<a class="btn btn-success btn-sm" href="/automation/view/' + job_id + '">View</a> ' +
                                 '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" job_id="' + job_id +'" data-bs-target="#deleteJobModal" >Delete</button>';
-                            if (row.status == "failed") {
-                                buttons += ' <button class="btn btn-facebook btn-sm" data-bs-toggle="modal" job_id="' + job_id +'" data-bs-target="#retryJobModal" >Retry</button>';
-                            }
+                            //if (row.status == "failed") {
+                            //    buttons += ' <button class="btn btn-facebook btn-sm" data-bs-toggle="modal" job_id="' + job_id +'" data-bs-target="#retryJobModal" >Retry</button>';
+                            //}
                             return buttons;
                         }
                     }
@@ -221,14 +225,14 @@
 
         $('#retryJobModal').on('submit', function(e) { //use on if jQuery 1.7+
             e.preventDefault();  //prevent form from submitting
-            const jobid = document.getElementById("retry-modal-jobid").value;
+            const campaignid = document.getElementById("campaignid").value;
 
             $('#close-retryjob-modal').click();
 
             fetch('/automation/retry',{
                 method: 'POST',
                 headers : { 'Content-Type': 'application/json' },
-                body: JSON.stringify({"jobid" : jobid}),
+                body: JSON.stringify({"campaignid" : campaignid}),
             })
             .then((response) => {
                 if(!response.ok)

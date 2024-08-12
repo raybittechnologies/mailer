@@ -26,6 +26,7 @@
                         <th>Email</th>
                         <th>Status</th>
                         <th>Automations</th>
+                        <th>Finished</th>
                         <th>Action</th>
                     </tr>
                     </thead>
@@ -98,6 +99,12 @@
                         }
                     },
                     {data: 'automations_count'},
+                    {
+                        data: 'status',
+                        render: function (status, type, row) {
+                            return status === 'finished' ? '<span class="badge bg-gradient-secondary">Finished</span>' : '<span class="badge bg-gradient-success">Running</span>';
+                        }
+                    },
                     {   
                         data: 'account_id', // Assuming the id property is present in your data
                         render: function (account_id, type, row) {
