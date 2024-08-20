@@ -1,6 +1,5 @@
 import time
 from apps import scheduler, db
-from flask_login import current_user
 from apps.models import Email, Automation, Action, Template, Uploadedservice, UserCredit, Service
 from apps.authentication.models import Users
 from apps.home.emailler import send_email_via_nylas, send_email_via_mailtrap
@@ -51,15 +50,38 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
         total_minutes_of_a_day = 24 * 60
         minutes_per_email = total_minutes_of_a_day // emails_count
         wait_seconds = minutes_per_email * 60
+
+        job_status = "completed"
         
-        for email in emails:
+        for idx, email in enumerate(emails):
+
+            # Check current user is approved or not
+            user = db.session.get(Users, int(action.userid))
+            if user and user.state == 'pending':
+                break
             
+            if user is None: # User is deleted
+                break
+
+            if job.status == "stopped":
+                job_status = "stopped"
+                break
+
             # try:
             #     if email.is_unsubscribed == 1:
             #         continue
             # except Exception as e:
             #     print("Failed to check is_unsubscribed: ", email.email,  str(e))
             #     continue
+
+            # if email is sent, skip : in case for resuming the job after stopping
+            try:
+                if email.is_sent == 1:
+                    continue
+            except Exception as e:
+                print("Failed to check is_sent: ", email.email, str(e))
+                continue
+            
 
             print("Sending to", email.email)
             
@@ -141,12 +163,14 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
                 
                 db.session.commit()
                 
-                # Refer this https://developer.nylas.com/docs/email/improving-email-delivery/
+            if idx + 1 == emails_count:
+                break
+            else:
                 time.sleep(wait_seconds)
-        
+
         # Indicate job is finished
-        job.status = "completed"
         try:
+            job.status = job_status
             db.session.commit()
         except Exception as e:
             print("Failed to commit db session:", str(e))

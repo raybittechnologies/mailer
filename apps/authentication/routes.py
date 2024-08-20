@@ -60,11 +60,11 @@ def login():
         # Locate user
         user = Users.query.filter_by(email=email).first()
         # Check the password
-        # if user and user.state == "pending":
-        #     # user is not approved
-        #     return render_template('accounts/login.html',
-        #                         msg='Account is not approved. Please contact administrator.',
-        #                         form=login_form)
+        if user and user.state == "pending":
+            # user is not approved
+            return render_template('accounts/login.html',
+                                msg='Wrong email or password.',
+                                form=login_form)
             
         if user and verify_pass(password, user.password) and user.state == "approved":
             login_user(user)

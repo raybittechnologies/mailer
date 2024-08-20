@@ -157,6 +157,14 @@
                             //if (row.status == "failed") {
                             //    buttons += ' <button class="btn btn-facebook btn-sm" data-bs-toggle="modal" job_id="' + job_id +'" data-bs-target="#retryJobModal" >Retry</button>';
                             //}
+                            // if job is running, then show stop button
+                            // if (row.status == "running") {
+                            //     buttons += ' <button class="btn btn-danger btn-sm" data-bs-toggle="modal" job_id="' + job_id +'" data-bs-target="#deleteJobModal" >Stop</button>';
+                            // }
+                            // // if job is stopped, then show resume button
+                            // if (row.status == "stopped") {
+                            //     buttons += ' <a class="btn btn-success btn-sm" href="/automation/resume/' + job_id + '">Resume</a>';
+                            // }
                             return buttons;
                         }
                     }

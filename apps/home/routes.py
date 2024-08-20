@@ -57,6 +57,18 @@ def role_required(role):
     return decorator
 
 
+def user_approved_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        user = Users.query.filter_by(email=current_user.email).first()
+        if user and user.state == "pending":
+            return redirect(url_for('home_blueprint.index'))
+        else:
+            return fn(*args, **kwargs)
+    return wrapper
+
+
+
 
 @blueprint.route('/home')
 @login_required
@@ -84,6 +96,7 @@ def mysql_insert_ignore(insert, compiler, **kw):
 
 @blueprint.route('/url', methods=['POST', 'GET'])
 @login_required
+@user_approved_required
 def url():
     if request.method == 'POST':
         location = request.form['location']
@@ -125,6 +138,7 @@ def url():
 # Export all data to excel file and download
 @blueprint.route('/export_all_data', methods=['GET'])
 @login_required
+@user_approved_required
 def export_all_data():
     services = Service.query.filter_by(user_id=current_user.id).all()
     all_services = {}
@@ -136,7 +150,7 @@ def export_all_data():
             'venue' : service.name,
             'phone': service.phone,
             'address': service.address,
-            'venue_type': service.venue_type,
+            'type': service.venue_type,
             'website': service.website,
             'email1' : service.email1,
             'first_name1' : service.first_name1,
@@ -186,6 +200,7 @@ def export_all_data():
 
 @blueprint.route('/url_history')
 @login_required
+@user_approved_required
 def url_history():
     user_urls = Yelpurl.query.filter_by(userid=current_user.id).order_by(Yelpurl.create_datetime.desc()).all()
     url_list = []
@@ -205,6 +220,7 @@ def url_history():
 
 @blueprint.route('/view_url_history/<int:url_id>')
 @login_required
+@user_approved_required
 def view_url_history(url_id):
     # Return only the urls that are credited
     user_urls = Service.query.filter_by(url_id=url_id, user_id=current_user.id).all()
@@ -245,6 +261,7 @@ def view_url_history(url_id):
 
 @blueprint.route('/view_scraped_data/<int:url_id>', methods=['GET'])
 @login_required
+@user_approved_required
 def view_scraped_data(url_id):
     
     # Return only the services that are not credited
@@ -267,6 +284,7 @@ def view_scraped_data(url_id):
 
 @blueprint.route('/view_credited_data/<int:url_id>', methods=['GET'])
 @login_required
+@user_approved_required
 def view_credited_data(url_id):
     
     # Return only the services that are not credited
@@ -298,6 +316,7 @@ def view_credited_data(url_id):
 
 @blueprint.route('/view_master_credited_data', methods=['GET'])
 @login_required
+@user_approved_required
 def view_master_credited_data():
     
     # Return only the services that are not credited
@@ -330,12 +349,14 @@ def view_master_credited_data():
 
 @blueprint.route('/history', methods=['POST', 'GET'])
 @login_required
+@user_approved_required
 def history():
     return render_template('home/view_urls.html', segment='history')
     
 
 @blueprint.route('/view_credited/<int:url_id>')
 @login_required
+@user_approved_required
 def view_credited(url_id):
     credited = Service.query.filter_by(user_id=current_user.id, url_id=url_id, is_credited=1).count()
     return render_template('home/view_credited_data.html', segment='history', credited=credited, url_id=url_id)
@@ -343,6 +364,7 @@ def view_credited(url_id):
 
 @blueprint.route('/view_master_credited')
 @login_required
+@user_approved_required
 def view_master_credited():
     credited = Service.query.filter_by(user_id=current_user.id, is_credited=1).count()
     return render_template('home/view_master_credited_data.html', segment='history', credited=credited)
@@ -350,6 +372,7 @@ def view_master_credited():
 
 @blueprint.route('/update/credit', methods=['POST'])
 @login_required
+@user_approved_required
 def credit_service():
     serviceid = request.json['id']
     action = request.json['action']
@@ -386,6 +409,7 @@ def credit_service():
 
 @blueprint.route('/fetch/<int:id>', methods=['GET', 'POST'])
 @login_required
+@user_approved_required
 def fetch(id):
     obj = Yelpurl.query.get(id)
     if obj.state != "running":
@@ -419,6 +443,7 @@ def complete_process():
 
 @blueprint.route('/fetching', methods=['GET', 'POST'])
 @login_required
+@user_approved_required
 def fetching():
     id = request.args.get('id')
     yelpurl = Yelpurl.query.get(id)
@@ -434,6 +459,7 @@ def fetching():
     
 @blueprint.route('/uploaded_files', methods=['GET'])
 @login_required
+@user_approved_required
 def uploaded_files():
     uploaded_files = Uploadedcontactfile.query.filter_by(user_id=current_user.id).order_by(Uploadedcontactfile.create_datetime.desc()).all()
     files = []
@@ -453,6 +479,7 @@ def uploaded_files():
     
 @blueprint.route('/upload_contact', methods=['GET', 'POST'])
 @login_required
+@user_approved_required
 def upload_contact():
     upload_folder = "uploads"
     if request.method == "GET":
@@ -552,6 +579,7 @@ def upload_contact():
         
 @blueprint.route('/contact/delete', methods=['POST'])
 @login_required
+@user_approved_required
 def contact_delete():
     file_id = int(request.form['fileid'])
     file = Uploadedcontactfile.query.get(file_id)
@@ -563,6 +591,7 @@ def contact_delete():
  
 @blueprint.route('/contact/<int:id>', methods=['GET'])
 @login_required
+@user_approved_required
 def view_contact(id):
     userid = current_user.id
     uploaded_file = Uploadedcontactfile.query.filter_by(id=id, user_id=userid).first()
@@ -576,12 +605,14 @@ def view_contact(id):
     
 @blueprint.route('/masterview', methods=['GET'])
 @login_required
+@user_approved_required
 def view_all_contact():
     return render_template('home/view_all_contact.html')
         
         
 @blueprint.route('/contacts/list/<int:id>', methods=['GET'])
 @login_required
+@user_approved_required
 def contacts_list(id):
     services = Uploadedservice.query.filter_by(user_id=current_user.id, file_id=id).order_by(Uploadedservice.create_datetime.desc()).all()
     all_services = []
@@ -610,6 +641,7 @@ def contacts_list(id):
 
 @blueprint.route('/contacts/all', methods=['GET'])
 @login_required
+@user_approved_required
 def contacts_all_list():
     services = Uploadedservice.query.filter_by(user_id=current_user.id).order_by(Uploadedservice.create_datetime.desc()).all()
     all_services = []
@@ -640,6 +672,7 @@ def contacts_all_list():
      
 @blueprint.route('/service/delete', methods=['POST'])
 @login_required
+@user_approved_required
 def service_delete():
     
     serviceid = request.json['serviceid']
@@ -658,6 +691,7 @@ def service_delete():
 
 @blueprint.route('/url/view/<int:id>', methods=['GET', 'POST'])
 @login_required
+@user_approved_required
 def url_view(id):
     user_id = Yelpurl.query.get(id).userid
     user = Users.query.get(user_id)
@@ -675,6 +709,7 @@ def url_view(id):
     
 @blueprint.route('/url/delete', methods=['POST'])
 @login_required
+@user_approved_required
 def url_delete():
     url_id = int(request.form['urlid'])
     yelpurl = Yelpurl.query.get(url_id)
@@ -787,6 +822,7 @@ def starting(urls, user_id, id):
 
 
 @blueprint.route('/admin/register', methods=['POST'])
+@login_required
 def register():
     # username = request.json.get('name')
     email = request.json.get('email').lower()
@@ -1112,6 +1148,7 @@ def update_template():
 
 @blueprint.route('/update/workflowstatus', methods=['POST'])
 @login_required 
+@user_approved_required
 def update_workflow_status():
     status = request.json['status']
     tempid = request.json['tempid']
@@ -1162,6 +1199,7 @@ def template_delete():
 
 @blueprint.route('/workflow/delete', methods=['POST'])
 @login_required
+@user_approved_required
 def workflow_delete():
     templateid = request.json['workflowid']
     temp = Template.query.get(templateid)
@@ -1198,6 +1236,7 @@ def template_view(tid):
 
 @blueprint.route('/workflow/view/<tid>', methods=['GET'])
 @login_required 
+@user_approved_required
 def workflow_view(tid):
     temp =Template.query.filter_by(tempid = tid).first()
     template = {
@@ -1250,6 +1289,7 @@ def add_action():
 
 @blueprint.route('/add/action', methods=['POST', 'GET'])
 @login_required 
+@user_approved_required
 def add_user_action():
     if request.method == 'POST':
         # print(request.form)
@@ -1311,6 +1351,7 @@ def admin_actions(id):
         
 @blueprint.route('/actions/<id>', methods=['GET'])
 @login_required
+@user_approved_required
 def user_actions(id):
     actions = Action.query.filter_by(tempid=int(id)).order_by(Action.waitdays.asc()).all()
     temp_list = []
@@ -1347,6 +1388,7 @@ def admin_action_delete():
 
 @blueprint.route('/action/delete', methods=['POST'])
 @login_required
+@user_approved_required
 def action_delete():
     actionid = request.json['actionid']
     automations = Automation.query.filter((Automation.action_id == actionid) & (Automation.status != "completed")).all()
@@ -1362,6 +1404,7 @@ def action_delete():
        
 @blueprint.route('/myworkflow', methods=['POST', 'GET'])
 @login_required 
+@user_approved_required
 def my_workflow():
     if request.method == 'POST':
         template_name = request.form['template-name']
@@ -1389,6 +1432,7 @@ def my_workflow():
 
 @blueprint.route('/templates', methods=['GET'])
 @login_required
+@user_approved_required
 def get_templates():
     
     admin = Users.query.filter_by(role='admin').first()
@@ -1412,6 +1456,7 @@ def get_templates():
 
 @blueprint.route('/get_workflows', methods=['GET', 'POST'])
 @login_required
+@user_approved_required
 def get_users_workflow():
     userid = current_user.id
     
@@ -1473,6 +1518,7 @@ def get_users_workflow():
 
 @blueprint.route('/import/workflow', methods=['POST'])
 @login_required
+@user_approved_required
 def import_users_workflow():
     tempid = request.form['select-template']
     template = Template.query.filter_by(id=tempid).first()
@@ -1507,6 +1553,7 @@ def import_users_workflow():
 
 @blueprint.route('/update/workflow', methods=['POST'])
 @login_required 
+@user_approved_required
 def update_workflow():
     template_name = request.form['workflow-name']
     template_desc = request.form['workflow-description']
@@ -1568,6 +1615,7 @@ def cancel_membership():
 
 @blueprint.route('/action/test', methods=['POST'])
 @login_required 
+@user_approved_required
 def action_test():
     
     actionid = request.json['id']
@@ -1606,6 +1654,7 @@ def action_test():
 
 @blueprint.route('/action/get', methods=['POST'])
 @login_required 
+@user_approved_required
 def get_action():
     actionid = request.json['id']
     action = Action.query.filter_by(id=actionid).first()
@@ -1656,6 +1705,7 @@ def webhook():
    
 @blueprint.route('/automation', methods=['POST', 'GET'])
 @login_required 
+@user_approved_required
 def automation():
     if request.method == 'POST':
         template_name = request.form['template-name']
@@ -1683,6 +1733,7 @@ def automation():
   
 @blueprint.route('/campaigns', methods=['POST', 'GET'])
 @login_required 
+@user_approved_required
 def campaigns():
     if request.method == 'POST':
         template_name = request.form['template-name']
@@ -1709,6 +1760,7 @@ def campaigns():
     
 @blueprint.route('/create/campaign', methods=['POST'])
 @login_required 
+@user_approved_required
 def create_campaign():
     
     workflow_id = request.json['workflow_id']
@@ -1807,6 +1859,7 @@ def create_campaign():
 
 @blueprint.route('/get_campaigns', methods=['GET'])
 @login_required
+@user_approved_required
 def get_campaigns():
     userid = current_user.id
     campaigns = Campaign.query.filter_by(userid=userid).order_by(Campaign.create_datetime.desc()).all()
@@ -1827,6 +1880,7 @@ def get_campaigns():
 
 @blueprint.route('/get_automations/<campaignid>', methods=['GET'])
 @login_required
+@user_approved_required
 def get_automations(campaignid):
     userid = current_user.id
     # print('get_automations', campaignid)
@@ -1850,6 +1904,7 @@ def get_automations(campaignid):
 
 @blueprint.route('/campaign/delete', methods=['POST'])
 @login_required 
+@user_approved_required
 def camp_delete():
     id = request.json['campid']
     camp = Campaign.query.get(id)
@@ -1857,6 +1912,7 @@ def camp_delete():
     if camp:
         campid = camp.campaignid
         db.session.delete(camp)
+        db.session.commit()
         
     automations = Automation.query.filter_by(campaignid=campid).all()
     
@@ -1864,16 +1920,17 @@ def camp_delete():
         jobid = automation.job_id
         db.session.delete(automation)
         Email.query.filter_by(job_id=jobid).delete()
+        db.session.commit()
         
         if scheduler.get_job(jobid):
             scheduler.remove_job(jobid)
         
-    db.session.commit()
     return {"success": True, 'message': "Campaign deleted successfully."}
 
 
 @blueprint.route('/automation/delete', methods=['POST'])
 @login_required 
+@user_approved_required
 def job_delete():
     jobid = request.json['jobid']
     job = Automation.query.filter_by(job_id=jobid).first()
@@ -1892,6 +1949,7 @@ def job_delete():
 
 @blueprint.route('/automation/retry', methods=['POST'])
 @login_required 
+@user_approved_required
 def job_retry():
     try:
         campaignid = request.json['campaignid']
@@ -1963,6 +2021,7 @@ def job_retry():
 
 @blueprint.route('/campaign/view/<campaignid>', methods=['GET'])
 @login_required 
+@user_approved_required
 def campaign_view(campaignid):
     # print("campaignid", campaignid)
     return render_template('home/view_campaign.html', campaignid=campaignid )
@@ -1970,6 +2029,7 @@ def campaign_view(campaignid):
 
 @blueprint.route('/automation/view/<jobid>', methods=['GET'])
 @login_required 
+@user_approved_required
 def automation_view(jobid):
     automation =Automation.query.filter_by(job_id = jobid).first()
     job = {
@@ -2293,6 +2353,7 @@ def update_campaign_setting():
 
 @blueprint.route('/connect_email', methods=['GET'])
 @login_required
+@user_approved_required
 def connect_email():
     # redirect to nylas.login
     return redirect(url_for('nylas.login'))
