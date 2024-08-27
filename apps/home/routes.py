@@ -1649,6 +1649,11 @@ def action_test():
         
     except Exception as e:
         print(repr(e))
+        if "401" in str(e):
+            # Reset nylas token to none
+            current_user.nylas_access_token = None
+            db.session.commit()
+            
         return {"success": False, "message": str(e)}
     
 

@@ -63,7 +63,7 @@ def login():
         if user and user.state == "pending":
             # user is not approved
             return render_template('accounts/login.html',
-                                msg='Wrong email or password.',
+                                msg='Account inactive - Please contact admin to activate account.',
                                 form=login_form)
             
         if user and verify_pass(password, user.password) and user.state == "approved":
