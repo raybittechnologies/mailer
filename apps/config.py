@@ -86,8 +86,8 @@ class Config(object):
     # MAIL_USE_TLS = True
     # MAIL_USE_SSL = False
     
-    NYLAS_OAUTH_CLIENT_ID = "d05jow5hd9z0q6dlrmt1w52s9"
-    NYLAS_OAUTH_CLIENT_SECRET = "5w3ost6x3aoztwomi10xg8e6g"
+    NYLAS_CLIENT_ID = os.environ.get('NYLAS_CLIENT_ID')
+    NYLAS_API_URI = os.environ.get('NYLAS_API_URI')
     
     JobStore_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'jobs.sqlite3')
     # Background Schedular settins

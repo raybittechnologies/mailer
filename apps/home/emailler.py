@@ -1,9 +1,18 @@
 import os
 
 import mailtrap as mt
-from flask_dance.contrib.nylas import make_nylas_blueprint, nylas
-from flask import current_app
-from flask_login import current_user
+# from flask import current_app
+# from flask_login import current_user
+from nylas import Client
+
+NYLAS_API_KEY = os.getenv('NYLAS_API_KEY')
+NYLAS_API_URI = os.getenv('NYLAS_API_URI')
+
+nylas = Client(
+    api_key = NYLAS_API_KEY,
+    api_uri = NYLAS_API_URI,
+)
+
 
 def send_email(user_email, sender_email, url_id, user_name):
     WEB_HOST_IP = os.environ.get('WEB_HOST_IP')
@@ -96,7 +105,7 @@ def send_test_email(subject, fromname, body, receiver, sender):
 
 
 def send_email_via_mailtrap(subject, fromname, body, receiver):
-    
+    WEB_HOST_IP = os.environ.get('WEB_HOST_IP')
     SENDER_MAIL = os.environ.get('SENDER_MAIL')
     MAILTRAP_API_KEY = os.environ.get('MAILTRAP_API_KEY')
     
@@ -124,9 +133,57 @@ def send_email_via_mailtrap(subject, fromname, body, receiver):
         
     return response['success']  
 
+def send_reconnect_email_via_mailtrap(subject, fromname, receiver):
+    WEB_HOST_IP = os.environ.get('WEB_HOST_IP')
+    SENDER_MAIL = os.environ.get('SENDER_MAIL')
+    MAILTRAP_API_KEY = os.environ.get('MAILTRAP_API_KEY')
 
-def send_email_via_nylas(nylas_client, subject, toname, fromemail, fromname, body, receiver):
+    message = f"""    
+            <p>Hi,</p>
+
+            <p>The mailing robot was unable to send out your campaign just now. No need to worry, as this could happen for various reasons.</p>
+
+            <p>Please reconnect your email by going to: :</p>
+            
+            <p>
+                <a href="{WEB_HOST_IP}/connect_email" style="color: #1a73e8; text-decoration: none;">Connect Email</a>
+            </p>
+            
+            <p>After that, please visit campaign page and click <strong> RETRY </strong>. your campaign will automatically restart where it left off, and any future scheduled e-mails will update their sends with a new updated schedule according to our best practices.</p>
+            
+            <p>Sorry for any inconvenience this may have caused.</p>
+            
+            <p>Thank you,</p>
+            
+            <p>Soundheart team (Robotic Booking Agent)</p>"""
     
+    
+    mail = mt.Mail(
+        sender=mt.Address(email=SENDER_MAIL, name=fromname),
+        to=[mt.Address(email=receiver, name="")],
+        subject=subject,
+        html=f"""
+            <!doctype html>
+            <html>
+            <head>
+                <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+            </head>
+            <body style="font-family: sans-serif;">
+                {message}
+            </body>
+            </html>
+        """
+    )
+
+    client = mt.MailtrapClient(token=MAILTRAP_API_KEY)
+    response = client.send(mail)
+    if not response['success']:
+        print(response)
+        
+    return response['success']  
+
+
+def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, receiver, grant_id):
         
     html=f"""
         <!doctype html>
@@ -139,21 +196,23 @@ def send_email_via_nylas(nylas_client, subject, toname, fromemail, fromname, bod
             </body>
         </html>
     """
-    message = nylas_client.drafts.create()
-    message.body = html
-    message.from_ = [{'email': fromemail, 'name': fromname}]
-    message.to = [{'email': receiver, 'name': toname}]
-    
-    message.tracking = {
-        "opens": True, # Enable message open tracking.
-        "links": True, # Enable link clicked tracking.
-        "thread_replies": True, # Enable thread replied tracking.
-        "payload": "Use this string to describe the message you're enabling tracking for. It's included in webhook notifications about tracked events."
-    }
-    message.subject = subject
-    response = message.send()
-    
-    return response
+    message = nylas.messages.send(
+        grant_id,
+        request_body={
+            "to": [{ "name": toname, "email": receiver }],
+            "from": [{ "name": fromname, "email": fromemail }],
+            "subject": subject,
+            "body": html,
+            "tracking_options": {
+                "opens": True,
+                "links": True,
+                "thread_replies": True,
+                "label": "Use this string to describe the message you're enabling tracking for. It's included in notifications about tracked events."
+            }
+        }
+        )
+    # print(message.data)
+    return message
 
 
 def send_password_reset_email(email, reset_link):

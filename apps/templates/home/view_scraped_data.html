@@ -119,6 +119,14 @@
 
             $('#filtersTable').on('click', 'button', event => {
             let data = dataTable.row($(event.target).closest('tr')).data();
+
+            Swal.fire({
+                title: 'Updating...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
             
             fetch("/update/credit", {
                 method: 'POST',
@@ -167,6 +175,14 @@
                 .catch(error => {
                     //handle error
                     console.log(error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: error.message,
+                        toast : true,
+                        position: "top-end",
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
                 });
 
             });

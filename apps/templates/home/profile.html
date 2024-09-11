@@ -207,6 +207,15 @@
 
           $('#close-modal').click();
 
+          //Show loading
+          Swal.fire({
+              title: 'Updating Email',
+              allowOutsideClick: false,
+              didOpen: () => {
+                  Swal.showLoading()
+              },
+          });
+
           fetch('/update_email',{
               method: 'POST',
               headers : { 'Content-Type': 'application/json' },

@@ -101,7 +101,6 @@
                 </div>
                 <form action="/admin/action/delete" style="display: contents" method="post"> 
                     <input type="hidden" name="actionid" id="delete-modal-actionid" />
-                    <input type="hidden" name="tempid" id="delete-modal-tempid"/>
                     <input type="hidden" class="form-control" id="tid" value="{{template.tid}}" name="tid" hidden>
                     
                     <div class="modal-footer">
@@ -174,9 +173,9 @@
                         data: 'id', // Assuming the id property is present in your data
                         render: function (id, type, row) {
                             // Create action buttons HTML
-                            var buttons = '<button class="btn btn-facebook btn-sm"  data-bs-toggle="modal" data-bs-target="#addNewActionModalMessage" >Edit</button> ' +
-                                '<button class="btn btn-success btn-sm">Test</button> ' +
-                                '<button class="btn btn-danger btn-sm" type="submit" data-bs-toggle="modal" data-bs-target="#deleteActionModal">Delete</button>'
+                            var buttons = '<button class="btn btn-facebook btn-sm" data-id="' + id +'"  data-bs-toggle="modal" data-bs-target="#addNewActionModalMessage" >Edit</button> ' +
+                                '<button class="btn btn-success btn-sm" data-id="' + id +'" >Test</button> ' +
+                                '<button class="btn btn-danger  btn-sm" data-id="' + id +'"  type="submit" data-bs-toggle="modal" data-bs-target="#deleteActionModal">Delete</button>'
                             return buttons;
                         }
                     }
@@ -184,27 +183,57 @@
             },
         );
         $('#filtersTable').on('click', 'button', event => {
-            let data = dataTable.row($(event.target).closest('tr')).data();
-            
+            let id = event.target.getAttribute("data-id");
+            console.log("id", id);
             if (event.target.innerText === "EDIT") {
-                document.getElementById("action-name").value = data.action_name;
-                document.getElementById("subject").value = data.subject;
-                document.getElementById("fromname").value = data.fromname;
-                document.getElementById("wait-days").value = data.waitdays;
-                document.getElementById("actionid").value = data.id;
-                document.getElementsByClassName("ql-editor")[0].innerHTML = data.message;
-                document.getElementById("add-action-button").innerHTML = "Save";
+                fetch('/action/get', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        id : id,
+                    }),
+                    headers: { 'Content-type': 'application/json' }
+                }).then(response => {
+                        if(!response.ok)
+                            return response.text().then(text => { throw new Error(text) })
+                        else
+                            return response.json()
+                    })
+                    .then(data => {
+                        //handle data
+                        // console.log(data);
+                        document.getElementById("action-name").value = data.action_name;
+                        document.getElementById("subject").value = data.subject;
+                        document.getElementById("fromname").value = data.fromname;
+                        document.getElementById("wait-days").value = data.waitdays;
+                        document.getElementById("actionid").value = data.id;
+                        document.getElementsByClassName("ql-editor")[0].innerHTML = data.message;
+                        document.getElementById("add-action-button").innerHTML = "Save";
+                    })
+                    .catch(error => {
+                        //handle error
+                        console.log(error);
+                    });
 
             } else if ( event.target.innerText === "DELETE") {
-                document.getElementById("delete-modal-actionid").value = data.id;
-                document.getElementById("delete-modal-tempid").value = data.tempid;
+                // document.getElementById("delete-modal-actionid").value = data.id;
+                // document.getElementById("delete-modal-tempid").value = data.tempid;
+                document.getElementById("delete-modal-actionid").value = id;
 
             } else if ( event.target.innerText === "TEST") {
+
+                // show loading
+                Swal.fire({
+                    title: 'Sending Email...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading()
+                    },
+                });
 
                 fetch("/admin/action/test", {
                     method: 'POST',
                     body: JSON.stringify({
-                        id : data.id,
+                        id : id,
                     }),
                     headers: { 'Content-type': 'application/json' }
                 }).then(response => {
@@ -236,6 +265,13 @@
                     .catch(error => {
                         //handle error
                         console.log(error);
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Email is not sent! Please try again.',
+                            showConfirmButton: false,
+                            timer: 2000
+                        });
                     });
                 
             } else {

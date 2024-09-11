@@ -176,6 +176,7 @@ class Email(db.Model):
     venue = db.Column(db.String(255))
     is_sent = db.Column(db.Integer, default=0)
     is_opened = db.Column(db.Integer, default=0)
+    is_bounced = db.Column(db.Integer, default=0)
     is_unsubscribed = db.Column(db.Integer, default=0)
     updated_datetime = db.Column(db.DateTime(), onupdate=datetime.datetime.utcnow, default=datetime.datetime.utcnow)
     unsubscribe_token = db.Column(db.String(128), nullable=False, index=True) # it is synced with unsubscribe_token in Uploadedservice table

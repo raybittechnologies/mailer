@@ -73,7 +73,7 @@
                                     </div>
                                     <p class="mb-4 mx-auto text-info" id="user-notification"></p>
                                 {% else %}
-                                    <a href='{{ url_for("nylas.login") }}' class="btn btn-primary">Connect EMAIL</a>
+                                    <a href='{{ url_for("home_blueprint.nylas_auth") }}' class="btn btn-primary">Connect EMAIL</a>
                                 {% endif %}
                             </div>
                             {% if current_user.nylas_access_token %}
@@ -264,6 +264,14 @@
 
             $('#close-modal').click();
 
+            Swal.fire({
+                title: 'Creating Campaign...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
+
             fetch('/create/campaign',{
                 method: 'POST',
                 headers : { 'Content-Type': 'application/json' },
@@ -301,6 +309,11 @@
             })
             .catch((err) => {
                 console.log(err);
+                Swal.fire({
+                    icon: "warning",
+                    title: "Oops...",
+                    text: data.message,
+                });
             })
         });
 
@@ -309,6 +322,14 @@
             const campid = document.getElementById("delete-modal-campid").value;
 
             $('#close-deletejob-modal').click();
+
+            Swal.fire({
+                title: 'Deleting Campaign...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
 
             fetch('/campaign/delete',{
                 method: 'POST',

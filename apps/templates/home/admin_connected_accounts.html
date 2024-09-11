@@ -82,20 +82,23 @@
         // Initialize DataTable
         var dataTable = $('#filtersTable').DataTable({
                 responsive: true,
-                pageLength: 100,
+                bProcessing: true,
+                serverSide: true,
+                pageLength: 10,
+                // disable search
+                searching: false,
                 order : [[2, 'asc']],
                 ajax: {
                     url: '/admin/get_connected_accounts',
-                    dataSrc: ''
                 },
                 columns: [
                     //{#{data: 'id'},#}
                     {data: 'email'},
                     { 
-                        data: 'sync_state',
-                        render : function (sync_state, type, row) {
-                            const states = ['running', 'downloading', 'valid', 'running', 'partial'];
-                            return states.includes(sync_state)  ? '<span class="badge bg-gradient-success">Connected</span>' : '<span class="badge bg-gradient-secondary">Stopped</span>';
+                        data: 'grant_status',
+                        render : function (grant_status, type, row) {
+                            const states = ['valid', 'running', 'partial'];
+                            return grant_status == "valid"  ? '<span class="badge bg-gradient-success">Connected</span>' : '<span class="badge bg-gradient-secondary">Stopped</span>';
                         }
                     },
                     {data: 'automations_count'},
@@ -137,6 +140,14 @@
             console.log(email, account_id);
 
             $('#delete-disconnect-close-modal').click();
+
+            Swal.fire({
+                title: 'Disconnecting...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
 
             fetch('/admin/disconnect_account',{
                 method: 'POST',

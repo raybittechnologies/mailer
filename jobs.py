@@ -2,21 +2,15 @@ import time
 from apps import scheduler, db
 from apps.models import Email, Automation, Action, Template, Uploadedservice, UserCredit, Service
 from apps.authentication.models import Users
-from apps.home.emailler import send_email_via_nylas, send_email_via_mailtrap
-from nylas import APIClient
+from apps.home.emailler import send_email_via_nylas, send_reconnect_email_via_mailtrap
+from nylas import Client
 from jinja2 import Template as JT
 import os
 from datetime import datetime, timedelta
 
-def email_automation_job(nylas_token, actionid, jobid, useremail):
+def email_automation_job(nylas_client, actionid, jobid, useremail):
     with scheduler.app.app_context():
         print("Automation job started", jobid)
-        
-        client = APIClient(
-                client_id=scheduler.app.config["NYLAS_OAUTH_CLIENT_ID"],
-                client_secret=scheduler.app.config["NYLAS_OAUTH_CLIENT_SECRET"],
-                access_token=nylas_token
-            )
         
         action = Action.query.filter_by(id=actionid).first()
 
@@ -67,12 +61,12 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
                 job_status = "stopped"
                 break
 
-            # try:
-            #     if email.is_unsubscribed == 1:
-            #         continue
-            # except Exception as e:
-            #     print("Failed to check is_unsubscribed: ", email.email,  str(e))
-            #     continue
+            try:
+                if email.is_unsubscribed == 1:
+                    continue
+            except Exception as e:
+                print("Failed to check is_unsubscribed: ", email.email,  str(e))
+                continue
 
             # if email is sent, skip : in case for resuming the job after stopping
             try:
@@ -110,41 +104,35 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
                 continue
             
             is_sent = False
+
+            grant_id = user.nylas_access_token
+
+            print("Grant ID:", grant_id)
+
+            if grant_id is None:
+                job.status = "failed"
+                subject = "Campaign Failed - Please re-connect Email EMAIL"
+                fromname = "Robotic Booking Agent"
+                send_reconnect_email_via_mailtrap(subject, fromname, useremail)
+
+                db.session.commit()
+
+                return
+
             while True:
                 try:
-                    response = send_email_via_nylas(client, subject, venue, useremail, fromname, mail_body, email.email)
+                    response = send_email_via_nylas(nylas_client, subject, venue, useremail, fromname, mail_body, email.email, grant_id)
                     is_sent = True
                     break
                 except Exception as e:
                     print("Failed", str(e))
-                    if "504 Gateway Timeout" in str(e):
-                        time.sleep(5)
-                        continue
                     
-                    if "401" in str(e):
+                    if "No Grant found for this Grant ID." in str(e) or "Grant not found for given ID/Email" in str(e) or 'expired' in str(e).lower():
                         job.status = "failed"
                         subject = "Campaign Failed - Please re-connect Email EMAIL"
                         fromname = "Robotic Booking Agent"
-                        message = f"""    
-                        <p>Hi,</p>
-
-                        <p>The mailing robot was unable to send out your campaign just now. No need to worry, as this could happen for various reasons.</p>
-
-                        <p>Please reconnect your email by going to: :</p>
                         
-                        <p>
-                            <a href="{WEB_HOST_IP}/connect_email" style="color: #1a73e8; text-decoration: none;">Connect Email</a>
-                        </p>
-                        
-                        <p>After that, please visit campaign page and click <strong> RETRY </strong>. your campaign will automatically restart where it left off, and any future scheduled e-mails will update their sends with a new updated schedule according to our best practices.</p>
-                        
-                        <p>Sorry for any inconvenience this may have caused.</p>
-                        
-                        <p>Thank you,</p>
-                        
-                        <p>Soundheart team (Robotic Booking Agent)</p>"""
-                                    
-                        send_email_via_mailtrap(subject, fromname, message, useremail)
+                        send_reconnect_email_via_mailtrap(subject, fromname, useremail)
 
                         # delete user nylas token
                         user = db.session.get(Users, int(action.userid))
@@ -154,11 +142,12 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
                         return
                     
                     else:
+                        time.sleep(5)
                         break
             
             if is_sent:
                 email.is_sent = 1
-                message_id = response['id']
+                message_id = response.data.id
                 email.mail_id = message_id
                 
                 db.session.commit()
@@ -167,6 +156,7 @@ def email_automation_job(nylas_token, actionid, jobid, useremail):
                 break
             else:
                 time.sleep(wait_seconds)
+                # time.sleep(30) # for testing
 
         # Indicate job is finished
         try:

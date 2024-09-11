@@ -1,6 +1,7 @@
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain_openai import ChatOpenAI
+import pyap
 from dotenv import load_dotenv
 load_dotenv()
 # from langchain_community.callbacks import get_openai_callback
@@ -19,7 +20,34 @@ import os
 openai_api_key=os.getenv("OPENAI_API_KEY")
 # print(openai_api_key)
 
-blacklist = ['@email.com', '@example.com','@domain.com','@godaddy.com','@address.com','@filler.com','@xyz.com','@newsletter.com','@mystore.com', 'example@gmail.com', '@sentry', 'mail@mail.com', '@mail.com', 'example@mail.com', '.png', '.jpg', 'sentry.io', '@mysite.com', 'example@', 'sample@', 'donotreply@']
+blacklist = ['@email.com', 
+             '@example.com',
+             '@domain.com',
+             '@godaddy.com',
+             '@address.com',
+             '@filler.com',
+             '@xyz.com',
+             '@newsletter.com',
+             '@mystore.com', 
+             'example@gmail.com', 
+             '@sentry', 
+             'mail@mail.com', 
+             '@mail.com', 
+             'example@mail.com', 
+             '.png', 
+             '.jpg', 
+             'sentry.io', 
+             '@mysite.com', 
+             'example@', 
+             'sample@', 
+             'donotreply@', 
+             '@company.com', 
+             '@yourdomain.com', 
+             'accessibility@wyndham.com',
+             'email@',
+             '@latofonts.com',
+             '@fontawesome.com',
+             ]
 
 llm = ChatOpenAI(
     model_name="gpt-3.5-turbo-0125",
@@ -44,6 +72,33 @@ def extract_first_name(email):
         
     output = llm_chain.invoke(input=email)
     return output['text']
+
+
+def extract_address(address):
+    address_parser  = pyap.parse(address, country='US')
+    try:
+        parsed_address = address_parser[0]
+        city = parsed_address.city
+        state = parsed_address.region1
+    except IndexError as e:
+        # print(address, 'not parsed', str(e))
+        try:
+            city = address.split(',')[0].strip().split()[-1]
+        except Exception as e:
+            city = ""
+            state = ""
+            return city, state
+            
+        try:
+            state = address.split(',')[1].strip().split()[0]
+        except Exception as e:
+            state = ""
+
+    except Exception as e:
+        city = ""
+        state = ""
+
+    return city, state
 
 # class Person(BaseModel):
 #     name: Optional[str] = Field(

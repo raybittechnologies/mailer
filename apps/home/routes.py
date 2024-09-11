@@ -3,6 +3,7 @@
 from functools import wraps
 import os
 import pprint
+import time
 
 from apps.authentication.models import Users
 from apps.authentication.util import verify_pass, hash_pass
@@ -23,16 +24,25 @@ from sqlalchemy.sql import Insert
 
 from concurrent.futures import ThreadPoolExecutor
 from apps.authentication.forms import LoginForm, CreateAccountForm
-from flask_dance.contrib.nylas import nylas
 from apps.home.emailler import *
 from apps.authentication.util import generate_job_id
-from nylas import APIClient
+from nylas import Client
+from nylas.models.auth import URLForAuthenticationConfig
+from nylas.models.auth import CodeExchangeRequest
+import pyap
 
 import pandas as pd
 import urllib.parse
 
-from apps.authentication.oauth import nylas_bp
-from apps.home.utils import check_blacklisted
+from apps.home.utils import check_blacklisted, extract_address
+
+NYLAS_API_KEY = os.getenv('NYLAS_API_KEY')
+NYLAS_API_URI = os.getenv('NYLAS_API_URI')
+
+nylas = Client(
+    api_key = NYLAS_API_KEY,
+    api_uri = NYLAS_API_URI,
+)
 
 executor = ThreadPoolExecutor(4)
 
@@ -74,19 +84,6 @@ def user_approved_required(fn):
 @login_required
 def index():
     page_data = get_page_data()
-    if nylas.authorized : 
-        if not current_user.nylas_access_token:
-            
-            user = Users.query.filter_by(id=current_user.id).first()
-            user.nylas_access_token = nylas.access_token
-            db.session.commit()
-            logout_user()
-
-            # delete nyals token from storage
-            del nylas_bp.token
-            
-            return redirect(url_for('authentication_blueprint.login')) 
-            
     return render_template('home/index.html', segment='index', API_GENERATOR=len(API_GENERATOR), page_data=page_data )
 
 # https://github.com/sqlalchemy/sqlalchemy/issues/5374
@@ -146,6 +143,10 @@ def export_all_data():
 
     for service in services:
         url_id = service.url_id
+        address = service.address
+
+        city, state = extract_address(address)
+
         data = {
             'venue' : service.name,
             'phone': service.phone,
@@ -153,22 +154,23 @@ def export_all_data():
             'type': service.venue_type,
             'website': service.website,
             'email1' : service.email1,
-            'first_name1' : service.first_name1,
+            'firstname1' : service.first_name1,
             'email2' : service.email2,
-            'first_name2' : service.first_name2,
+            'firstname2' : service.first_name2,
             'email3' : service.email3,
-            'first_name3' : service.first_name3,
+            'firstname3' : service.first_name3,
             'email4' : service.email4,
-            'first_name4' : service.first_name4,
-            'fbemail1' : service.fbemail1,
-            'first_name5' : service.first_name5,
-            'fbemail2' : service.fbemail2,
-            'first_name6' : service.first_name6,
+            'firstname4' : service.first_name4,
+            'facebookemail1' : service.fbemail1,
+            'firstname5' : service.first_name5,
+            'facebookemail2' : service.fbemail2,
+            'firstname6' : service.first_name6,
             'facebook' : service.facebook,
             'customtext' : "",
             'originalemail' : "",
-            'bademail' : service.bademail
-
+            'bademail' : service.bademail,
+            'city' : city,
+            'state' : state
         }
 
         if url_id not in all_services:
@@ -186,6 +188,7 @@ def export_all_data():
                 business = urllib.parse.parse_qs(parsed_url.query)['find_desc'][0]
                 location = urllib.parse.parse_qs(parsed_url.query)['find_loc'][0]
                 sheet_name = f"{business} in {location}"
+                sheet_name = sheet_name[:31]
                 df = pd.DataFrame(value)
                 df.to_excel(writer, sheet_name=sheet_name, index=False)
         
@@ -226,6 +229,7 @@ def view_url_history(url_id):
     user_urls = Service.query.filter_by(url_id=url_id, user_id=current_user.id).all()
     url_list = []
     for url_entry in user_urls:
+        city, state = extract_address(url_entry.address)
         url_data = {
             "id": url_entry.id,
             "venue_type": url_entry.venue_type,
@@ -234,6 +238,8 @@ def view_url_history(url_id):
             "address": url_entry.address,
             "url_id": url_entry.url_id,
             "user_id": url_entry.user_id,
+            "city": city,
+            "state": state
         }
 
         if current_user.role != "lite":
@@ -571,7 +577,7 @@ def upload_contact():
                         service.firstname = item['firstname' + str(idx+1)]
                         services.append(service)
 
-        db.session.bulk_save_objects(services)
+        db.session.add_all(services)
         db.session.commit()
 
         return {"success": True, "message": "File uploaded successfully."}
@@ -581,12 +587,18 @@ def upload_contact():
 @login_required
 @user_approved_required
 def contact_delete():
-    file_id = int(request.form['fileid'])
+    file_id = int(request.json['fileid'])
     file = Uploadedcontactfile.query.get(file_id)
-    db.session.delete(file)
-    Uploadedservice.query.filter_by(file_id=file_id).delete()
-    db.session.commit()
-    return redirect(url_for('home_blueprint.upload_contact'))
+    try:
+        if file:
+            db.session.delete(file)
+            Uploadedservice.query.filter_by(file_id=file_id).delete()
+            db.session.commit()
+            return {"success": True, 'message': "File deleted successfully."}
+        else:
+            return {"success": False, 'message': "File not found."}
+    except Exception as e:
+        return {"success": False, 'message': "Failed to delete file."}
         
  
 @blueprint.route('/contact/<int:id>', methods=['GET'])
@@ -618,6 +630,7 @@ def contacts_list(id):
     all_services = []
 
     for service in services:
+        city, state = extract_address(service.address)
         data = {
             'id': service.id,
             'name': service.name,
@@ -633,7 +646,9 @@ def contacts_list(id):
             'facebook': service.facebook,
             'firstname': service.firstname,
             'customtext': service.customtext,
-            'originalemail': service.originalemail
+            'originalemail': service.originalemail,
+            'city': city,
+            'state': state
         }
         all_services.append(data)
 
@@ -647,6 +662,7 @@ def contacts_all_list():
     all_services = []
 
     for service in services:
+        city, state = extract_address(service.address)
         data = {
             'id': service.id,
             'name': service.name,
@@ -662,8 +678,9 @@ def contacts_all_list():
             'facebook': service.facebook,
             'firstname': service.firstname,
             'customtext': service.customtext,
-            'originalemail': service.originalemail
-            
+            'originalemail': service.originalemail,
+            'city': city,
+            'state': state
         }
         all_services.append(data)
 
@@ -769,34 +786,27 @@ def get_segment(request):
 
 
 def get_all_filters():
-    user_urls = Yelpurl.query.filter_by(userid=current_user.id).all()
-    return user_urls
-
-
-def get_all_notifications():
-    user_urls = Yelpurl.query.filter_by(userid=current_user.id).all()
+    user_urls = Yelpurl.query.filter_by(userid=current_user.id).count()
     return user_urls
 
 
 def get_page_data():
     data_filter = get_all_filters()
-    data_noti = get_all_notifications()
     page_data = {
-        'total_filters': len(data_filter),
-        'total_noti': len(data_noti)
+        'total_filters': data_filter
     }
     return page_data
 
 
 def get_admin_data():
-    user_urls = Yelpurl.query.all()
-    users = Users.query.filter(Users.role != "admin").all()
-    services = Service.query.all()
+    user_urls = Yelpurl.query.count()
+    users = Users.query.filter(Users.role != "admin").count()
+    services = Service.query.count()
 
     page_data = {
-        'total_filters': len(user_urls),
-        'total_users': len(users),
-        'services': len(services)
+        'total_filters': user_urls,
+        'total_users': users,
+        'services': services
     }
     return page_data
 
@@ -1546,7 +1556,7 @@ def import_users_workflow():
         action.userid = current_user.id
         new_actions.append(action)
     
-    db.session.bulk_save_objects(new_actions)
+    db.session.add_all(new_actions)
     db.session.commit()
     return redirect(url_for('home_blueprint.my_workflow'))
 
@@ -1635,27 +1645,35 @@ def action_test():
         jinja_temp = JT(action.message)
         mail_body = jinja_temp.render(test_service)
         
-        client = APIClient(
-            client_id=current_app.config["NYLAS_OAUTH_CLIENT_ID"],
-            client_secret=current_app.config["NYLAS_OAUTH_CLIENT_SECRET"],
-            access_token=current_user.nylas_access_token,
-        )
-        
-        if send_email_via_nylas(client, action.subject , "Servcie Name",  current_user.email, action.fromname,  mail_body, receiver):
-            return {"success": True}
+        grant_id = current_user.nylas_access_token
 
-        else:
-            return {"success": False, "message": "Please check Nylas API"}
+        if not grant_id:
+            WEB_HOST_IP = os.getenv("WEB_HOST_IP")
+            subject = "Failed to test email"
+            body = f'''<p> Please click the link below to connect your email.</p>
+                        <a href="{WEB_HOST_IP}/connect_email" style="color: #1a73e8; text-decoration: none;">Connect Email</a>
+                    </p>'''
+            send_email_via_mailtrap(subject , "Robotic Booking Agent", body,  current_user.email)
+            
+            return {"success": False, "message": body}
+        
+        send_email_via_nylas(nylas, action.subject , "Servcie Name",  current_user.email, action.fromname,  mail_body, receiver, grant_id)
+        return {"success": True}
         
     except Exception as e:
         print(repr(e))
-        if "401" in str(e):
+        if "No Grant found for this Grant ID." in str(e) or "Grant not found for given ID/Email" in str(e) or 'expired' in str(e).lower():
             # Reset nylas token to none
             current_user.nylas_access_token = None
             db.session.commit()
+            return {"success": False, "message": "Please connect your email account."}
+        
+        elif "Connection aborted" in str(e):
+            return {"success": False, "message": "Failed. Please try again later."}
+        
+        else:
+            return {"success": False, "message": str(e)}
             
-        return {"success": False, "message": str(e)}
-    
 
 @blueprint.route('/action/get', methods=['POST'])
 @login_required 
@@ -1681,30 +1699,61 @@ def get_action():
 def webhook():
     if request.method == "GET" : 
         # Verify webhooks on nylas settings 
-        challenge = request.args['challenge']
-        return challenge
+        if "challenge" in request.args:
+            return request.args['challenge']
+        else:
+            return "no challenge"
     
     else:
-        # print(request.json)
         # pprint.pprint(request.json)
-        
-        event_type = request.json['deltas'][0]['type']
-        
+        event_type = request.json['type']
+
+        if event_type == 'message.bounce_detected':
+            message_id = request.json['data']['object']['origin']['id']
+            email = Email.query.filter_by(mail_id=message_id).first()
+            if email:
+                # unsubscribe the email
+                unsub_token = email.unsubscribe_token
+                if unsub_token:
+                    emails = Email.query.filter_by(unsubscribe_token=unsub_token).all()
+                    for email in emails:
+                        email.is_unsubscribed = 1
+                        email.is_bounced = 1
+                        db.session.commit()
+                    
+                    service = Uploadedservice.query.filter_by(unsubscribe_token=unsub_token).first()
+                    if service:
+                        service.is_unsubscribed = 1
+                        service.is_bad = 1
+                        db.session.commit()
+
+        elif event_type == 'grant.deleted' or event_type == 'grant.expired':
+            grant_id = request.json['data']['object']['grant_id']
+            user = Users.query.filter_by(nylas_access_token=grant_id).first()
+
+            if user:
+                user.nylas_access_token = None
+                db.session.commit()
+
         if event_type == "message.opened":
-            message_id = request.json['deltas'][0]['object_data']['metadata']['message_id']
+            grant_id = request.json['data']['object']['grant_id']
+            message_id = request.json['data']['object']['message_id']
+
             email = Email.query.filter_by(mail_id=message_id).first()
             if email:
                 email.is_opened = 1
                 db.session.commit()
             
         elif event_type == "thread.replied":
-            message_id = request.json['deltas'][0]['object_data']['metadata']['reply_to_message_id']
+            grant_id = request.json['data']['object']['grant_id']
+            message_id = request.json['data']['object']['thread_id']
             email = Email.query.filter_by(mail_id=message_id).first()
             if email:
                 email.is_replied = 1
                 db.session.commit()
         
-        return "okay"
+        # reply with 200 status code
+        return "OK"
 
 
    
@@ -1736,7 +1785,7 @@ def automation():
         return render_template('home/automation.html', segment="campaigns")
     
   
-@blueprint.route('/campaigns', methods=['POST', 'GET'])
+@blueprint.route('/campaigns', methods=['POST', 'GET']) 
 @login_required 
 @user_approved_required
 def campaigns():
@@ -1795,9 +1844,13 @@ def create_campaign():
     contactfile = Uploadedcontactfile.query.get(contactfile_id)
     contactfile_name = contactfile.description
         
-    group_count =  len(services) // group_size
-    if len(services ) % group_size != 0:
-        group_count += 1
+    if len(services) / 7 < group_size: # devide by 7 because we have 7 days in a week
+        group_count = len(services) // 7 if len(services) % 7 == 0 else len(services) // 7 + 1
+        group_size =  len(services) // group_count if len(services) % group_count == 0 else len(services) // group_count + 1
+    else:
+        group_count =  len(services) // group_size if len(services) % group_size == 0 else len(services) // group_size + 1
+
+    # calculate the group size for week days
     
     groups = []
     emails = []
@@ -1826,7 +1879,7 @@ def create_campaign():
                 'trigger' : 'date',
                 "run_date" : job_starttime.strftime("%Y-%m-%d %H:%M:%S"),
                 "func" : "jobs:email_automation_job",
-                "args" : (current_user.nylas_access_token, action.id, group.job_id, current_user.email)
+                "args" : (nylas, action.id, group.job_id, current_user.email)
             }
             try:
                 scheduler.add_job(**job) # TODO: Uncomment this line
@@ -1855,8 +1908,8 @@ def create_campaign():
     campaign.userid = current_user.id
     
     db.session.add(campaign)
-    db.session.bulk_save_objects(groups)
-    db.session.bulk_save_objects(emails)
+    db.session.add_all(groups)
+    db.session.add_all(emails)
     db.session.commit()
     
     return {"success": True, "message": "Campaign created successfully. It will start on the scheduled time."}
@@ -1918,6 +1971,9 @@ def camp_delete():
         campid = camp.campaignid
         db.session.delete(camp)
         db.session.commit()
+    
+    if campid is None:
+        return {"success": False, 'message': "Campaign not found."}
         
     automations = Automation.query.filter_by(campaignid=campid).all()
     
@@ -2005,7 +2061,7 @@ def job_retry():
                 'trigger' : 'date',
                 "run_date" : job_starttime.strftime("%Y-%m-%d %H:%M:%S"),
                 "func" : "jobs:email_automation_job",
-                "args" : (current_user.nylas_access_token, action_id, jobid, current_user.email)
+                "args" : (nylas, action_id, jobid, current_user.email)
             }
             try:
                 scheduler.add_job(**job) # TODO: Uncomment this line
@@ -2059,8 +2115,10 @@ def get_emails(jobid):
             'is_opened': email.is_opened,
             'is_unsubscribed' : email.is_unsubscribed,
             'is_replied' : email.is_replied,
+            'is_bounced' : email.is_bounced,
             'updated_datetime' : email.updated_datetime,
-            'unsubscribe_token' : email.unsubscribe_token
+            'unsubscribe_token' : email.unsubscribe_token,
+            'mail_id' : email.mail_id,
         }
         temp_list.append(temp_data)
         
@@ -2087,6 +2145,7 @@ def unsubscribe_all():
     try:
         for email in emails:
             email.is_unsubscribed = 1
+            db.session.commit()
         
         if service:
             service.is_unsubscribed = 1
@@ -2104,6 +2163,8 @@ def unsubscribe_all():
                     if email:
                         print("unsubscribed", email.email)
                         email.is_unsubscribed = 1
+
+                    db.session.commit()
             else:
                 phone = service.phone
 
@@ -2121,7 +2182,7 @@ def unsubscribe_all():
                             print("unsubscribed", email.email)
                             email.is_unsubscribed = 1
 
-        db.session.commit()
+                        db.session.commit()
     
     except Exception as e:
         print(repr(e))
@@ -2240,34 +2301,49 @@ def terms():
 @login_required
 @role_required('admin')
 def connected_accounts():
-        return render_template('home/admin_connected_accounts.html', segment="connected_accounts")
+    return render_template('home/admin_connected_accounts.html', segment="connected_accounts")
 
 
 @blueprint.route('/admin/get_connected_accounts', methods=['GET'])
 @login_required
 @role_required('admin')
 def get_connected_accounts():
-        
-    nylas = APIClient(
-        client_id=current_app.config['NYLAS_OAUTH_CLIENT_ID'],
-        client_secret=current_app.config["NYLAS_OAUTH_CLIENT_SECRET"],
-    )
+    # parase query params
+    params = request.args.to_dict()
+    draw = int(params.get('draw', 0))
+    start = int(params.get('start', 0))
+    length = int(params.get('length', 10))
+    
+    queryparams = {
+        "limit": length,
+        "offset": start
+    }
 
-    accounts = nylas.accounts.all()
+    try:
+        accounts = nylas.grants.list(query_params=queryparams).data
+    except Exception as e:
+        print(repr(e))
+        return jsonify({"draw": draw, "recordsTotal": 0, "recordsFiltered": 0, "data": []})
+    
     connected_accounts = []
 
     for account in accounts:
         user_email = account.email.lower()
-        user_id = Users.query.filter_by(email=user_email).first()
+        user = Users.query.filter_by(email=user_email).first()
+
+        # if user.state == "pending":
+        #     continue
+
+        # print(account)
         data = {
-            "id" : account.account_id,
-            "account_id" : account.account_id,
+            "id" : account.id,
+            "account_id" : account.id,
             "email" : account.email,
-            "sync_state" : account.sync_state,
+            "grant_status" : account.grant_status,
         }
         
-        if user_id:
-            automations = Automation.query.filter(Automation.userid == user_id.id).all()
+        if user:
+            automations = Automation.query.filter(Automation.userid == user.id).all()
             all_automations = 0
             completed_automations = 0
             running_pending_automations = 0
@@ -2285,41 +2361,35 @@ def get_connected_accounts():
             else:
                 status = "running"
 
-            data.update({"user_id" : user_id.id, "automations_count" : running_pending_automations, "status" : status})
+            data.update({"user_id" : user.id, "automations_count" : running_pending_automations, "status" : status})
         else:
             status = "finished"
             data.update({"user_id" : None, "automations_count" : 0, "status" : status})
 
         connected_accounts.append(data)
     
-    return jsonify(connected_accounts)
-
+    # sort connected_accounts by automations_count
+    connected_accounts = sorted(connected_accounts, key=lambda x: x['automations_count'])
+    
+    return jsonify({"draw": draw, "recordsTotal": 1000, "recordsFiltered": 1000, "data": connected_accounts})
+    
 
 @blueprint.route('/admin/disconnect_account', methods=['POST'])
 @login_required
 @role_required('admin')
 def disconnect_account():
-    account_id = request.json['account_id']
+    grant_id = request.json['account_id']
     email = request.json['email'].lower()
 
     try:
-        nylas = APIClient(
-            client_id=current_app.config['NYLAS_OAUTH_CLIENT_ID'],
-            client_secret=current_app.config["NYLAS_OAUTH_CLIENT_SECRET"],
-        )
-        
-        nylas.accounts.delete(account_id)
+        response = nylas.grants.destroy( grant_id )
+        print(response)
 
-        user = Users.query.filter_by(email=email).first()
-        if user:
-            user.nylas_access_token = None
-            db.session.commit()
-
-        return {"success": True, "message": "Account removed successfully."}
+        return {"success": True, "message": "Successfully disconnected account."}
 
     except Exception as e:
         print(repr(e))
-        return {"success": False, "message": "Failed to remove account."}
+        return {"success": False, "message": "Failed to delete account."}
 
 
 
@@ -2361,4 +2431,62 @@ def update_campaign_setting():
 @user_approved_required
 def connect_email():
     # redirect to nylas.login
-    return redirect(url_for('nylas.login'))
+    return redirect('/nylas/auth')
+
+
+@blueprint.route('/nylas/auth', methods=['GET'])
+@login_required
+@user_approved_required
+def nylas_auth():
+    if current_user.nylas_access_token is None or current_user.nylas_access_token == "":
+        NYLAS_CLIENT_ID = os.getenv('NYLAS_CLIENT_ID')
+        NYLAS_REDIRECT_URI = os.getenv("WEB_HOST_IP") + "/oauth/exchange"
+
+        config = URLForAuthenticationConfig(
+            {"client_id": NYLAS_CLIENT_ID, 
+            "redirect_uri" : NYLAS_REDIRECT_URI
+            })
+
+        url = nylas.auth.url_for_oauth2(config)
+        return redirect(url)
+    
+    else:
+        return redirect(url_for('home_blueprint.index'))
+
+@blueprint.route("/oauth/exchange", methods=["GET"])
+@login_required
+@user_approved_required
+def authorized():
+    if current_user.nylas_access_token is None:
+        code = request.args.get("code")
+
+        NYLAS_CLIENT_ID = os.getenv('NYLAS_CLIENT_ID')
+        NYLAS_REDIRECT_URI = os.getenv("WEB_HOST_IP") + "/oauth/exchange"
+
+        exchangeRequest = CodeExchangeRequest(
+            {"redirect_uri": NYLAS_REDIRECT_URI,
+            "code": code, 
+            "client_id": NYLAS_CLIENT_ID})
+        while True:
+            try:
+                exchange = nylas.auth.exchange_code_for_token(exchangeRequest)
+                break
+            except requests.exceptions.ConnectionError:
+                print("Connection error")
+                time.sleep(5)
+                continue
+
+
+
+        grant_id = exchange.grant_id
+
+        user = Users.query.filter_by(id=current_user.id).first()
+        user.nylas_access_token = grant_id
+        db.session.commit()
+
+        print("Nylas token updated", grant_id)
+
+        return redirect(url_for('home_blueprint.index'))
+    
+    else:
+        return redirect(url_for('home_blueprint.index'))

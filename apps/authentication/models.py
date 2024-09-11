@@ -22,11 +22,11 @@ class Users(db.Model, UserMixin):
     password      = db.Column(db.String(255))
     role          = db.Column(db.String(64), nullable=False, default='user')
     oauth_github  = db.Column(db.String(100), nullable=True)
-    nylas_access_token = db.Column(db.String(32))
+    nylas_access_token = db.Column(db.String(36))
 
     api_token     = db.Column(db.String(255))
     api_token_ts  = db.Column(db.Integer)   
-    state         = db.Column(db.String(10)) 
+    state         = db.Column(db.String(10)) # pending, approved
     password_reset_token = db.Column(db.String(128)) 
     
     def __init__(self, **kwargs):

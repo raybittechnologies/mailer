@@ -14,7 +14,7 @@ Flask-WTF==1.2.1
 lxml==4.9.3
 mailtrap==2.0.1
 numpy==1.26.1
-nylas==5.14.1
+nylas==6.3.1
 openpyxl==3.1.2
 pandas==2.1.2
 PyJWT==2.8.0
@@ -26,3 +26,4 @@ kor
 mysql-connector-python
 pymysql
 gevent
+pyap

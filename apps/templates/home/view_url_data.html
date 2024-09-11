@@ -45,6 +45,8 @@
                         <th>customtext</th>
                         <th>originalemail</th>
                         <th>bademail</th>
+                        <th>city</th>
+                        <th>state</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -86,6 +88,13 @@
             $('#filtersTable').DataTable({
                     responsive: true,
                     dom: 'Bfrtip',
+                    // set visibility of columns
+                    columnDefs: [
+                        {
+                            target: [21, 22],
+                            visible: false,
+                        }
+                    ],
                     buttons: [
                         {
                             extend: 'copy',
@@ -171,7 +180,9 @@
                         },
                         {data: 'customtext', defaultContent : ""},
                         {data: 'originalemail', defaultContent : ""},
-                        {data: 'bademail', defaultContent : ""}
+                        {data: 'bademail', defaultContent : ""},
+                        {data: 'city', defaultContent : ""},
+                        {data: 'state', defaultContent : ""},
                     ]
                 },
             );

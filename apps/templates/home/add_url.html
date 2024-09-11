@@ -52,12 +52,12 @@
 
         function initAutocomplete() {
             // Initialize the map centered on a default location
-            map = new google.maps.Map(document.getElementById('map'), {
-                // Default to new york
-                center: { lat: 40.7128, lng: -74.0060 },
-                zoom: 13,
-                mapId: "RBA_MAP_ID"
-            });
+            // map = new google.maps.Map(document.getElementById('map'), {
+            //     // Default to new york
+            //     center: { lat: 40.7128, lng: -74.0060 },
+            //     zoom: 13,
+            //     mapId: "RBA_MAP_ID"
+            // });
 
             // Create the autocomplete object, restricting the search to geographical location types
             autocomplete = new google.maps.places.Autocomplete(
@@ -66,7 +66,7 @@
             );
 
             // When the user selects an address from the dropdown, update the map
-            autocomplete.addListener('place_changed', onPlaceChanged);
+            // autocomplete.addListener('place_changed', onPlaceChanged);
         }
     
         // When the user selects an address from the dropdown, populate the address fields in the form.

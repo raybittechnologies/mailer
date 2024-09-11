@@ -259,6 +259,15 @@
         $('#filtersTable').on('click', 'input', event => {
 
             const id = event.target.id.split("_")[1];
+
+            Swal.fire({
+                title: 'Updating...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
+
             // Update workflow status
             fetch("/update/workflowstatus", {
                 method: 'POST',
@@ -277,10 +286,21 @@
                     //handle data
                     // console.log(data)
                     dataTable.ajax.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: data.message,
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
                 })
                 .catch(error => {
                     //handle error
                     console.log(error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Oops...',
+                        text: data.message,
+                    });
                 });
 
         });
@@ -291,6 +311,14 @@
             const workflowid = document.getElementById("delete-modal-tempid").value;
 
             $('#delete-workflow-button').click();
+
+            Swal.fire({
+                title: 'Deleting...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
 
             fetch('/workflow/delete',{
                 method: 'POST',

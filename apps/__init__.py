@@ -50,7 +50,7 @@ def configure_database(app):
     def shutdown_session(exception=None):
         db.session.remove()
 
-from apps.authentication.oauth import github_blueprint, nylas_bp
+# from apps.authentication.oauth import github_blueprint, nylas_bp
 
 def create_app(config):
     app = Flask(__name__)
@@ -58,8 +58,8 @@ def create_app(config):
     register_extensions(app)
     register_blueprints(app)
 
-    app.register_blueprint(github_blueprint, url_prefix="/login") 
-    app.register_blueprint(nylas_bp, url_prefix="/login")
+    # app.register_blueprint(github_blueprint, url_prefix="/login") 
+    # app.register_blueprint(nylas_bp, url_prefix="/login")
     
     configure_database(app)
     return app

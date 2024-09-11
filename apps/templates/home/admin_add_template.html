@@ -190,6 +190,13 @@
             const id = event.target.id.split("flexSwitchCheckDefault")[1];
             // console.log(id);
             // Fetch action data
+            Swal.fire({
+                title: 'Updating...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
             fetch("/admin/update/template", {
                 method: 'POST',
                 body: JSON.stringify({
@@ -207,10 +214,20 @@
                     //handle data
                     // console.log(data)
                     dataTable.ajax.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Updated',
+                        text: 'Template status updated successfully',
+                    });
                 })
                 .catch(error => {
                     //handle error
                     console.log(error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'An error occurred while updating template status',
+                    });
                 });
 
         });

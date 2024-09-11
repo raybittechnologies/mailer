@@ -67,7 +67,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="recipient-name" class="col-form-label">Wait(days):</label>
-                                <input type="number" class="form-control" id="wait-days" min="0" name="wait-days" required>
+                                <input type="number" class="form-control" id="wait-days" min="0" max="365" name="wait-days" required>
                             </div>
                             <div class="form-group">
                                 <label for="editor" class="col-form-label">Message:</label>
@@ -223,6 +223,14 @@
 
                 document.getElementById("add-action-button").innerHTML = "Save";
 
+                Swal.fire({
+                    title: 'Sending Email...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    },
+                });
+
                 fetch("/action/test", {
                     method: 'POST',
                     body: JSON.stringify({
@@ -251,17 +259,11 @@
                             });
                         } else {
                             console.log(data.message);
-                            if (data.message.includes("401")) {
-                                title = 'Email not sent! Please connect email by going to CAMPAIGNS tab > "START CAMPAIGN" button, and retry what you were doing'
-                            } else {
-                                title = "Email is not sent! Please try again."
-                            }
-
                             Swal.fire({
                                 icon: 'error',
-                                title: title,
-                                showConfirmButton: false,
-                                timer: 3000
+                                title: "Failed to send email!",
+                                html: data.message,
+                                showConfirmButton: true,
                             });
                         }
                     })
@@ -270,6 +272,11 @@
                         event.target.disabled = false;
                         event.target.innerHTML = 'TEST'
                         console.log(error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: error.message,
+                            showConfirmButton: true,
+                        });
                     });
 
             } else {
@@ -282,6 +289,14 @@
             const actionid = document.getElementById("delete-modal-actionid").value;
 
             $('#delete-action-modal').click();
+
+            Swal.fire({
+                title: 'Deleting...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
 
             fetch('/action/delete',{
                 method: 'POST',

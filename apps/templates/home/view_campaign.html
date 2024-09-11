@@ -79,7 +79,7 @@
                     </form>
                 {% else %}
                     <div class="modal-footer">
-                        <a href='{{ url_for("nylas.login") }}' class="btn btn-primary">Connect EMAIL</a>
+                        <a href='{{ url_for("home_blueprint.nylas_auth") }}' class="btn btn-primary">Connect EMAIL</a>
                     </div>
                 {% endif %}
               </div>
@@ -191,6 +191,14 @@
 
             $('#close-deletejob-modal').click();
 
+            Swal.fire({
+                title: 'Deleting...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
+
             fetch('/automation/delete',{
                 method: 'POST',
                 headers : { 'Content-Type': 'application/json' },
@@ -236,6 +244,14 @@
             const campaignid = document.getElementById("campaignid").value;
 
             $('#close-retryjob-modal').click();
+
+            Swal.fire({
+                title: 'Rescheduling...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
 
             fetch('/automation/retry',{
                 method: 'POST',

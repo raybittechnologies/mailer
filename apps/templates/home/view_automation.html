@@ -28,6 +28,7 @@
                         <th>Opened</th>
                         <th>Unsubscribed</th>
                         <th>Replied</th>
+                        <th>Bounced</th>
                         <th>Updated on</th>
                         <th>Actions</th>
                     </tr>
@@ -64,7 +65,7 @@
                 pageLength: 50,
                 columnDefs: [
                 {
-                    target: 5,
+                    target: 6,
                     render: DataTable.render.datetime()
                 }],
                 order : [],
@@ -103,6 +104,14 @@
                         render : function (is_replied, type, row) {
                             var  label = ""
                             label = is_replied ? '<span class="badge bg-gradient-success">Replied</span>' : '';
+                            return label
+                        }
+                    },
+                    {
+                        data: 'is_bounced',
+                        render : function (is_bounced, type, row) {
+                            var  label = ""
+                            label = is_bounced ? '<span class="badge bg-gradient-primary">Bounced</span>' : '';
                             return label
                         }
                     },
