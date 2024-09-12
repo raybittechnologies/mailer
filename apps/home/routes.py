@@ -577,7 +577,7 @@ def upload_contact():
                         service.firstname = item['firstname' + str(idx+1)]
                         services.append(service)
 
-        db.session.add_all(services)
+        db.session.bulk_save_objects(services)
         db.session.commit()
 
         return {"success": True, "message": "File uploaded successfully."}
@@ -1556,7 +1556,7 @@ def import_users_workflow():
         action.userid = current_user.id
         new_actions.append(action)
     
-    db.session.add_all(new_actions)
+    db.session.bulk_save_objects(new_actions)
     db.session.commit()
     return redirect(url_for('home_blueprint.my_workflow'))
 
@@ -1695,7 +1695,7 @@ def get_action():
 
     
     
-@blueprint.route('/webhook', methods=['POST', "GET"])
+@blueprint.route('/webhooks', methods=['POST', "GET"])
 def webhook():
     if request.method == "GET" : 
         # Verify webhooks on nylas settings 
@@ -1706,7 +1706,11 @@ def webhook():
     
     else:
         # pprint.pprint(request.json)
-        event_type = request.json['type']
+        try:
+            event_type = request.json['type']
+        except:
+            pprint.pprint(request.json)
+            return "OK"
 
         if event_type == 'message.bounce_detected':
             message_id = request.json['data']['object']['origin']['id']
@@ -1845,19 +1849,21 @@ def create_campaign():
     contactfile_name = contactfile.description
         
     if len(services) / 7 < group_size: # devide by 7 because we have 7 days in a week
-        group_count = len(services) // 7 if len(services) % 7 == 0 else len(services) // 7 + 1
-        group_size =  len(services) // group_count if len(services) % group_count == 0 else len(services) // group_count + 1
+        group_size = len(services) // 7 if len(services) % 7 == 0 else len(services) // 7 + 1
+        # group_size =  len(services) // group_count if len(services) % group_count == 0 else len(services) // group_count + 1
+        group_count = 7
     else:
         group_count =  len(services) // group_size if len(services) % group_size == 0 else len(services) // group_size + 1
 
     # calculate the group size for week days
-    
-    groups = []
+
     emails = []
+    groups = []
     campaignid = generate_job_id(32)
     
     # A group is a job here
     for action in actions:
+            
         for groupid in range(group_count):
             group = Automation()
             group.group_number = groupid
@@ -1908,8 +1914,8 @@ def create_campaign():
     campaign.userid = current_user.id
     
     db.session.add(campaign)
-    db.session.add_all(groups)
-    db.session.add_all(emails)
+    db.session.bulk_save_objects(groups)
+    db.session.bulk_save_objects(emails)
     db.session.commit()
     
     return {"success": True, "message": "Campaign created successfully. It will start on the scheduled time."}
