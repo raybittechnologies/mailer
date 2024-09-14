@@ -98,6 +98,9 @@ def extract_address(address):
         city = ""
         state = ""
 
+    if city == "York":
+        city = "New York"
+        
     return city, state
 
 # class Person(BaseModel):

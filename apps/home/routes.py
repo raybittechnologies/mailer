@@ -151,6 +151,8 @@ def export_all_data():
             'venue' : service.name,
             'phone': service.phone,
             'address': service.address,
+            'city' : city,
+            'state' : state,
             'type': service.venue_type,
             'website': service.website,
             'email1' : service.email1,
@@ -168,9 +170,7 @@ def export_all_data():
             'facebook' : service.facebook,
             'customtext' : "",
             'originalemail' : "",
-            'bademail' : service.bademail,
-            'city' : city,
-            'state' : state
+            'bademail' : service.bademail
         }
 
         if url_id not in all_services:

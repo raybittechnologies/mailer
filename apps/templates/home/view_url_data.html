@@ -27,6 +27,8 @@
                         <th>venue</th>
                         <th>phone</th>
                         <th>address</th>
+                        <th>city</th>
+                        <th>state</th>
                         <th>type</th>
                         <th>website</th>
                         <th>email1</th>
@@ -45,8 +47,6 @@
                         <th>customtext</th>
                         <th>originalemail</th>
                         <th>bademail</th>
-                        <th>city</th>
-                        <th>state</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -91,7 +91,7 @@
                     // set visibility of columns
                     columnDefs: [
                         {
-                            target: [21, 22],
+                            target: [3, 4],
                             visible: false,
                         }
                     ],
@@ -123,6 +123,8 @@
                         {data: 'venue', defaultContent : ""},
                         {data: 'phone', defaultContent : ""},
                         {data: 'address', defaultContent : ""},
+                        {data: 'city', defaultContent : ""},
+                        {data: 'state', defaultContent : ""},
                         {data: 'venue_type', defaultContent : ""},
                         {
                             data: 'website',
@@ -180,9 +182,7 @@
                         },
                         {data: 'customtext', defaultContent : ""},
                         {data: 'originalemail', defaultContent : ""},
-                        {data: 'bademail', defaultContent : ""},
-                        {data: 'city', defaultContent : ""},
-                        {data: 'state', defaultContent : ""},
+                        {data: 'bademail', defaultContent : ""}
                     ]
                 },
             );

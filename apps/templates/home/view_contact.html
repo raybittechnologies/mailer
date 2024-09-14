@@ -28,12 +28,12 @@
                             <th>type</th>
                             <th>phone</th>
                             <th>address</th>
+                            <th>city</th>
+                            <th>state</th>
                             <th>website</th>
                             <th>facebook</th>
                             <th>subscribed</th>
                             <th>actions</th>
-                            <th>city</th>
-                            <th>state</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -90,7 +90,7 @@
                 dom: 'Bfrtip',
                 columnDefs: [
                     {
-                        target: [12, 13],
+                        target: [8, 9],
                         visible: false,
                     }
                 ],
@@ -103,7 +103,7 @@
                         extend: 'excel',
                         filename: '{{ file_desc }}',
                         exportOptions: {
-                            columns: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13]
+                            columns: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
                         },
                         title: null
                     },
@@ -111,7 +111,7 @@
                         extend: 'csv',
                         filename: '{{ file_desc }}',
                         exportOptions: {
-                            columns: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13]
+                            columns: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
                         }
                     }],
                 order : [],
@@ -128,6 +128,8 @@
                     {data: 'venue_type', defaultContent : ""},
                     {data: 'phone', defaultContent : ""},
                     {data: 'address', defaultContent : ""},
+                    {data: 'city', defaultContent : ""},
+                    {data: 'state', defaultContent : ""},
                     {
                         data: 'website',
                         render: function (website, type, row) {
@@ -168,9 +170,7 @@
                                 '<button class="btn btn-danger btn-sm" id="' + id + '" data-bs-toggle="modal" data-bs-target="#deleteServiceModal" >Delete</button>';
                             return buttons;
                         }
-                    },
-                    {data: 'city', defaultContent : ""},
-                    {data: 'state', defaultContent : ""}
+                    }
                 ]
             },
         );
