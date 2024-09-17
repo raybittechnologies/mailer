@@ -70,6 +70,7 @@
                                     <div class="form-group">
                                         <label for="max-emails-per-day" class="col-form-label">Max Emails Per Day:</label>
                                         <input type="number" class="form-control" id="max-emails-per-day" min="1" max="" name="max-emails-per-day" required></input>
+                                        <input type="hidden" id="emails_daily_limit" name="emails_daily_limit" >
                                     </div>
                                     <p class="mb-4 mx-auto text-info" id="user-notification"></p>
                                 {% else %}
@@ -145,7 +146,7 @@
             } else {
                 for (let i = 0; i < templates.length; i++) {
                     // console.log(res[i])
-                    options += '<option ' +  ' value="' + templates[i].id +'">' + templates[i].template_name + "</option>" + "<br>";
+                    options += '<option ' +  ' value="' + templates[i].id +'">' + templates[i].template_name + "</option>" ;
                 }
                 document.getElementById("select-workflow").innerHTML = options;
                 // document.getElementById("workflow-description").innerHTML = templates[0].template_desc;
@@ -157,7 +158,7 @@
                 options = "";
                 for (let i = 0; i < contacts.length; i++) {
                     // console.log(res[i])
-                    options += '<option ' +  ' value="' + contacts[i].id +'">' + contacts[i].description + "</option>" + "<br>";
+                    options += '<option ' + 'data="' + contacts[i].service_count + '"' +  ' value="' + contacts[i].id +'">' + contacts[i].description + "</option>";
                 }
                 document.getElementById("select-contacts").innerHTML = options;
             }
@@ -168,9 +169,11 @@
                 document.getElementById("create-campaign-button").disabled = false;
             }
 
-            document.getElementById("max-emails-per-day").value = emails_daily_limit;
-            document.getElementById("max-emails-per-day").max = emails_daily_limit;
-            document.getElementById("user-notification").innerHTML = "*The daily email sending limit is capped at a maximum of " + emails_daily_limit + " emails. Please contact admin to increase this daily limit.";
+            // set emails_daily_limit
+            document.getElementById("emails_daily_limit").value = emails_daily_limit;
+
+
+            calculateMaxEmailsPerDay(contacts[0].service_count, emails_daily_limit);
 
             // start_date = document.getElementById("start-date");
             // start_date.value = "12/16/2023 11:47 PM"
@@ -197,6 +200,27 @@
         // document.getElementById("automation-datetime-local-input").value = local_now;
 
     };
+
+
+    // create function to calculate max_emails_per_day
+    function calculateMaxEmailsPerDay(total_emails, emails_daily_limit) {
+        // if total_emails / 7 is bigger than max_emails_per_day, then set max_emails_per_day to total_emails // 7 + 1
+        // else set max_emails_per_day to total_emails
+        var max_emails_daily = 0;
+        if (total_emails / 7 < emails_daily_limit) {
+            max_emails_daily = Math.floor(total_emails / 7) + 1;
+        } else {
+            max_emails_daily = emails_daily_limit;
+        }
+
+        document.getElementById("max-emails-per-day").value = total_emails;
+
+        document.getElementById("max-emails-per-day").value = max_emails_daily;
+        document.getElementById("max-emails-per-day").max = max_emails_daily;
+        document.getElementById("user-notification").innerHTML = "*The daily email sending limit is capped at a maximum of " + max_emails_daily + " emails. Please contact admin to increase this daily limit.";
+
+    }
+
 
     $(document).ready(function () {
         // const selectElement = document.getElementById("select-workflow");
@@ -375,6 +399,14 @@
         //     dataTable.ajax.reload();
         // }, 30000);
 
+        // contacts option changed event
+        $('#select-contacts').on('change', function() {
+            var total_emails = document.getElementById("select-contacts").selectedOptions[0].getAttribute("data");
+            var emails_daily_limit = document.getElementById("emails_daily_limit").value;
+
+            calculateMaxEmailsPerDay(total_emails, emails_daily_limit);
+
+        });
     });
 </script>
 {% endblock javascripts %}

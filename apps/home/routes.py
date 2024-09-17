@@ -1507,10 +1507,15 @@ def get_users_workflow():
             temp_list.append(temp_data)
         
         for temp in contacts:
+            # Get all emails in contact file
+
+            count = Uploadedservice.query.filter_by(file_id=temp.id).count()
+
             temp_data = {
                 'id': temp.id,
                 'description': temp.description,
-                'create_datetime' : temp.create_datetime
+                'create_datetime' : temp.create_datetime,
+                'service_count' : count
             }
             contacts_list.append(temp_data)
 
@@ -1848,12 +1853,7 @@ def create_campaign():
     contactfile = Uploadedcontactfile.query.get(contactfile_id)
     contactfile_name = contactfile.description
         
-    if len(services) / 7 < group_size: # devide by 7 because we have 7 days in a week
-        group_size = len(services) // 7 if len(services) % 7 == 0 else len(services) // 7 + 1
-        # group_size =  len(services) // group_count if len(services) % group_count == 0 else len(services) // group_count + 1
-        group_count = 7
-    else:
-        group_count =  len(services) // group_size if len(services) % group_size == 0 else len(services) // group_size + 1
+    group_count =  len(services) // group_size if len(services) % group_size == 0 else len(services) // group_size + 1
 
     # calculate the group size for week days
 
