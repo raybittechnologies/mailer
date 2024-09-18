@@ -70,9 +70,13 @@
                                     <div class="form-group">
                                         <label for="max-emails-per-day" class="col-form-label">Max Emails Per Day:</label>
                                         <input type="number" class="form-control" id="max-emails-per-day" min="1" max="" name="max-emails-per-day" required></input>
-                                        <input type="hidden" id="emails_daily_limit" name="emails_daily_limit" >
+                                        <input type="hidden" id="emails-daily-limit" name="emails-daily-limit" >
                                     </div>
                                     <p class="mb-4 mx-auto text-info" id="user-notification"></p>
+                                    <!-- Error notification when user put over max emails per day -->
+                                    <p class="mb-4 mx-auto text-danger" role="alert" id="error-notification" style="display: none;">
+                                    </p>
+
                                 {% else %}
                                     <a href='{{ url_for("home_blueprint.nylas_auth") }}' class="btn btn-primary">Connect EMAIL</a>
                                 {% endif %}
@@ -169,20 +173,13 @@
                 document.getElementById("create-campaign-button").disabled = false;
             }
 
-            // set emails_daily_limit
-            document.getElementById("emails_daily_limit").value = emails_daily_limit;
-
+            document.getElementById("max-emails-per-day").max = emails_daily_limit;
+            document.getElementById("emails-daily-limit").value = emails_daily_limit;
+            document.getElementById("user-notification").innerHTML = "*The daily email sending limit is a suggested maximum of 50 emails PER day PER email address. Please contact support for anything above this daily suggested limit for a workaround.";
+            document.getElementById("error-notification").innerHTML = "ERROR: Only " + emails_daily_limit +" emails per day max; Please reduce your Contacts list to no more than " + emails_daily_limit * 7 + " total (" + emails_daily_limit + " per day 7 days a week )"
 
             calculateMaxEmailsPerDay(contacts[0].service_count, emails_daily_limit);
 
-            // start_date = document.getElementById("start-date");
-            // start_date.value = "12/16/2023 11:47 PM"
-            // //
-
-
-            // console.log(start_date.value);
-            // console.log(new Date().toLocaleString('en-US').replace(",", ""));
-            // console.log(templates);
         })
         .catch((err) => {
             console.log(err);
@@ -213,11 +210,7 @@
             max_emails_daily = emails_daily_limit;
         }
 
-        document.getElementById("max-emails-per-day").value = total_emails;
-
         document.getElementById("max-emails-per-day").value = max_emails_daily;
-        document.getElementById("max-emails-per-day").max = max_emails_daily;
-        document.getElementById("user-notification").innerHTML = "*The daily email sending limit is capped at a maximum of " + max_emails_daily + " emails. Please contact admin to increase this daily limit.";
 
     }
 
@@ -402,11 +395,54 @@
         // contacts option changed event
         $('#select-contacts').on('change', function() {
             var total_emails = document.getElementById("select-contacts").selectedOptions[0].getAttribute("data");
-            var emails_daily_limit = document.getElementById("emails_daily_limit").value;
+            var emails_daily_limit = document.getElementById("max-emails-per-day").max;
 
             calculateMaxEmailsPerDay(total_emails, emails_daily_limit);
 
+            // hide error notification
+            document.getElementById("error-notification").style.display = "none";
+
         });
+        // max-emails-per-day user input event
+        $('#max-emails-per-day').on('input', function(e) {
+            var max_emails_per_day = e.target.value;
+            var emails_daily_limit = document.getElementById("emails-daily-limit").value;
+
+            // convert to integer
+            max_emails_per_day = parseInt(max_emails_per_day);
+            emails_daily_limit = parseInt(emails_daily_limit);
+
+            if (max_emails_per_day > emails_daily_limit) {
+                document.getElementById("error-notification").style.display = "block";
+                document.getElementById("create-campaign-button").disabled = true;
+            } else {
+                document.getElementById("error-notification").style.display = "none";
+                document.getElementById("create-campaign-button").disabled = false;
+            }
+
+        });
+
+        // open modal event
+        $('#creatCampaignModalMessage').on('show.bs.modal', function (e) {
+           // hide error notification
+            var max_emails_per_day = document.getElementById("max-emails-per-day").value;
+            var emails_daily_limit = document.getElementById("emails-daily-limit").value;
+
+            // convert to integer
+            max_emails_per_day = parseInt(max_emails_per_day);
+            emails_daily_limit = parseInt(emails_daily_limit);
+
+            if (max_emails_per_day > emails_daily_limit) {
+                document.getElementById("error-notification").style.display = "block";
+                document.getElementById("create-campaign-button").disabled = true;
+            } else {
+                document.getElementById("error-notification").style.display = "none";
+                document.getElementById("create-campaign-button").disabled = false;
+            }
+           
+        });
+
+
     });
 </script>
 {% endblock javascripts %}
