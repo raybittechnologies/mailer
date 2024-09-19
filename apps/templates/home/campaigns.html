@@ -162,7 +162,7 @@
                 options = "";
                 for (let i = 0; i < contacts.length; i++) {
                     // console.log(res[i])
-                    options += '<option ' + 'data="' + contacts[i].service_count + '"' +  ' value="' + contacts[i].id +'">' + contacts[i].description + "</option>";
+                    options += '<option ' + 'data="' + contacts[i].service_count + '"' +  ' value="' + contacts[i].id +'">' + contacts[i].description + "(" + contacts[i].service_count +") </option>";
                 }
                 document.getElementById("select-contacts").innerHTML = options;
             }
@@ -177,6 +177,15 @@
             document.getElementById("emails-daily-limit").value = emails_daily_limit;
             document.getElementById("user-notification").innerHTML = "*The daily email sending limit is a suggested maximum of 50 emails PER day PER email address. Please contact support for anything above this daily suggested limit for a workaround.";
             document.getElementById("error-notification").innerHTML = "ERROR: Only " + emails_daily_limit +" emails per day max; Please reduce your Contacts list to no more than " + emails_daily_limit * 7 + " total (" + emails_daily_limit + " per day 7 days a week )"
+
+            // active option total emails
+            var total_emails = document.getElementById("select-contacts").selectedOptions[0].getAttribute("data");
+            total_emails = parseInt(total_emails);
+
+            if (emails_daily_limit * 7 < total_emails) {
+                document.getElementById("error-notification").style.display = "block";
+                document.getElementById("create-campaign-button").disabled = true;
+            }
 
             calculateMaxEmailsPerDay(contacts[0].service_count, emails_daily_limit);
 
@@ -397,35 +406,54 @@
             var total_emails = document.getElementById("select-contacts").selectedOptions[0].getAttribute("data");
             var emails_daily_limit = document.getElementById("max-emails-per-day").max;
 
+            // convert to integer
+            total_emails = parseInt(total_emails);
+            emails_daily_limit = parseInt(emails_daily_limit);
+
             calculateMaxEmailsPerDay(total_emails, emails_daily_limit);
 
             // hide error notification
             document.getElementById("error-notification").style.display = "none";
+
+            if (emails_daily_limit * 7 < total_emails) {
+                document.getElementById("error-notification").style.display = "block";
+                document.getElementById("create-campaign-button").disabled = true;
+            } else {
+                document.getElementById("error-notification").style.display = "none";
+                document.getElementById("create-campaign-button").disabled = false;
+            }
 
         });
         // max-emails-per-day user input event
         $('#max-emails-per-day').on('input', function(e) {
             var max_emails_per_day = e.target.value;
             var emails_daily_limit = document.getElementById("emails-daily-limit").value;
+            var total_emails = document.getElementById("select-contacts").selectedOptions[0].getAttribute("data");
 
             // convert to integer
             max_emails_per_day = parseInt(max_emails_per_day);
             emails_daily_limit = parseInt(emails_daily_limit);
+            total_emails = parseInt(total_emails);
 
-            if (max_emails_per_day > emails_daily_limit) {
-                document.getElementById("error-notification").style.display = "block";
-                document.getElementById("create-campaign-button").disabled = true;
-            } else {
+            if (max_emails_per_day <= emails_daily_limit && max_emails_per_day * 7 >= total_emails) {
                 document.getElementById("error-notification").style.display = "none";
                 document.getElementById("create-campaign-button").disabled = false;
+            } else {
+                document.getElementById("error-notification").style.display = "block";
+                document.getElementById("create-campaign-button").disabled = true;
             }
-
+            
         });
 
         // open modal event
         $('#creatCampaignModalMessage').on('show.bs.modal', function (e) {
            // hide error notification
-            var max_emails_per_day = document.getElementById("max-emails-per-day").value;
+            var max_emails_per_day_input = document.getElementById("max-emails-per-day");
+            if (max_emails_per_day_input) {
+                var max_emails_per_day = max_emails_per_day_input.value;
+            } else {
+                return;
+            }
             var emails_daily_limit = document.getElementById("emails-daily-limit").value;
 
             // convert to integer
@@ -439,7 +467,7 @@
                 document.getElementById("error-notification").style.display = "none";
                 document.getElementById("create-campaign-button").disabled = false;
             }
-           
+
         });
 
 
