@@ -1,0 +1,330 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} {% endblock title %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}
+<style>
+    .tags-input {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 5px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        width: 100%;
+    }
+    .tag {
+        display: inline-flex;
+        align-items: center;
+        background-color: #d1e7fd;
+        padding: 5px;
+        margin: 2px;
+        border-radius: 4px;
+    }
+    .tag span {
+        margin-left: 5px;
+        cursor: pointer;
+    }
+    .tags-input input {
+        border: none;
+        outline: none;
+        flex: 1;
+        padding: 5px;
+    }
+</style>
+
+{% endblock stylesheets %}
+
+{% block content %}
+
+    <div class="container-fluid py-4">
+        <div class="container mt-5">
+            <div class="card shadow-lg border-0 rounded-lg">
+                <div class="card-header"><h3 class="text-center font-weight-light my-1">Multiple Search</h3></div>
+                <div class="card-body">
+                    <form >
+                         <div class="form-group">
+                            <label class="small mb-1" for="businesses">Business Type</label>
+                            <input id="business" name="business" type="hidden" required/>
+                            <div id="bus_tags-input" class="py-1 tags-input" required>
+                                <input type="text" id="businesses" name="businesses"  placeholder="Add businesses separated by commas" />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="small mb-1" for="locations">Location</label>
+                            <input id="location" name="location" type="hidden" required/>
+                                   
+                            <div id="loc-tags-input" class="py-1 tags-input" required>
+                                <input type="text" id="locations" name="locations" placeholder="Add places"/>
+                            </div>
+                            
+                            <input type="hidden" id="latitude" name="latitude" >
+                            <input type="hidden" id="longitude" name="longitude">
+
+                        </div>
+                        <div class="form-group d-flex align-items-center justify-content-between mt-4 mb-0">
+                            <button class="btn btn-danger" type="button" data-bs-toggle="modal" data-bs-target="#confirmModal">Start Processes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <!-- <div id="map" style="height: 400px; width: 100%; padding-top: 20px;"></div> -->
+        </div>
+
+        <!-- Creat modal to confirm start process -->
+        <div class="modal fade" id="confirmModal" tabindex="-1" data-bs-backdrop="static" role="dialog" aria-labelledby="confirmModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="confirmModalLabel">Confirm Start Process</h5>
+                        <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" id="confirm-modal-close" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body" id="modal-body-message">
+                        Are you sure you want to start the process?
+                    </div>
+                    <form >
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary" >Start Process</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {% include "includes/footer.html" %}
+
+    </div>
+
+{% endblock content %}
+
+<!-- Specific JS goes HERE -->
+{% block javascripts %}
+
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA1gJVpuNrhHJXNYmm_zikTZgmADxo1mDY&loading=async&libraries=places,maps,marker&v=beta" async defer></script>
+<script>
+    
+    $(document).ready(function () {
+
+        let map;
+        let marker;
+        let autocomplete;
+        
+        const locations = document.getElementById('location');
+        const loctagsInput = document.getElementById('loc-tags-input');
+        const locinput = document.getElementById('locations');
+
+        const hiddenbusInput = document.getElementById('business');
+        const busTagsInput = document.getElementById('bus_tags-input');
+        const businessInput = document.getElementById('businesses');
+        let places = []; // Array to store selected places
+        let businesses = []; // Array to store selected businesses
+
+        function initAutocomplete() {
+            // Initialize the map centered on a default location
+            // map = new google.maps.Map(document.getElementById('map'), {
+            //     // Default to new york
+            //     center: { lat: 40.7128, lng: -74.0060 },
+            //     zoom: 13,
+            //     mapId: "RBA_MAP_ID"
+            // });
+
+            // Create the autocomplete object, restricting the search to geographical location types
+            autocomplete = new google.maps.places.Autocomplete(
+                locinput,
+                { 
+                    types: ['geocode'], 
+                    componentRestrictions: { country: 'us' } ,
+                    fields: ['geometry', 'formatted_address']
+                }
+            );
+
+            // When the user selects an address from the dropdown, update the map
+            autocomplete.addListener('place_changed', onPlaceChanged);
+
+            // Add event listener to the input field to add a place tag when the user presses Enter
+            
+            businessInput.addEventListener('keydown', (event) => {
+                // Check if the user pressed 'Enter' or ',' to create a new tag
+                if (event.key === 'Enter' || event.key === ',') {
+                    event.preventDefault();
+                    let tagText = businessInput.value.trim();
+                    // tagText = tagText.slice(0, -1); // Remove the comma
+                    console.log(tagText);
+                    if (tagText) {
+                        addBusinessTag(tagText);
+                    }
+                    businessInput.value = ''; // Clear the input field
+                }
+            });
+        }
+    
+        // When the user selects an address from the dropdown, populate the address fields in the form.
+        function onPlaceChanged() {
+            const place = autocomplete.getPlace();
+
+            console.log(place);
+
+            // print latitude and longitude to the input fields by converting the place.geometry.location.lat() and place.geometry.location.lng() to string
+            
+            if (!place.geometry) {
+                // User entered the name of a Place that was not suggested and
+                // pressed the Enter key, or the Place Details request failed.
+                window.alert("No details available for input: '" + place.name + "'");
+                return;
+            }
+
+            document.getElementById('latitude').value = place.geometry.location.lat();
+            document.getElementById('longitude').value = place.geometry.location.lng();
+
+            // Add selected place to the places array and update tags
+            addPlaceTag(place.formatted_address);
+
+            // Clear the input field for new entries
+            locinput.value = '';
+            
+            // // If the place has a geometry, then present it on a map
+            // if (place.geometry.viewport) {
+            //     map.fitBounds(place.geometry.viewport);
+            // } else {
+            //     map.setCenter(place.geometry.location);
+            //     map.setZoom(17); // Why 17? Because it looks good.
+            // }
+
+            // // Set the marker at the new location
+            // if (marker) {
+            //     marker.setMap(null);
+            // }
+            // marker = new google.maps.Marker({
+            //     map: map,
+            //     position: place.geometry.location,
+            //     draggable: true,
+            //     zoom: 15
+            // });
+        }
+
+        // Function to add a place tag to the input
+        function addPlaceTag(placeName) {
+
+            // Prevent duplicate tags
+            if (places.includes(placeName)) {
+                return;
+            }
+            // Create a tag element
+            const tag = document.createElement('div');
+            tag.className = 'tag';
+            tag.textContent = placeName;
+
+            // Create a remove button for the tag
+            const removeButton = document.createElement('span');
+            removeButton.textContent = '✖';
+            removeButton.onclick = () => {
+                loctagsInput.removeChild(tag);
+                places = places.filter(p => p !== placeName); // Remove from places array
+                updateHiddenPlacesInput();
+            };
+
+            tag.appendChild(removeButton);
+            loctagsInput.insertBefore(tag, locinput); // Add tag before the input element
+
+            // Add place to the places array
+            places.push(placeName);
+
+            updateHiddenPlacesInput();
+        }
+
+        // Function to add a business tag to the input
+        function addBusinessTag(businessName) {
+            // Prevent duplicate tags
+            if (businesses.includes(businessName)) {
+                return;
+            }
+            // Create a tag element
+            const tag = document.createElement('div');
+            tag.className = 'tag';
+            tag.textContent = businessName;
+
+            // Create a remove button for the tag
+            const removeButton = document.createElement('span');
+            removeButton.textContent = '✖';
+            removeButton.onclick = () => {
+                busTagsInput.removeChild(tag);
+                businesses = businesses.filter(b => b !== businessName); // Remove from businesses array
+                updateHiddenBusinessedInput();
+            };
+
+            tag.appendChild(removeButton);
+            busTagsInput.insertBefore(tag, businessInput); // Add tag before the input element
+
+            // Add business to the businesses array
+            businesses.push(businessName);
+
+            updateHiddenBusinessedInput();
+        }
+
+        function updateHiddenBusinessedInput() {
+            hiddenbusInput.value = businesses.join('|'); // Store tags as a comma-separated string
+        }
+
+        function updateHiddenPlacesInput() {
+            locations.value = places.join('|'); // Store tags as a comma-separated string
+        }
+
+        // Get event listener to the form submit button
+        $('#confirmModal').on('submit', function (e) {
+            $('#modal-body-message').text('Are you sure you want to start the process?');
+            e.preventDefault();
+
+            const location = document.getElementById('location').value;
+            const business = document.getElementById('business').value;
+            const latitude = document.getElementById('latitude').value;
+            const longitude = document.getElementById('longitude').value;
+
+            console.log('---', location, business, latitude, longitude);
+
+            if (!location || !business || !latitude || !longitude) {
+                console.log('Please fill in all the fields');
+                // Show a modal to alert the user to fill in all the fields
+                $('#modal-body-message').text('Please fill in all the fields');
+                return;
+            }
+
+            // submit the form data to the server
+
+            let formdata = new FormData();
+            formdata.append('location', location);
+            formdata.append('business', business);
+            formdata.append('latitude', latitude);
+            formdata.append('longitude', longitude);
+
+            // close the modal
+            $('#confirm-modal-close').click();
+
+            fetch('/url', {
+                method: 'POST',
+                body: formdata
+            }).then(response => {
+                console.log(response);
+                return response.url;
+            }).then(data => {
+                console.log(data);
+                // Redirect to the view page
+                window.location.href = data;
+            }).catch(error => {
+                console.error(error);
+            });
+                
+
+        });
+
+        window.onload = initAutocomplete;
+
+    });
+
+
+</script>
+{% endblock javascripts %}
