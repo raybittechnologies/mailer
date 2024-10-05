@@ -9,6 +9,7 @@ from apps import db
 from sqlalchemy import create_engine, Column, Integer, String, orm
 from flask_bcrypt import generate_password_hash, check_password_hash
 from apps.authentication.util import generate_random_string, generate_unsubscribe_token
+from sqlalchemy.dialects.mysql import LONGTEXT
 import uuid
 '''
 Add your models below
@@ -28,6 +29,8 @@ class Yelpurl(db.Model):
     userid = db.Column(db.Integer)
     state = db.Column(db.String(20))
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, index=True)
+    latitude = db.Column(db.String(255))
+    longitude = db.Column(db.String(255))
 
 
 class Service(db.Model):
@@ -57,7 +60,13 @@ class Service(db.Model):
     first_name4 = db.Column(db.String(255))
     first_name5 = db.Column(db.String(255))
     first_name6 = db.Column(db.String(255))
-
+    city = db.Column(db.String(255))
+    state = db.Column(db.String(255))
+    zip = db.Column(db.String(255))
+    country = db.Column(db.String(255))
+    latitude = db.Column(db.String(255))
+    longitude = db.Column(db.String(255))
+    thumnailurl = db.Column(db.String(1024))
     
     __table_args__ = (
         db.Index('sevice-idx', "url_id", "user_id", "biz_id", unique=True), 
@@ -206,5 +215,12 @@ class UserCampaignSetting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     userid = db.Column(db.Integer)
     emails_daily_limit = db.Column(db.Integer, default=150)
+    create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
+    update_datetime = db.Column(db.DateTime(), onupdate=datetime.datetime.utcnow, default=datetime.datetime.utcnow)
+
+class HowToFAQ(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    # field to save html with image imbeded
+    content = db.Column(LONGTEXT)
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
     update_datetime = db.Column(db.DateTime(), onupdate=datetime.datetime.utcnow, default=datetime.datetime.utcnow)

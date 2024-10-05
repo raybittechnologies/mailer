@@ -36,15 +36,20 @@ import urllib.parse
 
 from apps.home.utils import check_blacklisted, extract_address
 
-NYLAS_API_KEY = os.getenv('NYLAS_API_KEY')
-NYLAS_API_URI = os.getenv('NYLAS_API_URI')
+NYLAS_API_KEY = os.environ.get('NYLAS_API_KEY')
+NYLAS_API_URI = os.environ.get('NYLAS_API_URI')
+
+print("NYLAS_API_URI: ", NYLAS_API_URI)
 
 nylas = Client(
     api_key = NYLAS_API_KEY,
     api_uri = NYLAS_API_URI,
 )
 
-executor = ThreadPoolExecutor(4)
+# calculate the number of workers to use
+workers = (multiprocessing.cpu_count() * 2) + 1
+print("Number of workers: ", workers)
+executor = ThreadPoolExecutor(max_workers=workers)
 
 processes = {}
 
@@ -96,24 +101,35 @@ def mysql_insert_ignore(insert, compiler, **kw):
 @user_approved_required
 def url():
     if request.method == 'POST':
-        location = request.form['location']
-        business = request.form['business']
+        locations = request.form['location'].split('|')
+        businesses = request.form['business'].split('|')
+        latitude = request.form['latitude']
+        longitude = request.form['longitude']
 
+        product_url = ""
         base_url = 'https://www.yelp.com/search?'
-        encoded_business = urllib.parse.quote(business)
-        encoded_location = urllib.parse.quote(location)
+        urls = []
+        for location in locations:
+            for business in businesses:
+                encoded_business = urllib.parse.quote(business)
+                encoded_location = urllib.parse.quote(location)
 
-        encoded_url = f"find_desc={encoded_business}&find_loc={encoded_location}"
-        url = base_url + encoded_url
-
-        existing_url = Yelpurl.query.filter_by(product_url=url, userid=current_user.id).first()
-        if existing_url is None:
-            new_url = Yelpurl(product_url=url, userid=current_user.id, state="idle", name=business)
-            db.session.add(new_url)
-            db.session.commit()
+                encoded_url = f"find_desc={encoded_business}&find_loc={encoded_location}"
+                url = base_url + encoded_url
+                urls.append(url)
             
-            existing_url = Yelpurl.query.filter_by(product_url=url, userid=current_user.id).first()
-            url_id = existing_url.id
+        product_url = ",".join(urls)
+
+        existing_url = Yelpurl.query.filter_by(product_url=product_url, userid=current_user.id).first()
+        if existing_url is None:
+            business_name = ",".join(businesses)
+            new_url = Yelpurl(product_url=product_url, userid=current_user.id, state="idle", name=business_name)
+            new_url.latitude = latitude
+            new_url.longitude = longitude
+            db.session.add(new_url)
+            db.session.flush()
+            url_id = new_url.id
+            db.session.commit()
             
             return redirect(url_for('home_blueprint.fetch', id=url_id))
             
@@ -130,7 +146,30 @@ def url():
             return render_template('home/view_urls.html', segment='history', message=message )
         
     else:
-        return render_template('home/add_url.html', segment='url')
+        current_user_id = current_user.id
+        user = Users.query.get(current_user_id)
+
+        if user.is_multi_search == 1:
+            return render_template('home/add_multi_url.html', segment='url')
+        else:
+            return render_template('home/add_url.html', segment='url')
+        
+
+# Add multiple urls
+# @blueprint.route('/add_multi_url', methods=['POST'])
+# @login_required
+# @user_approved_required
+# def add_multi_url():
+
+#     location = request.form['location']
+#     business = request.form['business']
+#     latitude = request.form['latitude']
+#     longitude = request.form['longitude']
+    
+#     print(request.form)
+            
+#     return {"success": True, "message": "Urls added successfully."}
+        
 
 # Export all data to excel file and download
 @blueprint.route('/export_all_data', methods=['GET'])
@@ -145,7 +184,11 @@ def export_all_data():
         url_id = service.url_id
         address = service.address
 
-        city, state = extract_address(address)
+        city = service.city
+        state = service.state
+
+        if city is None or state is None:
+            city, state = extract_address(address)
 
         data = {
             'venue' : service.name,
@@ -169,7 +212,7 @@ def export_all_data():
             'firstname6' : service.first_name6,
             'facebook' : service.facebook,
             'customtext' : "",
-            'originalemail' : "",
+            'notes' : "",
             'bademail' : service.bademail
         }
 
@@ -229,7 +272,12 @@ def view_url_history(url_id):
     user_urls = Service.query.filter_by(url_id=url_id, user_id=current_user.id).all()
     url_list = []
     for url_entry in user_urls:
-        city, state = extract_address(url_entry.address)
+        city = url_entry.city
+        state = url_entry.state
+        
+        if city is None or state is None:
+            city, state = extract_address(url_entry.address)
+
         url_data = {
             "id": url_entry.id,
             "venue_type": url_entry.venue_type,
@@ -239,7 +287,12 @@ def view_url_history(url_id):
             "url_id": url_entry.url_id,
             "user_id": url_entry.user_id,
             "city": city,
-            "state": state
+            "state": state,
+            "zip": url_entry.zip,
+            "country": url_entry.country,
+            "latitude": url_entry.latitude,
+            "longitude": url_entry.longitude,
+            "thumnailurl": url_entry.thumnailurl
         }
 
         if current_user.role != "lite":
@@ -424,10 +477,7 @@ def fetch(id):
         urls = obj.product_url.split(',')
         
         #delete all sevices in db before run
-        services = Service.query.filter_by(url_id=id).all()
-        if len(services):
-            for service in services:
-                db.session.delete(service)
+        Service.query.filter_by(url_id=id).delete()
         db.session.commit()
         # run scraper
         try:
@@ -453,6 +503,7 @@ def complete_process():
 def fetching():
     id = request.args.get('id')
     yelpurl = Yelpurl.query.get(id)
+    print(yelpurl)
     
     if yelpurl.state == "running":
         if current_user.role == "lite":
@@ -506,7 +557,7 @@ def upload_contact():
         else:
             return {"success": False, "message": "File type not supported."}
 
-        columns  = ['venue', 'type', 'website', 'phone', 'address', 'facebook', 'customtext', 'originalemail']
+        columns  = ['venue', 'type', 'website', 'phone', 'address', 'facebook', 'customtext', 'notes']
         if 'firstname' in df.columns and 'email' in df.columns:
             columns += ['firstname']
             columns += ['email']
@@ -534,7 +585,7 @@ def upload_contact():
             address = item['address']
             facebook = item['facebook']
             customtext = item['customtext']
-            originalemail = item['originalemail']
+            originalemail = item['notes']
 
             if 'subscribed' in df.columns:
                 is_unsubscribed = 1 if item['subscribed'] == "Unsubscribed" else 0
@@ -555,7 +606,7 @@ def upload_contact():
                     service.firstname = item['firstname']
                     service.is_unsubscribed = is_unsubscribed
                     services.append(service)
-                    services.append(service)
+                    # services.append(service)
             
             else:
                 email1 = item['email1'].strip() if item.get('email1') else ""
@@ -622,37 +673,87 @@ def view_all_contact():
     return render_template('home/view_all_contact.html')
         
         
-@blueprint.route('/contacts/list/<int:id>', methods=['GET'])
+@blueprint.route('/contacts/list/<int:id>', methods=['GET', 'POST'])
 @login_required
 @user_approved_required
 def contacts_list(id):
-    services = Uploadedservice.query.filter_by(user_id=current_user.id, file_id=id).order_by(Uploadedservice.create_datetime.desc()).all()
-    all_services = []
+    if request.method == 'GET':
+        services = Uploadedservice.query.filter_by(user_id=current_user.id, file_id=id).order_by(Uploadedservice.create_datetime.desc()).all()
+        all_services = []
 
-    for service in services:
-        city, state = extract_address(service.address)
-        data = {
-            'id': service.id,
-            'name': service.name,
-            'venue_type': service.venue_type,
-            'email': service.email,
-            'is_bad' : service.is_bad,
-            'create_datetime' : service.create_datetime,
-            'is_unsubscribed' : service.is_unsubscribed,
-            'unsubscribe_token' : service.unsubscribe_token,
-            'website': service.website,
-            'phone': service.phone,
-            'address': service.address,
-            'facebook': service.facebook,
-            'firstname': service.firstname,
-            'customtext': service.customtext,
-            'originalemail': service.originalemail,
-            'city': city,
-            'state': state
-        }
-        all_services.append(data)
+        for service in services:
+            city, state = extract_address(service.address)
+            data = {
+                'id': service.id,
+                'name': service.name,
+                'venue_type': service.venue_type,
+                'email': service.email,
+                'is_bad' : service.is_bad,
+                'create_datetime' : service.create_datetime,
+                'is_unsubscribed' : service.is_unsubscribed,
+                'unsubscribe_token' : service.unsubscribe_token,
+                'website': service.website,
+                'phone': service.phone,
+                'address': service.address,
+                'facebook': service.facebook,
+                'firstname': service.firstname,
+                'customtext': service.customtext,
+                'originalemail': service.originalemail,
+                'city': city,
+                'state': state
+            }
+            all_services.append(data)
 
-    return jsonify(all_services)
+        return jsonify(all_services)
+    else:
+        data = request.json
+        print(data)
+        return jsonify(data)
+
+
+@blueprint.route('/service/<int:id>', methods=['GET'])
+@login_required
+@user_approved_required
+def get_service(id):
+    service = Uploadedservice.query.get(id)
+    city, state = extract_address(service.address)
+    data = {
+        'id': service.id,
+        'name': service.name,
+        'venue': service.venue_type,
+        'email': service.email,
+        'is_bad' : service.is_bad,
+        'create_datetime' : service.create_datetime,
+        'is_unsubscribed' : service.is_unsubscribed,
+        'unsubscribe_token' : service.unsubscribe_token,
+        'website': service.website,
+        'phone': service.phone,
+        'address': service.address,
+        'facebook': service.facebook,
+        'firstname': service.firstname,
+        'customtext': service.customtext,
+        'originalemail': service.originalemail,
+        'city': city,
+        'state': state
+    }
+    return jsonify(data)
+
+# Edit service
+@blueprint.route('/service/edit', methods=['POST'])
+@login_required
+@user_approved_required
+def service_edit():
+    data = request.json
+    service = Uploadedservice.query.get(data['serviceid'])
+    service.name = data['venue']
+    service.email = data['email']
+    service.firstname = data['firstname']
+    service.customtext = data['customtext']
+    service.originalemail = data['originalemail']
+    service.phone = data['phone']
+    db.session.commit()
+    return {"success": True, 'message': "Service updated successfully."}
+
 
 @blueprint.route('/contacts/all', methods=['GET'])
 @login_required
@@ -746,6 +847,18 @@ def profile():
     else:
         credit = None
     return render_template('home/profile.html', segment='profile', user_credit=credit)
+
+
+@blueprint.route('/how-to')
+@login_required
+def how_to():
+    return render_template('home/how_to.html', segment='how-to')
+
+
+@blueprint.route('/how-to-edit')
+@login_required
+def how_to_edit():
+    return render_template('home/how_to_edit.html', segment='how_to_edit')
 
 
 @blueprint.route('/process_stop/<int:id>')
@@ -2410,12 +2523,24 @@ def get_users_campaign_settings():
         user_data = {
             'id': user[0].id,
             'email': user[0].email,
+            'is_multisearch': user[0].is_multi_search,
             'update_datetime': user[1].update_datetime,
             'emails_daily_limit': user[1].emails_daily_limit,
         }
         user_list.append(user_data)
 
     return jsonify(user_list)
+
+@blueprint.route('/admin/enable_multisearch', methods=['POST'])
+@login_required
+@role_required('admin')
+def enable_multisearch():
+    userid = request.json['user_id']
+    is_multisearch = 1 if request.json['is_multisearch'] else 0
+    user = Users.query.filter_by(id=userid).first()
+    user.is_multi_search = is_multisearch
+    db.session.commit()
+    return {"success": True, "message": "Multi search enabled."}
 
 @blueprint.route('/admin/update/campaign_settings', methods=['POST'])
 @login_required 
@@ -2482,8 +2607,6 @@ def authorized():
                 time.sleep(5)
                 continue
 
-
-
         grant_id = exchange.grant_id
 
         user = Users.query.filter_by(id=current_user.id).first()
@@ -2496,3 +2619,37 @@ def authorized():
     
     else:
         return redirect(url_for('home_blueprint.index'))
+
+
+@blueprint.route('/get_howto_text', methods=['GET'])
+@login_required
+def get_howto_text():
+
+    howto_text = HowToFAQ.query.first()
+    if howto_text is None:
+        howto_text = HowToFAQ()
+        howto_text.text = ""
+        db.session.add(howto_text)
+        db.session.commit()
+    else:
+        howto_text = HowToFAQ.query.first()
+
+        return jsonify({"text": howto_text.content, "id": howto_text.id})
+
+
+@blueprint.route('/update_howto_text', methods=['POST'])
+@login_required
+@role_required('admin')
+def update_howto_text():
+    text = request.json.get('text')
+    id = request.json.get('id')
+    howto_text = HowToFAQ.query.filter_by(id=id).first()
+    try:
+        if howto_text:
+            howto_text.content = text
+            db.session.commit()
+
+        return jsonify({"success": True, "message": "Updated successfully."})
+    except Exception as e:
+        print(repr(e))
+        return jsonify({"success": False, "message": repr(e)})

@@ -24,6 +24,7 @@
                     <thead>
                     <tr>
                         <th>Email</th>
+                        <th>Enable Multisearch</th>
                         <th>Emails Daily Limit</th>
                         <th>Last Updated On</th>
                         <th>Action</th>
@@ -96,7 +97,7 @@
                 order : [],
                 columnDefs: [
                 {
-                    target: 2,
+                    target: 3,
                     render: DataTable.render.datetime()
                 }],
                 ajax: {
@@ -104,8 +105,18 @@
                     dataSrc: ''
                 },
                 columns: [
-                    //{#{data: 'id'},#}
                     {data: 'email'},
+                    {
+                        data: 'is_multisearch',
+                        render : function (is_mu, type, row) {
+                            var checked = is_mu ? 'checked' : '';
+                            var label = is_mu ? '<span class="badge bg-gradient-success">Enabled</span>' : '<span class="badge bg-gradient-secondary">Disabled</span>';
+                            var state = '<div class="form-check form-switch">' + 
+                                            '<input class="form-check-input" type="checkbox" id="flexSwitchCheckDefault' + row.id +'" ' + checked + ' >' + label +
+                                        '</div>';
+                            return state
+                        }
+                    },
                     {data: 'emails_daily_limit'},
                     {data: 'update_datetime'},
                     {   
@@ -132,6 +143,64 @@
                 console.log(event.target.innerText)
             }
         });
+        
+        $('#filtersTable').on('click', 'input', event => {
+            const id = event.target.id;
+            const user_id = id.replace('flexSwitchCheckDefault', '');
+            const url = "/admin/enable_multisearch" 
+            
+            Swal.fire({
+                title: 'Updating...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
+            // Fetch action data
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({user_id: user_id, is_multisearch: event.target.checked})
+
+            }).then(response => {
+                    if(!response.ok)
+                        return response.text().then(text => { throw new Error(text) })
+                    else
+                        return response.text()
+                })
+                .then(data => {
+                    //handle data
+                    // console.log(data)
+                    // dataTable.ajax.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Updated',
+                        text: 'Updated successfully',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    event.target.parentElement.querySelector('span').innerText = event.target.checked ? 'Enabled' : 'Disabled';
+                    event.target.parentElement.querySelector('span').className = event.target.checked ? 'badge bg-gradient-success' : 'badge bg-gradient-secondary';
+                })
+                .catch(error => {
+                    //handle error
+                    console.log(error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: error,
+                    });
+                    // set the switch back to the original state
+                    event.target.checked = !event.target.checked;
+                    event.target.parentElement.querySelector('span').innerText = event.target.checked ? 'Enabled' : 'Disabled';
+                    event.target.parentElement.querySelector('span').className = event.target.checked ? 'badge bg-gradient-success' : 'badge bg-gradient-secondary';
+
+                });
+
+        });
+
 
     });
 </script>

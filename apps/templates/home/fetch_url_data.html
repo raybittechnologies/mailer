@@ -71,6 +71,8 @@
                     </tbody>
                 </table>
             </div>
+            <!-- Add Google map, disable scroll on the map  -->
+            <div id="map" style="height: 400px; width: 100%; padding-top: 20px;"></div>
         </div>
 
         {% include "includes/footer.html" %}
@@ -90,6 +92,7 @@
     {#    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>#}
     {#    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>#}
     {#    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>#}
+    <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA1gJVpuNrhHJXNYmm_zikTZgmADxo1mDY&loading=async&libraries=places,maps,marker&v=beta" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
@@ -98,12 +101,6 @@
             'We will email when your results are ready to be downloaded! Please allow up to 10min for every 240 records. Feel free to navigate away from this page',
             'success'
         );
-        $(document).ready(function () {
-            // Initialize DataTable
-            //$('#filtersTable').DataTable(
-                //{responsive: true},
-            //);
-        });
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script>
@@ -113,6 +110,24 @@
         var paraElement = document.getElementById("para");
         var btnView = document.getElementById("btnview");
         var btnStop = document.getElementById("btnstop");
+        let map;
+        
+        async function initmap() {
+            center_lat = '{{ current_url.latitude }}' ? parseFloat('{{ current_url.latitude }}') : 37.7749;
+            center_lng = '{{ current_url.longitude }}' ? parseFloat('{{ current_url.longitude }}') : -122.4194;
+
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 10,
+                center: {lat: center_lat, lng: center_lng},
+                mapId: "yelp_search_map_id",
+            });
+
+            // Prevent page scroll when interacting with the map
+            map.getDiv().addEventListener('wheel', function(event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }, { passive: false });
+        }
       
         var dataTable = $('#filtersTable').DataTable({
             responsive: true,
@@ -147,42 +162,105 @@
                 },
                 {data: 'bademail', defaultContent : ""},
             ]
-        }
-    );
-        
-    var interval = setInterval(function () {
-        fetch('/check_state',{
-            method: 'POST',
-            headers : { 'Content-Type': 'application/json' },
-            body: JSON.stringify({id : '{{ current_url.id }}' }),
-        })
-        .then((response) => {
-            if (!response.ok) {
-              throw new Error('Network response was not ok');
-            }
-            return response.text(); // Extract the response body as text
-        })
-        .then((res) => {
-            running_status = res;
-            console.log(running_status)
-
-            if (running_status == "completed") {
-                btnstop_ = document.getElementById("btnstop");
-                loaderImage.style.display = "none";
-                btnStop.style.display = "none";
-                btnView.style.display = "block";
-                
-                paraElement.textContent = "Process Completed";
-                alarm.play()
-                clearInterval(interval);
-            }
-        })
-        .catch((err) => {
-            console.log(err)
         });
-        dataTable.ajax.reload();
-    }, 2000);
-    
+        
+        var interval = setInterval(function () {
+            fetch('/check_state',{
+                method: 'POST',
+                headers : { 'Content-Type': 'application/json' },
+                body: JSON.stringify({id : '{{ current_url.id }}' }),
+            })
+            .then((response) => {
+                if (!response.ok) {
+                throw new Error('Network response was not ok');
+                }
+                return response.text(); // Extract the response body as text
+            })
+            .then((res) => {
+                running_status = res;
+                console.log(running_status)
 
+                if (running_status == "completed") {
+                    btnstop_ = document.getElementById("btnstop");
+                    
+                    paraElement.textContent = "Process Completed";
+                    alarm.play()
+                    clearInterval(interval);
+
+                    if (loaderImage){
+                        loaderImage.style.display = "none";
+                    }
+                    if (btnStop){
+                        btnStop.style.display = "none";
+                    }
+                    if (btnView){
+                        btnView.style.display = "block";
+                    }
+                }
+                updatemap();
+            })
+            .catch((err) => {
+                console.log(err)
+            });
+            dataTable.ajax.reload();
+
+        }, 3000);
+
+        let markers = []; // Array to store marker references
+
+        async function updatemap() {
+            // Create a map centered at the first location
+            const { Map, InfoWindow } = await google.maps.importLibrary("maps");
+            const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary(
+                "marker",
+            );
+            
+            const infoWindow = new InfoWindow();
+            
+            //Get table data
+            var table = $('#filtersTable').DataTable();
+            var locations = table.rows().data();
+
+            // clear all markers
+            markers.forEach((marker) => {
+                marker.setMap(null);
+            });
+            markers = [];
+            
+            // Add markers to the map
+            locations.each(function (location, index) {
+                
+                const pin = new PinElement({
+                    glyph: `${index + 1}`,
+                    // scale: 1.5,
+                });
+                // console.log(location)
+                const marker = new google.maps.marker.AdvancedMarkerElement({
+                    map,
+                    position: {lat: parseFloat(location.latitude), lng: parseFloat(location.longitude)},
+                    title: location.venue,
+                    content: pin.element,
+                    gmpClickable: true,
+                });
+
+                markers.push(marker);
+
+                marker.addListener("click", ({ domEvent, latLng }) => {
+                    const { target } = domEvent;
+                    infoWindow.close();
+                    // create html with thumbnail and title
+                    const content = '<img src="' + location.thumnailurl + '" style="width:150px;height:150px;"><br>' + '<p>' + location.venue + '</p>';
+                    infoWindow.setContent(content);
+                    // infoWindow.setContent(marker.title);
+                    infoWindow.open(marker.map, marker);
+                });
+            });
+
+        }
+
+        window.onload = function () {
+            initmap();
+        };
+    
     </script>
 {% endblock javascripts %}

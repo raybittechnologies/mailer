@@ -134,6 +134,13 @@ def msg1():
                     url_id=data['url_id'],
                     user_id=data['user_id'],
                     biz_id=data['bizId'],
+                    city=data['city'],
+                    state=data['state'],
+                    zip=data['zip'],
+                    country=data['country'],
+                    latitude=data['latitude'],
+                    longitude=data['longitude'],
+                    thumnailurl=data['thumnailurl']
                 )
 
                 for idx, email in enumerate([data['Email1'], data['Email2'], data['Email3'], data['Email4'], data['FacebookEmail1'], data['FacebookEmail2']]):

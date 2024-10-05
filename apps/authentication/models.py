@@ -28,6 +28,7 @@ class Users(db.Model, UserMixin):
     api_token_ts  = db.Column(db.Integer)   
     state         = db.Column(db.String(10)) # pending, approved
     password_reset_token = db.Column(db.String(128)) 
+    is_multi_search = db.Column(db.Integer, default=0) # 1: multi search, 0: single search
     
     def __init__(self, **kwargs):
         for property, value in kwargs.items():

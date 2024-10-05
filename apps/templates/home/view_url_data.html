@@ -11,7 +11,6 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.3.2/css/fixedHeader.bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
-
 {% endblock stylesheets %}
 
 {% block content %}
@@ -45,7 +44,7 @@
                         <th>firstname6</th>
                         <th>facebook</th>
                         <th>customtext</th>
-                        <th>originalemail</th>
+                        <th>notes</th>
                         <th>bademail</th>
                     </tr>
                     </thead>
@@ -54,6 +53,12 @@
                     </tbody>
                 </table>
             </div>
+            <!-- if current_url latitude or longitude is not null , add map  else hide -->
+            {% if current_url.latitude and current_url.longitude %}
+                <div id="map" style="height: 400px; width: 100%; padding-top: 20px;"></div>
+            {% else %}
+                <div id="map" style="height: 0px; width: 0px; padding-top: 0px;"></div>
+            {% endif %}
 
 
         </div>
@@ -80,9 +85,76 @@
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.colVis.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA1gJVpuNrhHJXNYmm_zikTZgmADxo1mDY&loading=async&libraries=places,maps,marker&v=beta"></script>
 
 
     <script>
+        let map;
+        const mapContainer = document.getElementById('map');
+        async function initmap() {
+            center_lat = '{{ current_url.latitude }}' ? parseFloat('{{ current_url.latitude }}') : 37.7749;
+            center_lng = '{{ current_url.longitude }}' ? parseFloat('{{ current_url.longitude }}') : -122.4194;
+
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 8,
+                center: {lat: center_lat, lng: center_lng},
+                mapId: "dawefaef2342342",
+            });
+            
+            // Prevent page scroll when interacting with the map
+            map.getDiv().addEventListener('wheel', function(event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }, { passive: false });
+        }
+        
+        async function updatemap() {
+            // Create a map centered at the first location
+            const { Map, InfoWindow } = await google.maps.importLibrary("maps");
+            const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary(
+                "marker",
+            );
+            
+            const infoWindow = new InfoWindow();
+            
+            //Get table data
+            var table = $('#filtersTable').DataTable();
+            var locations = table.rows().data();
+
+            // Add markers to the map
+            locations.each(function (location, index) {
+                
+                const pin = new PinElement({
+                    glyph: `${index + 1}`,
+                    // scale: 1.5,
+                });
+                // console.log(location);
+                // if location is missing latitude or longitude, skip it
+                if (!location.latitude || !location.longitude) {
+                    return;
+                }
+                const marker = new google.maps.marker.AdvancedMarkerElement({
+                    map,
+                    position: {lat: parseFloat(location.latitude), lng: parseFloat(location.longitude)},
+                    title: location.venue,
+                    content: pin.element,
+                    gmpClickable: true,
+                });
+
+                marker.addListener("click", ({ domEvent, latLng }) => {
+                    const { target } = domEvent;
+                    infoWindow.close();
+                    // create html with thumbnail and title
+                    const content = '<img src="' + location.thumnailurl + '" style="width:150px;height:150px;"><br>' + '<p>' + location.venue + '</p>';
+                    infoWindow.setContent(content);
+                    // size of info window
+                    infoWindow.setOptions({ maxWidth: 200 });
+                    infoWindow.open(marker.map, marker);
+                });
+            });
+
+        }
+
         $(document).ready(function () {
             // Initialize DataTable
             $('#filtersTable').DataTable({
@@ -188,6 +260,20 @@
             );
             $('#filtersTable').DataTable().buttons().container()
                 .appendTo('#example_wrapper .col-md-6:eq(0)');
+
+            // Initialize the map if yelpurl has latitude and longitude
+            // Update the map with markers after table data is loaded
+            $('#filtersTable').on('draw.dt', function () {
+                updatemap();
+            });
+
+            window.onload = function () {
+                if ('{{ current_url.latitude }}' && '{{ current_url.longitude }}') {
+                    initmap();
+                }
+            };
+            
+
         });
     </script>
 {% endblock javascripts %}

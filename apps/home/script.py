@@ -103,10 +103,69 @@ def yelp_scraper_run(url, user_id, id):
                     else:
                         website = ""
                         
-                    address = ""
-                    for location in response_json['searchPageProps']['rightRailProps']['searchMapProps']['hovercardData'].values():
-                        if bizId == location['bizId']:
-                            address = " ".join(location['addressLines'])
+                    full_address = ""
+                    try:
+                        for location in response_json['searchPageProps']['rightRailProps']['searchMapProps']['hovercardData'].values():
+                            if bizId == location['bizId']:
+                                full_address = " ".join(location['addressLines'])
+                    except:
+                        pass
+
+                    latitude = ""
+                    longitude = ""
+                    try:
+                        for location in response_json['searchPageProps']['rightRailProps']['searchMapProps']['mapState']['markers']:
+                            if "resourceId" in location and bizId == location['resourceId']:
+                                try:
+                                    latitude = location['location']['latitude']
+                                    longitude = location['location']['longitude']
+                                except:
+                                    pass
+
+                                break
+                    except:
+                        pass
+                    
+                    city = ""
+                    state = ""
+                    zip = ""
+                    country = ""
+                    thumbnail_url = ""
+
+                    # 3714 Main St Houston, TX 77002
+                    try:
+                        for location in response_json['searchPageProps']['photoMetadata']:
+                            if "businessEncid" in location and bizId == location['businessEncid']:
+                                try:
+                                    address = location['uploadedLocation']['address']
+                                except:
+                                    pass
+                                try:
+                                    city = location['uploadedLocation']['city']
+                                except:
+                                    pass
+                                try:
+                                    state = location['uploadedLocation']['state']
+                                except:
+                                    pass
+                                try:
+                                    zip = location['uploadedLocation']['zip']
+                                except:
+                                    pass
+                                try:
+                                    country = location['uploadedLocation']['country']
+                                except:
+                                    pass
+                                try:
+                                    thumbnail_url = location['thumbnailUrl']
+                                except:
+                                    pass
+                                break
+                    except:
+                        pass
+                    
+                    if not full_address:
+                        full_address = f"{address}, {city}, {state} {zip} {country}"
                     
                     data = dict()
                     data['url'] = url,
@@ -114,7 +173,7 @@ def yelp_scraper_run(url, user_id, id):
                     data['venuetype'] = venue_type,
                     data['website'] = website
                     data['Phone'] = phone
-                    data['address'] = address
+                    data['address'] = full_address
                     data['facebook'] = ""
                     data['instagram'] = ""
                     data['twitter'] = ""
@@ -127,7 +186,13 @@ def yelp_scraper_run(url, user_id, id):
                     data['url_id'] = id
                     data['user_id'] = user_id
                     data['bizId'] = bizId
-                    
+                    data['city'] = city
+                    data['state'] = state
+                    data['zip'] = zip
+                    data['country'] = country
+                    data['latitude'] = latitude
+                    data['longitude'] = longitude
+                    data['thumnailurl'] = thumbnail_url
                     search_data.append(data)
                     
             if len(search_data) == 0:

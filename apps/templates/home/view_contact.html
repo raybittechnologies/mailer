@@ -24,7 +24,7 @@
                             <th>email</th>
                             <th>firstname</th>
                             <th>customtext</th>
-                            <th>originalemail</th>
+                            <th>notes</th>
                             <th>type</th>
                             <th>phone</th>
                             <th>address</th>
@@ -65,13 +65,56 @@
             </div>
         </div>
 
+        <!-- creat edit venue , email, firstname, customtext, originalemail, type, phone, address, city, state, website, facebook, subscribed in 2 columns input-->
+        
+        <div class="modal fade" id="editServiceModal" data-bs-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="editServiceModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="editServiceModalLabel">Edit Service</h5>
+                  <button type="button" class="btn-close text-dark" id="close-editjob-modal" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <form action="/service/edit" style="display: contents" method="post"> 
+                    <input type="hidden" name="jobid" id="edit-modal-serviceid"/>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="venue">Venue</label>
+                            <input type="text" class="form-control" id="edit-modal-venue" name="venue" required>
+
+                            <label for="email">Email</label>
+                            <input type="email" class="form-control" id="edit-modal-email" name="email" required>
+
+                            <label for="phone">Phone</label>
+                            <input type="text" class="form-control" id="edit-modal-phone" name="phone" required>
+
+                            <label for="firstname">Firstname</label>
+                            <input type="text" class="form-control" id="edit-modal-firstname" name="firstname" >
+
+                            <label for="customtext">Custom Text</label>
+                            <input type="text" class="form-control" id="edit-modal-customtext" name="customtext" >
+
+                            <label for="originalemail">Notes</label>
+                            <input type="text" class="form-control" id="edit-modal-originalemail" name="originalemail">
+
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <input class="btn btn-primary" type="submit" value="Save">
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+                      
     </div>
 
 {% endblock content %}
 
 <!-- Specific JS goes HERE -->
 {% block javascripts %}
-<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.js"></script>
 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap.min.js"></script>
 <script src="https://cdn.datatables.net/fixedheader/3.3.2/js/dataTables.fixedHeader.min.js"></script>
@@ -166,7 +209,7 @@
                         data: 'id', // Assuming the id property is present in your data
                         render: function (id, type, row) {
                             // Create action buttons HTML
-                            var buttons = 
+                            var buttons = '<button class="btn btn-primary btn-sm" id="' + id + '" data-bs-toggle="modal" data-bs-target="#editServiceModal" >Edit</button> ' +
                                 '<button class="btn btn-danger btn-sm" id="' + id + '" data-bs-toggle="modal" data-bs-target="#deleteServiceModal" >Delete</button>';
                             return buttons;
                         }
@@ -181,8 +224,32 @@
             const id = event.target.id;
             if (event.target.innerText === "DELETE") {
                 document.getElementById("delete-modal-serviceid").value = id;
+            } else if (event.target.innerText === "EDIT") {
+                fetch('/service/' + id, {
+                    method: 'GET',
+                }).then(response => {
+                        if(!response.ok)
+                            return response.text().then(text => { throw new Error(text) })
+                        else
+                            return response.json()
+                    })
+                    .then(data => {
+                        //handle data
+                        // console.log(data)
+                        document.getElementById("edit-modal-serviceid").value = data.id;
+                        document.getElementById("edit-modal-venue").value = data.name;
+                        document.getElementById("edit-modal-email").value = data.email;
+                        document.getElementById("edit-modal-firstname").value = data.firstname;
+                        document.getElementById("edit-modal-customtext").value = data.customtext;
+                        document.getElementById("edit-modal-originalemail").value = data.originalemail;
+                        document.getElementById("edit-modal-phone").value = data.phone;
+                    })
+                    .catch(error => {
+                        //handle error
+                        console.log(error);
+                    });
             } else {
-                console.log(event.target.innerText)
+                console.log("Unknown action");
             }
         });
 
@@ -235,6 +302,75 @@
                 method: 'POST',
                 headers : { 'Content-Type': 'application/json' },
                 body: JSON.stringify({"serviceid" : serviceid}),
+            })
+            .then((response) => {
+                if(!response.ok)
+                    return response.text().then(text => { throw new Error(text) })
+                else
+                    return response.json()
+            })
+            .then((data) => {
+                if (data.success) {
+                    // console.log(data);
+                    dataTable.ajax.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: data.message,
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                } else {
+                    console.log(data.message);
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Oops...",
+                        text: data.message,
+                    });
+                }
+            })
+            .catch((err) => {
+                console.log(err);
+                Swal.fire({
+                    icon: "warning",
+                    title: "Oops...",
+                    text: data.message,
+                });
+            })
+        });
+
+        // submit edit form
+        $('#editServiceModal').on('submit', function(e) { //use on if jQuery 1.7+
+            e.preventDefault();  //prevent form from submitting
+            const serviceid = document.getElementById("edit-modal-serviceid").value;
+            const venue = document.getElementById("edit-modal-venue").value;
+            const email = document.getElementById("edit-modal-email").value;
+            const firstname = document.getElementById("edit-modal-firstname").value;
+            const customtext = document.getElementById("edit-modal-customtext").value;
+            const originalemail = document.getElementById("edit-modal-originalemail").value;
+            const phone = document.getElementById("edit-modal-phone").value;
+
+            $('#close-editjob-modal').click();
+
+            Swal.fire({
+                title: 'Updating...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
+
+            fetch('/service/edit',{
+                method: 'POST',
+                headers : { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    "serviceid" : serviceid,
+                    "venue" : venue,
+                    "email" : email,
+                    "firstname" : firstname,
+                    "customtext" : customtext,
+                    "originalemail" : originalemail,
+                    "phone" : phone
+                }),
             })
             .then((response) => {
                 if(!response.ok)
