@@ -131,6 +131,7 @@ def yelp_scraper_run(url, user_id, id):
                     zip = ""
                     country = ""
                     thumbnail_url = ""
+                    address = ""
 
                     # 3714 Main St Houston, TX 77002
                     try:

@@ -234,6 +234,11 @@
                     glyph: `${index + 1}`,
                     // scale: 1.5,
                 });
+                
+                if (!location.latitude || !location.longitude || location.latitude == "" || location.longitude == "") {
+                    return;
+                }
+
                 // console.log(location)
                 const marker = new google.maps.marker.AdvancedMarkerElement({
                     map,

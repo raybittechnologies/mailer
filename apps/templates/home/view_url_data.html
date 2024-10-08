@@ -129,10 +129,11 @@
                     // scale: 1.5,
                 });
                 // console.log(location);
-                // if location is missing latitude or longitude, skip it
-                if (!location.latitude || !location.longitude) {
+                // if location is missing latitude or longitude, skip it or location.latitude is "" or location.longitude is ""
+                if (!location.latitude || !location.longitude || location.latitude == "" || location.longitude == "") {
                     return;
                 }
+
                 const marker = new google.maps.marker.AdvancedMarkerElement({
                     map,
                     position: {lat: parseFloat(location.latitude), lng: parseFloat(location.longitude)},
