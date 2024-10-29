@@ -2841,24 +2841,19 @@ def update_howto_text():
 def reg_push_notify():
     subscription_info = request.get_json()
     user_id = subscription_info.get('user_id')
-    push_notification = PushNotificationInfo.query.filter_by(userid=user_id).first()
-    if push_notification:
-        if subscription_info['endpoint'] == push_notification.subscription_info['endpoint']:
+    push_notifications = PushNotificationInfo.query.filter_by(userid=user_id).all()
+    for push_notification in push_notifications:
+        if subscription_info['keys']['auth'] == push_notification.subscription_info['keys']['auth']:
             print(f"User {user_id} already subscribed")
             return jsonify({"success": True}), 200
-        else: # Create new subscription
-            push_notification = PushNotificationInfo()
-            push_notification.userid = user_id
-            push_notification.subscription_info = subscription_info
-            db.session.add(push_notification)
-    else:
-        push_notification = PushNotificationInfo()
-        push_notification.userid = user_id
-        push_notification.subscription_info = subscription_info
-        db.session.add(push_notification)
 
+    push_notification = PushNotificationInfo()
+    push_notification.userid = user_id
+    push_notification.subscription_info = subscription_info
+    db.session.add(push_notification)
     print(f"User {user_id} subscribed")
     db.session.commit()
+
     return jsonify({"success": True}), 200
 
 
