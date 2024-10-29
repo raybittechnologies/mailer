@@ -75,8 +75,8 @@ class Config(object):
         # This will create a file in <app> FOLDER
         SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'db.sqlite3')
         
-    SENDER_MAIL = os.environ.get('SENDER_MAIL')
-    MAILTRAP_API_KEY = os.environ.get('MAILTRAP_API_KEY')
+    SENDER_MAIL = os.getenv('SENDER_MAIL')
+    MAILTRAP_API_KEY = os.getenv('MAILTRAP_API_KEY')
     MAILTRAP_TEMP_UUID = os.getenv("MAILTRAP_TEMP_UUID")
     
     # MAIL_SERVER = os.getenv("MAIL_SERVER")
@@ -86,8 +86,8 @@ class Config(object):
     # MAIL_USE_TLS = True
     # MAIL_USE_SSL = False
     
-    NYLAS_CLIENT_ID = os.environ.get('NYLAS_CLIENT_ID')
-    NYLAS_API_URI = os.environ.get('NYLAS_API_URI')
+    NYLAS_CLIENT_ID = os.getenv('NYLAS_CLIENT_ID')
+    NYLAS_API_URI = os.getenv('NYLAS_API_URI')
     
     JobStore_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'jobs.sqlite3')
     # Background Schedular settins
@@ -97,6 +97,10 @@ class Config(object):
     SCHEDULER_EXECUTORS = {"default": {"type": "threadpool", "max_workers": 5000}}
     SCHEDULER_JOB_DEFAULTS = {"coalesce": False, "max_instances": 5000}
     SCHEDULER_API_ENABLED = True
+
+    VAPID_PUBLIC_KEY = 'BJtD0PoxxpnXJe2RjT5sF2VUvrI9GMThCdEQgLi4vQit2u44pB19Y7LD8QzAzeC52L7gnaq3kl8T7ZjPczqnBqM'
+    VAPID_PRIVATE_KEY = 'nX3mBH80Ayipbpdvx8rVIK0yJgEWLeUEz0ELkaubgzY'
+    VAPID_CLAIMS = {"sub": "https://roboticbookingagent.com"}
     
 
 class ProductionConfig(Config):

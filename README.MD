@@ -21,3 +21,6 @@ flask db migrate -m "logs"
 - Fixed the issue that campaign send multi emails at a time. and not working sometimes
 - Added new columne to see available credit in admin page
 - Added monlty credit column
+
+# Create vapid
+npx web-push generate-vapid-keys

@@ -13,7 +13,7 @@ import cloudscraper
 from threading import Thread
 import queue
 import os
-from apps.home.utils import check_blacklisted
+from apps.home.utils import check_blacklisted, is_blacklisted
 
 
 #ZYTE Smart Proxy : https://app.zyte.com
@@ -89,6 +89,9 @@ def yelp_scraper_run(url, user_id, id):
                 if "bizId" in business:
                     bizId = business['bizId']
                     venue_name = business['searchResultBusiness']['name']
+
+                    if is_blacklisted(venue_name):
+                        continue
 
                     if "temp. closed" in venue_name.lower():
                         continue

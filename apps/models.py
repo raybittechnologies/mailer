@@ -9,7 +9,7 @@ from apps import db
 from sqlalchemy import create_engine, Column, Integer, String, orm
 from flask_bcrypt import generate_password_hash, check_password_hash
 from apps.authentication.util import generate_random_string, generate_unsubscribe_token
-from sqlalchemy.dialects.mysql import LONGTEXT
+from sqlalchemy.dialects.mysql import LONGTEXT, JSON
 import uuid
 '''
 Add your models below
@@ -224,3 +224,40 @@ class HowToFAQ(db.Model):
     content = db.Column(LONGTEXT)
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
     update_datetime = db.Column(db.DateTime(), onupdate=datetime.datetime.utcnow, default=datetime.datetime.utcnow)
+
+class PushNotificationInfo(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    userid = db.Column(db.Integer, index=True)
+    # push notification subscription info json
+    subscription_info = db.Column(JSON)
+    create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
+    update_datetime = db.Column(db.DateTime(), onupdate=datetime.datetime.utcnow, default=datetime.datetime.utcnow)
+
+class Reminder(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    userid = db.Column(db.Integer, index=True)  
+    job_id = db.Column(db.String(191), index=True)
+    title = db.Column(db.String(1024))
+    note = db.Column(db.Text)
+    name = db.Column(db.String(191), index=True)
+    email = db.Column(db.String(255))
+    phone = db.Column(db.String(255))
+    venue = db.Column(db.String(255))
+    note_template = db.Column(db.Text)
+    reminder_time = db.Column(db.DateTime(), index=True)
+    status = db.Column(db.String(16), default='active') # active, completed, past
+    create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
+    update_datetime = db.Column(db.DateTime(), onupdate=datetime.datetime.utcnow, default=datetime.datetime.utcnow)
+
+    #  create index for userid , email
+    __table_args__ = (
+        db.Index('reminder-idx', "userid", "email"),
+    )
+
+
+
+class GlobalSetting(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), index=True, unique=True)
+    value = db.Column(db.String(1024))
+

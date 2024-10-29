@@ -1,12 +1,17 @@
 import time
 from apps import scheduler, db
-from apps.models import Email, Automation, Action, Template, Uploadedservice, UserCredit, Service
+from apps.models import Email, Automation, Action, Template, Uploadedservice, UserCredit, Service, PushNotificationInfo, Reminder
 from apps.authentication.models import Users
-from apps.home.emailler import send_email_via_nylas, send_reconnect_email_via_mailtrap
+from apps.home.emailler import send_email_via_nylas, send_reconnect_email_via_mailtrap, send_email_via_mailtrap
 from nylas import Client
 from jinja2 import Template as JT
 import os
 from datetime import datetime, timedelta
+from apps.home.utils import send_push_notification
+import urllib.parse
+from flask import current_app, jsonify
+from sqlalchemy import func
+
 
 def email_automation_job(nylas_client, actionid, jobid, useremail):
     with scheduler.app.app_context():
@@ -23,7 +28,7 @@ def email_automation_job(nylas_client, actionid, jobid, useremail):
         jinja_temp = JT(message)
         
         emails = Email.query.filter_by(job_id=jobid, is_unsubscribed=0).all()
-        WEB_HOST_IP = os.environ.get('WEB_HOST_IP')
+        WEB_HOST_IP = os.getenv('WEB_HOST_IP')
         
         job = Automation.query.filter_by(job_id=jobid).first()
         
@@ -182,3 +187,84 @@ def job_manage_credit():
                 user_credit.credit += montly_credit
 
         db.session.commit()
+
+
+def job_push_notification_reminder(job_id, user_id):
+    print("Push notification job started", datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f"))
+    with scheduler.app.app_context():
+
+        push_infos = PushNotificationInfo.query.filter_by(userid=user_id).all()
+        for push_notify_info in push_infos:
+            sub_info = push_notify_info.subscription_info
+            reminder = Reminder.query.filter_by(job_id=job_id).first()
+
+            if reminder is None:
+                continue
+            
+            title = reminder.title
+            body = reminder.note
+            reminder_id = reminder.id
+            
+            endpoint_url = sub_info.get('endpoint')
+            parsed_url = urllib.parse.urlparse(endpoint_url)
+            origin = f"{parsed_url.scheme}://{parsed_url.netloc}"
+
+            vapid_claims = scheduler.app.config['VAPID_CLAIMS']
+            vapid_claims.update({'aud' : origin})
+            vapid_private_key = scheduler.app.config['VAPID_PRIVATE_KEY']
+            url = f"/reminders?reminder_id={reminder_id}"
+
+            send_push_notification(sub_info, title,  body, reminder_id, vapid_claims, vapid_private_key, url)
+
+
+def job_send_weekly_reminding_past_reminder_email():
+
+    with scheduler.app.app_context():
+        print("Weekly reminder job started", datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f"))
+        current_time = datetime.utcnow()
+
+        #  get all reminders whith status active and reminder_time < current_time and group by user_id
+        reminders = (
+                    Reminder.query
+                    .with_entities(Reminder.userid, func.min(Reminder.reminder_time).label('reminder_time'))
+                    .filter(Reminder.status == 'active', Reminder.reminder_time < current_time)
+                    .group_by(Reminder.userid)
+                    .all()
+                )
+
+        print("Reminders count", len(reminders))
+        for reminder in reminders:
+            user_id = reminder.userid
+            user = db.session.get(Users, user_id)
+            if user is None:
+                continue
+
+            user_email = user.email
+
+            subject = "PAST due reminders on Robotic Booking Agent"
+            fromname = "Robotic Booking Agent"
+            # "Hi,
+            #     This is a friendly reminder you have active "past due" reminders on Robotic Booking Agent that are requiring your attention.
+            #     Please login so you can view them to follow up with your hot leads. 
+            #     https://www.roboticbookingagent.com/
+            #     You're soo close to securing that gig; Don't let this fall through the cracks!
+            #     Please note: you will keep getting this reminder every week if you have any "past due" reminders. So make sure to change them to the future to prevent this reminder from being emailed to you weekly. You can also unsubscribe from these reminder emails using the link below.
+            #     Sincerely, 
+            #     Team Soundheart Music (Robotic Booking Agent)
+            #     (Unsubscribe from weekly reminder emails link) 
+            body = f"""
+                <p>Hi,</p>
+                <p>This is a friendly reminder you have active "past due" reminders on Robotic Booking Agent that are requiring your attention.</p>
+                <p>Please login so you can view them to follow up with your hot leads.</p>
+                <p><a href="https://www.roboticbookingagent.com/reminders">https://www.roboticbookingagent.com/</a></p>
+                <p>You're soo close to securing that gig; Don't let this fall through the cracks!</p>
+                <p>Please note: you will keep getting this reminder every week if you have any "past due" reminders. So make sure to change them to the future to prevent this reminder from being emailed to you weekly. You can also unsubscribe from these reminder emails using the link below.</p>
+                <p>Sincerely,</p>
+                <p>Team Soundheart Music (Robotic Booking Agent)</p>
+            """
+            receiver = user_email
+            response = send_email_via_mailtrap(subject, fromname, body, receiver)
+
+
+
+

@@ -88,6 +88,35 @@ else:
         print("Failed to create job", str(e))
 
 
+#  Create a job to send email fro users which has past active reminders, start is eveny Monday, 2 pm in local time
+remind_job_id = 'job_send_reminder_email_past_due'
+job = {
+        "id" : remind_job_id,
+        'trigger' : 'cron',
+        'hour' : 14,
+        'minute' : 0,
+        'day_of_week' : 'mon', # mon, tue, wed, thu, fri, sat, sun
+        "func" : "jobs:job_send_weekly_reminding_past_reminder_email",
+        "args" : ()
+    }
+
+if scheduler.get_job(remind_job_id) is None:
+    try:
+        scheduler.add_job(**job) # TODO: Uncomment this line
+        print("Created Credit job ", remind_job_id)
+    except Exception as e:
+        print("Failed to create job", str(e))
+
+else:
+    print("job_send_reminder_email_past_due already exists")
+    try:
+        scheduler.remove_job(remind_job_id)
+        scheduler.add_job(**job) # TODO: Uncomment this line
+        print("Created Credit job ", remind_job_id)
+    except Exception as e:
+        print("Failed to create job", str(e))
+
+
 @app.route('/msg', methods=['POST'])
 def msg1():
     data = request.json['result']
@@ -99,7 +128,7 @@ def msg1():
         user_email = user.email
         user_name = user.email
         
-        SENDER_MAIL = os.environ.get('SENDER_MAIL')
+        SENDER_MAIL = os.getenv('SENDER_MAIL')
         print("Send email to", user_email, "from", SENDER_MAIL)
         try:
             send_email(user_email, SENDER_MAIL, url_id, user_name)
@@ -189,6 +218,5 @@ def msg1():
         s = yelpurl.state
     return s
 
-
 if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0', port=8081)
+    app.run(debug=True, host='0.0.0.0', port=8081) # use_reloader=False # for code change detection

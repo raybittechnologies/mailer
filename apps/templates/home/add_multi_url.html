@@ -161,6 +161,16 @@
                     businessInput.value = ''; // Clear the input field
                 }
             });
+
+            // Event listener to add a place tag when the user copy and paste  comma-separated text
+            businessInput.addEventListener('paste', (event) => {
+                event.preventDefault();
+                let paste = (event.clipboardData || window.clipboardData).getData('text');
+                let tags = paste.split(',');
+                tags.forEach(tag => {
+                    addBusinessTag(tag.trim());
+                });
+            });
         }
     
         // When the user selects an address from the dropdown, populate the address fields in the form.

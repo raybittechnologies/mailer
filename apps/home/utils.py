@@ -2,6 +2,8 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain_openai import ChatOpenAI
 import pyap
+from pywebpush import webpush, WebPushException
+import json
 from dotenv import load_dotenv
 load_dotenv()
 # from langchain_community.callbacks import get_openai_callback
@@ -49,6 +51,9 @@ blacklist = ['@email.com',
              '@fontawesome.com',
              ]
 
+venue_black_list = [
+    'applebee'
+]
 llm = ChatOpenAI(
     model_name="gpt-3.5-turbo-0125",
     temperature=0,
@@ -57,6 +62,42 @@ llm = ChatOpenAI(
 def check_blacklisted(email):
     return all([black not in email for black in blacklist] + ['@' in email])
 
+def is_blacklisted(venue_name):
+    return any([black.lower() in venue_name.lower() for black in venue_black_list])
+
+def send_push_notification(subscription, title,  body, reminder_id, vapid_claims, vapid_private_key, url):
+    try:
+        webpush(
+            subscription_info=subscription,
+            data=json.dumps({"title": title, "body": body, "reminderId": reminder_id, "url": url}),
+            vapid_private_key=vapid_private_key,
+            vapid_claims=vapid_claims
+        )
+    except WebPushException as ex:
+        print(f"Error sending push notification: {ex}")
+        return False
+    return True
+
+def is_music_venue(venue_type, batch_filter_venues):
+    for venue in venue_type.split(','):
+        if venue.strip() in batch_filter_venues:
+            return True
+    return False
+
+
+def get_sub_batches(music_batch, batch_size):
+
+    batch_count = len(music_batch) // batch_size
+    if len(music_batch) % batch_size != 0:
+        batch_count += 1
+
+    sub_batches = []
+    for i in range(batch_count):
+        start = i * batch_size
+        end = start + batch_size
+        sub_batches.append(music_batch[start:end])
+
+    return sub_batches
 
 def extract_first_name(email):
     '''

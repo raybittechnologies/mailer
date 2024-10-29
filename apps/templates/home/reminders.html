@@ -1,0 +1,656 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} {% endblock title %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.3.2/css/fixedHeader.bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+{% endblock stylesheets %}
+
+{% block content %}
+
+<div class="container-fluid py-4">
+    <div class="container mt-5">
+        <div class="card col shadow-lg border-0 rounded-lg">
+            <div class="card-header">
+                <h3 class="text-center font-weight-light my-4">My Reminders</h3>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-success bg-gradient-success" data-bs-toggle="modal"
+                    data-bs-target="#createNewReminderModal">Create New</button>
+                <table style="width:100%" id="filtersTable" class="table table-striped table-bordered nowrap">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Note</th>
+                            <th>Status</th>
+                            <th>Run on</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Rows will be added dynamically using JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% include "includes/footer.html" %}
+    <div class="modal fade" id="deleteReminderModal" tabindex="-1" role="dialog" aria-labelledby="deleteReminderModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteReminderModalLabel">Are you sure to delete this reminder?</h5>
+                    <button type="button" class="btn-close text-dark" id="close-remind-modal" data-bs-dismiss="modal"
+                        aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form >
+                    <input type="hidden" name="reminder-id" id="reminder-id" />
+                    <div class="modal-footer">
+                        <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <input class="btn btn-danger" type="submit" tabindex="0" value="Delete">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="createNewReminderModal" srole="dialog" data-bs-backdrop="static" aria-labelledby="createNewReminderModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createNewReminderModalLabel">Create New Reminder</h5>
+                    <button type="button" class="btn-close text-dark" id="close-create-modal" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form id="create-reminder-form" action="/reminder/create" method="post">
+                    <div class="modal-body">
+                        <input type="hidden" name="userid" id="userid" value="{{ user_id }}" />
+                        <input type="hidden" name="reminder-id" id="reminder-id" />
+                        <div class="form-group">
+                            <div class="input-group">
+                                <span class="input-group-text">Title: </span>
+                                <input type="text" class="form-control" name="title" id="title" maxlength="255" readonly required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="input-group">
+                                <span class="input-group-text">Note: </span>
+                                <input type="text" class="form-control" name="note"  id="note" >
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="input-group">
+                                <span class="input-group-text">Name: </span>
+                                <input type="text" class="form-control" name="name" maxlength="255" id="name" >
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="input-group">
+                                <span class="input-group-text">Phone: </span>
+                                <input type="text" class="form-control" name="phone" maxlength="255" id="phone">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="input-group">
+                                <span class="input-group-text">Email: </span>
+                                <input type="email" class="form-control" name="email" maxlength="255" id="email" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="input-group">
+                                <span class="input-group-text">Venue: </span>
+                                <input type="text" class="form-control" name="venue" maxlength="255" id="venue" >
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="input-group">
+                                <span class="input-group-text">Title Template: </span>
+                                <input type="text" class="form-control" name="title-template" id="title-template" value="Follow up w/ [name] @ [venue] **See email from [email] [phone]"  required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="input-group">
+                                <span class="input-group-text">Reminder Time: </span>
+                                <input type="datetime-local" class="form-control" name="reminder_time" id="reminder_time" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer form-group">
+                        <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <input class="btn btn-success" type="submit" id="submit-btn" value="Create">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+<!-- Specific JS goes HERE -->
+{% block javascripts %}
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap.min.js"></script>
+<script src="https://cdn.datatables.net/fixedheader/3.3.2/js/dataTables.fixedHeader.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.4.1/js/responsive.bootstrap.min.js"></script>
+<script>
+    var templates = null;
+
+    function formatDateToLocalISO(date) {
+        // Get individual date components
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are zero-based, so add 1
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+
+        // Return formatted date string
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    $(document).ready(function () {
+
+        // Get the current date and time
+        const now = new Date();
+        // Format the date and time to match 'YYYY-MM-DDTHH:MM'
+        const formattedDateTime = formatDateToLocalISO(now);
+        // Set the min attribute of the input field
+        document.getElementById('reminder_time').min = formattedDateTime;
+
+        // Initialize DataTable
+        var dataTable = $('#filtersTable').DataTable({
+            responsive: true,
+            pageLength: 50,
+            columnDefs: [
+                {
+                    target: 3,
+                    render: DataTable.render.datetime()
+                }],
+            order: [[ 3, "asc" ]],
+            ajax: {
+                url: '{{ reminder_id }}' ? '/get_reminders?_id={{ user_id }}&reminder_id={{ reminder_id }}' : '/get_reminders?_id={{ user_id }}',
+                dataSrc: ''
+            },
+            columns: [
+                { 
+                    data: 'title',
+                    render: function (title, type, row) {
+                        let title_template = row.title_template;
+                        let name = row.name;
+                        let phone = row.phone;
+                        if (phone) {
+                            phone = '<a class="text-info" href="tel:' + phone + '">' + phone + '</a>';
+                        }
+                        let email = row.email;
+                        if (email) {
+                            email = '<a class="text-info" href="mailto:' + email + '">' + email + '</a>';
+                        }
+                        let venue = row.venue;
+                        if (title_template) {
+                            title = title_template.replace("[name]", name).replace("[phone]", phone).replace("[email]", email).replace("[venue]", venue);
+                        }
+                        return  "<p>"  + title + "</p>";
+                    }
+                },
+                {
+                    data: 'note',
+                },
+                {
+                    data: 'status',
+                    render: function (status, type, row) {
+                        var label = ""
+                        var dropdown = ""
+                        reminder_time = new Date(row.reminder_time);
+                        reminder_id = row.reminder_id;
+                        
+                        // get current utc time
+                        const now = new Date();
+                        // console.log(reminder_time, now)
+                        
+                        if (status === "completed") {
+                            label = '<span class="badge bg-gradient-success">Completed</span>'
+                        } else if (reminder_time > now) {
+                            label = '<span class="badge bg-gradient-info">Active</span>'
+                        } else {
+                            // add option to reschedule , 1 hour, 1 day, 1 week
+                            dropdown = `
+                                <div class="dropdown">
+                                    <button class="btn btn-sm bg-gradient-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Past
+                                    </button>
+                                        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                            <li class="text-success" reminder_id="` + reminder_id + `">Complete</li>
+                                            <li class="text-info" reminder_id="` + reminder_id + `">Remind me in an hour</li>
+                                            <li class="text-info" reminder_id="` + reminder_id + `">Remind me in 7 days</li>
+                                        </ul>
+                                </div>
+                            `
+
+                            label += dropdown;
+                        }
+                        return label
+                    }
+                },
+                { data: 'reminder_time' },
+                {
+                    data: 'reminder_id', // Assuming the id property is present in your data
+                    render: function (reminder_id, type, row) {
+                        // Create action buttons HTML'
+                        var buttons = '<button class="btn btn-primary btn-sm" data-bs-toggle="modal" reminder_id="' + reminder_id + '" data-bs-target="#createNewReminderModal" >Edit</button>' + 
+                        ' <button class="btn btn-danger btn-sm" data-bs-toggle="modal" reminder_id="' + reminder_id + '" data-bs-target="#deleteReminderModal" >Delete</button>';
+                        return buttons;
+                    }
+                }
+
+            ]
+        },
+        );
+
+        $('#filtersTable').on('click', 'button', event => {
+            if (event.target.innerText === "DELETE") {
+                const reminder_id = event.target.getAttribute("reminder_id");
+                document.getElementById("reminder-id").value = reminder_id;
+            } else if (event.target.innerText === "EDIT") {
+                const reminder_id = event.target.getAttribute("reminder_id");
+                // console.log(reminder_id);
+                fetch('/get_reminder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ "reminder_id": reminder_id }),
+                })
+                    .then((response) => {
+                        if (!response.ok)
+                            return response.text().then(text => { throw new Error(text) })
+                        else
+                            return response.json()
+                    })
+                    .then((data) => {
+                        console.log(data);
+                        document.getElementById("reminder-id").value = data.reminder_id;
+                        document.getElementById("title-template").value = data.title_template;
+                        document.getElementById("title").value = data.title;
+                        document.getElementById("note").value = data.note;
+                        document.getElementById("name").value = data.name;
+                        document.getElementById("phone").value = data.phone;
+                        document.getElementById("email").value = data.email;
+                        document.getElementById("venue").value = data.venue;
+                        // convert utc reminder_time to local time and set it to the input field as YYYY-MM-DDTHH:MM
+                        const reminder_time = new Date(data.reminder_time);
+                        const reminder_time_local = formatDateToLocalISO(reminder_time);
+                        document.getElementById("reminder_time").value = reminder_time_local;
+                        document.getElementById("createNewReminderModalLabel").innerText = "Edit Reminder";
+                        document.getElementById("submit-btn").value = "Update";
+                        $('#createNewReminderModal').modal('show');
+                    })
+                    .catch((err) => {
+                        console.log(err);
+                        Swal.fire({
+                            icon: "warning",
+                            title: "Oops...",
+                            text: data.message,
+                        });
+                    })
+            } else {
+                console.log(event.target.innerText)
+                // dispatch event again
+                // event.target.dispatchEvent(new Event('click'));
+            }
+        });
+
+        $('#deleteReminderModal').on('submit', function (e) { //use on if jQuery 1.7+
+            e.preventDefault();  //prevent form from submitting
+            const reminder_id = document.getElementById("reminder-id").value;
+
+            // hide modal
+            $('#close-remind-modal').click();
+
+            Swal.fire({
+                title: 'Deleting...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            }); 
+
+            fetch('/delete_reminder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    "reminder_id": reminder_id 
+                }),
+            })
+                .then((response) => {
+                    if (!response.ok)
+                        return response.text().then(text => { throw new Error(text) })
+                    else
+                        return response.json()
+                })
+                .then((data) => {
+                    if (data.success) {
+                        // console.log(data);
+                        dataTable.ajax.reload();
+                        Swal.fire({
+                            icon: 'success',
+                            title: data.message,
+                            showConfirmButton: false,
+                            timer: 2000
+                        });
+                    } else {
+                        console.log(data.message);
+                        Swal.fire({
+                            icon: "warning",
+                            title: "Oops...",
+                            text: data.message,
+                        });
+                    }
+                })
+                .catch((err) => {
+                    console.log(err);
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Oops...",
+                        text: data.message,
+                    });
+                })
+        });
+
+        $('#create-reminder-form').on('submit', function (e) { //use on if jQuery 1.7+
+            e.preventDefault();  //prevent form from submitting
+            const userid = document.getElementById("userid").value;
+            const reminder_id = document.getElementById("reminder-id").value;
+            const title = document.getElementById("title").value;
+            const note = document.getElementById("note").value;
+            const name = document.getElementById("name").value;
+            const phone = document.getElementById("phone").value;
+            const email = document.getElementById("email").value;
+            const venue = document.getElementById("venue").value;
+            const title_template = document.getElementById("title-template").value;
+            const reminder_time = document.getElementById("reminder_time").value;
+
+            if (title === "" || reminder_time === "") {
+                Swal.fire({
+                    icon: "warning",
+                    title: "Oops...",
+                    text: "Title and Reminder Time are required",
+                });
+                return;
+            }
+
+            // convert reminder_time to UTC
+            const reminder_time_utc = new Date(reminder_time).toISOString();
+
+            console.log("===", reminder_time_utc);
+
+            $('#close-create-modal').click();
+
+            Swal.fire({
+                title: reminder_id ? 'Rescheduling...' : 'Creating...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
+
+            fetch('/add_reminder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    "userid": userid,
+                    "reminder_id": reminder_id,
+                    "title": title,
+                    "name": name,
+                    "phone": phone,
+                    "email": email,
+                    "venue": venue,
+                    "title_template": title_template,
+                    "note": note,
+                    "reminder_time": reminder_time_utc
+                }),
+            })
+                .then((response) => {
+                    if (!response.ok)
+                        return response.text().then(text => { throw new Error(text) })
+                    else
+                        return response.json()
+                })
+                .then((data) => {
+                    if (data.success) {
+                        // console.log(data);
+                        dataTable.ajax.reload();
+                        Swal.fire({
+                            icon: 'success',
+                            title: data.message,
+                            showConfirmButton: false,
+                            timer: 2000
+                        });
+                        // clear form
+                        document.getElementById("reminder-id").value = "";
+                        document.getElementById("title").value = "";
+                        document.getElementById("note").value = "";
+                        document.getElementById("name").value = "";
+                        document.getElementById("phone").value = "";
+                        document.getElementById("email").value = "";
+                        document.getElementById("venue").value = "";
+                        document.getElementById("title-template").value = "Follow up w/ [name] @ [venue] **See email from [email] [phone]";
+                        document.getElementById("reminder_time").value = '';
+                        document.getElementById("createNewReminderModalLabel").innerText = "Create New Reminder";
+                        document.getElementById("submit-btn").value = "Create";
+
+                    } else {
+                        console.log(data.message);
+                        Swal.fire({
+                            icon: "warning",
+                            title: "Oops...",
+                            text: data.message,
+                        });
+                    }
+                })
+                .catch((err) => {
+                    console.log(err);
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Oops...",
+                        text: data.message,
+                    });
+                })
+        });
+
+        // get event title-template input and update title value
+        document.getElementById("title-template").addEventListener("input", function () {
+            updateTitle();
+        });
+
+        document.getElementById("name").addEventListener("input", function () {
+            updateTitle();
+        });
+
+        document.getElementById("phone").addEventListener("input", function () {
+            updateTitle();
+        });
+
+        document.getElementById("email").addEventListener("input", function () {
+            updateTitle();
+        });
+
+        document.getElementById("venue").addEventListener("input", function () {
+            updateTitle();
+        });
+
+        function updateTitle() {
+            var title = document.getElementById("title");
+            var title_template = document.getElementById("title-template").value;
+            var name = document.getElementById("name").value;
+            var phone = document.getElementById("phone").value;
+            var email = document.getElementById("email").value;
+            var venue = document.getElementById("venue").value;
+            title.value = title_template.replace("[name]", name).replace("[phone]", phone).replace("[email]", email).replace("[venue]", venue);
+        }
+
+        // get event when Create New reminder model is opened
+        $('#createNewReminderModal').on('show.bs.modal', function (e) {
+            // clear form
+            document.getElementById("reminder-id").value = "";
+            document.getElementById("title").value = "";
+            document.getElementById("note").value = "";
+            document.getElementById("name").value = "";
+            document.getElementById("phone").value = "";
+            document.getElementById("email").value = "";
+            document.getElementById("venue").value = "";
+            document.getElementById("title-template").value = "Follow up w/ [name] @ [venue] **See email from [email] [phone]";
+            document.getElementById("reminder_time").value = '';
+            document.getElementById("createNewReminderModalLabel").innerText = "Create New Reminder";
+            document.getElementById("submit-btn").value = "Create";
+        });
+
+        //  Get event from dropdown selection
+        $('#filtersTable').on('click', 'li', event => {
+            const reminder_id = event.target.getAttribute("reminder_id");
+            const action = event.target.innerText;
+            console.log(reminder_id, action);
+
+            // if actions is null then return
+            if (!action) {
+                return;
+            }
+
+            if (action === "Complete") {
+                fetch('/complete_reminder/' + reminder_id, {
+                    method: 'POST',
+                })
+                    .then((response) => {
+                        if (!response.ok)
+                            return response.text().then(text => { throw new Error(text) })
+                        else
+                            return response.json()
+                    })
+                    .then((data) => {
+                        if (data.success) {
+                            // console.log(data);
+                            dataTable.ajax.reload();
+                            // Sweet alert like toast message on top right
+                            Swal.fire({
+                                icon: 'success',
+                                title: data.message,
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 2000
+                            });
+                        } else {
+                            console.log(data.message);
+                            Swal.fire({
+                                icon: "warning",
+                                title: "Oops...",
+                                text: data.message,
+                            });
+                        }
+                    })
+                    .catch((err) => {
+                        console.log(err);
+                        Swal.fire({
+                            icon: "warning",
+                            title: "Oops...",
+                            text: data.message,
+                        });
+                    });
+            } else if (action === "Remind me in an hour") {
+                fetch('/reschedule_reminder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ "reminder_id": reminder_id, "hours": 1 }),
+                })
+                    .then((response) => {
+                        if (!response.ok)
+                            return response.text().then(text => { throw new Error(text) })
+                        else
+                            return response.json()
+                    })
+                    .then((data) => {
+                        if (data.success) {
+                            // console.log(data);
+                            dataTable.ajax.reload();
+                            Swal.fire({
+                                icon: 'success',
+                                title: data.message,
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 2000
+                            });
+                        } else {
+                            console.log(data.message);
+                            Swal.fire({
+                                icon: "warning",
+                                title: "Oops...",
+                                text: data.message,
+                            });
+                        }
+                    })
+                    .catch((err) => {
+                        console.log(err);
+                        Swal.fire({
+                            icon: "warning",
+                            title: "Oops...",
+                            showConfirmButton: false,
+                        });
+                    })
+            } else if (action === "Remind me in 7 days") {
+                fetch('/reschedule_reminder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ "reminder_id": reminder_id, "days": 7 }),
+                })
+                    .then((response) => {
+                        if (!response.ok)
+                            return response.text().then(text => { throw new Error(text) })
+                        else
+                            return response.json()
+                    })
+                    .then((data) => {
+                        if (data.success) {
+                            // console.log(data);
+                            dataTable.ajax.reload();
+                            Swal.fire({
+                                icon: 'success',
+                                title: data.message,
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 2000
+                            });
+                        } else {
+                            console.log(data.message);
+                            Swal.fire({
+                                icon: "warning",
+                                title: "Oops...",
+                                text: data.message,
+                            });
+                        }
+                    })
+                    .catch((err) => {
+                        console.log(err);
+                        Swal.fire({
+                            icon: "warning",
+                            title: "Oops...",
+                            text: data.message,
+                            showConfirmButton: false,
+                        });
+                    });
+            }
+        });
+
+
+    });
+</script>
+{% endblock javascripts %}

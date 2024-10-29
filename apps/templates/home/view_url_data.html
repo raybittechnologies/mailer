@@ -92,8 +92,8 @@
         let map;
         const mapContainer = document.getElementById('map');
         async function initmap() {
-            center_lat = '{{ current_url.latitude }}' ? parseFloat('{{ current_url.latitude }}') : 37.7749;
-            center_lng = '{{ current_url.longitude }}' ? parseFloat('{{ current_url.longitude }}') : -122.4194;
+            const center_lat = '{{ current_url.latitude }}' ? parseFloat('{{ current_url.latitude }}') : 37.7749;
+            const center_lng = '{{ current_url.longitude }}' ? parseFloat('{{ current_url.longitude }}') : -122.4194;
 
             map = new google.maps.Map(document.getElementById('map'), {
                 zoom: 8,

@@ -15,9 +15,9 @@ nylas = Client(
 
 
 def send_email(user_email, sender_email, url_id, user_name):
-    WEB_HOST_IP = os.environ.get('WEB_HOST_IP')
-    MAILTRAP_TEMP_UUID = os.environ.get('MAILTRAP_TEMP_UUID')
-    MAILTRAP_API_KEY = os.environ.get('MAILTRAP_API_KEY')
+    WEB_HOST_IP = os.getenv('WEB_HOST_IP')
+    MAILTRAP_TEMP_UUID = os.getenv('MAILTRAP_TEMP_UUID')
+    MAILTRAP_API_KEY = os.getenv('MAILTRAP_API_KEY')
     view_data_link = WEB_HOST_IP + "/url/view/" + str(url_id)
     
     # create mail object
@@ -42,8 +42,8 @@ def send_email(user_email, sender_email, url_id, user_name):
 
 
 def send_cancel_membership_email(user_email):
-    MAILTRAP_API_KEY = os.environ.get('MAILTRAP_API_KEY')
-    SENDER_MAIL = os.environ.get('SENDER_MAIL')
+    MAILTRAP_API_KEY = os.getenv('MAILTRAP_API_KEY')
+    SENDER_MAIL = os.getenv('SENDER_MAIL')
 
     # create mail object
     mail = mt.Mail(
@@ -55,6 +55,12 @@ def send_cancel_membership_email(user_email):
             <html>
             <head>
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+                <style> p {{
+                        line-height: 1.5;
+                        margin-bottom: -14px;
+                        font-size: 16px;
+                    }}
+                </style>
             </head>
             <body style="font-family: sans-serif;">
                 <p>Request for Membership Cancellation</p>
@@ -75,7 +81,7 @@ def send_cancel_membership_email(user_email):
 
 def send_test_email(subject, fromname, body, receiver, sender):
     
-    MAILTRAP_API_KEY = os.environ.get('MAILTRAP_API_KEY')
+    MAILTRAP_API_KEY = os.getenv('MAILTRAP_API_KEY')
     
     mail = mt.Mail(
         sender=mt.Address(email=sender, name=fromname),
@@ -88,6 +94,12 @@ def send_test_email(subject, fromname, body, receiver, sender):
             <html>
             <head>
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+                <style> p {{
+                        line-height: 1.5;
+                        margin-bottom: -14px;
+                        font-size: 16px;
+                    }}
+                </style>
             </head>
             <body style="font-family: sans-serif;">
                 {body}
@@ -105,9 +117,9 @@ def send_test_email(subject, fromname, body, receiver, sender):
 
 
 def send_email_via_mailtrap(subject, fromname, body, receiver):
-    WEB_HOST_IP = os.environ.get('WEB_HOST_IP')
-    SENDER_MAIL = os.environ.get('SENDER_MAIL')
-    MAILTRAP_API_KEY = os.environ.get('MAILTRAP_API_KEY')
+    WEB_HOST_IP = os.getenv('WEB_HOST_IP')
+    SENDER_MAIL = os.getenv('SENDER_MAIL')
+    MAILTRAP_API_KEY = os.getenv('MAILTRAP_API_KEY')
     
     mail = mt.Mail(
         sender=mt.Address(email=SENDER_MAIL, name=fromname),
@@ -118,6 +130,12 @@ def send_email_via_mailtrap(subject, fromname, body, receiver):
             <html>
             <head>
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+                <style> p {{
+                        line-height: 1.5;
+                        margin-bottom: -14px;
+                        font-size: 16px;
+                    }}
+                </style>
             </head>
             <body style="font-family: sans-serif;">
                 {body}
@@ -134,9 +152,9 @@ def send_email_via_mailtrap(subject, fromname, body, receiver):
     return response['success']  
 
 def send_reconnect_email_via_mailtrap(subject, fromname, receiver):
-    WEB_HOST_IP = os.environ.get('WEB_HOST_IP')
-    SENDER_MAIL = os.environ.get('SENDER_MAIL')
-    MAILTRAP_API_KEY = os.environ.get('MAILTRAP_API_KEY')
+    WEB_HOST_IP = os.getenv('WEB_HOST_IP')
+    SENDER_MAIL = os.getenv('SENDER_MAIL')
+    MAILTRAP_API_KEY = os.getenv('MAILTRAP_API_KEY')
 
     message = f"""    
             <p>Hi,</p>
@@ -167,6 +185,12 @@ def send_reconnect_email_via_mailtrap(subject, fromname, receiver):
             <html>
             <head>
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+                <style> p {{
+                        line-height: 1.5;
+                        margin-bottom: -14px;
+                        font-size: 16px;
+                    }}
+                </style>
             </head>
             <body style="font-family: sans-serif;">
                 {message}
@@ -190,9 +214,15 @@ def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, rece
         <html>
         <head>
             <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+            <style> p {{
+                    line-height: 1.5;
+                    margin-bottom: -14px;
+                    font-size: 16px;
+                }}
+            </style>
         </head>
             <body style="font-family: sans-serif;">
-                {body}
+            {body}
             </body>
         </html>
     """
@@ -217,8 +247,8 @@ def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, rece
 
 def send_password_reset_email(email, reset_link):
     
-    SENDER_MAIL = os.environ.get('SENDER_MAIL')
-    MAILTRAP_API_KEY = os.environ.get('MAILTRAP_API_KEY')
+    SENDER_MAIL = os.getenv('SENDER_MAIL')
+    MAILTRAP_API_KEY = os.getenv('MAILTRAP_API_KEY')
     
     mail = mt.Mail(
         sender=mt.Address(email=SENDER_MAIL, name="Robitic Booking Agent"),
@@ -229,6 +259,12 @@ def send_password_reset_email(email, reset_link):
             <html>
             <head>
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+                <style> p {{
+                        line-height: 1.5;
+                        margin-bottom: -14px;
+                        font-size: 16px;
+                    }}
+                </style>
             </head>
             <body style="font-family: sans-serif;">
                 please click the link below to reset your password.

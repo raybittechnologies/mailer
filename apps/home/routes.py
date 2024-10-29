@@ -4,6 +4,9 @@ from functools import wraps
 import os
 import pprint
 import time
+import json
+import pytz
+import tzlocal
 
 from apps.authentication.models import Users
 from apps.authentication.util import verify_pass, hash_pass
@@ -34,10 +37,12 @@ import pyap
 import pandas as pd
 import urllib.parse
 
-from apps.home.utils import check_blacklisted, extract_address
+from pywebpush import webpush, WebPushException
 
-NYLAS_API_KEY = os.environ.get('NYLAS_API_KEY')
-NYLAS_API_URI = os.environ.get('NYLAS_API_URI')
+from apps.home.utils import check_blacklisted, extract_address, send_push_notification, is_music_venue, get_sub_batches
+
+NYLAS_API_KEY = os.getenv('NYLAS_API_KEY')
+NYLAS_API_URI = os.getenv('NYLAS_API_URI')
 
 print("NYLAS_API_URI: ", NYLAS_API_URI)
 
@@ -45,6 +50,7 @@ nylas = Client(
     api_key = NYLAS_API_KEY,
     api_uri = NYLAS_API_URI,
 )
+
 
 # calculate the number of workers to use
 workers = (multiprocessing.cpu_count() * 2) + 1
@@ -84,12 +90,14 @@ def user_approved_required(fn):
 
 
 
-
 @blueprint.route('/home')
 @login_required
 def index():
     page_data = get_page_data()
-    return render_template('home/index.html', segment='index', API_GENERATOR=len(API_GENERATOR), page_data=page_data )
+    vapid_public_key = current_app.config.get('VAPID_PUBLIC_KEY')
+    user_id = current_user.id
+    print("VAPID_PUBLIC_KEY: ", vapid_public_key)
+    return render_template('home/index.html', segment='index', API_GENERATOR=len(API_GENERATOR), page_data=page_data, public_key=vapid_public_key, user_id=user_id)
 
 # https://github.com/sqlalchemy/sqlalchemy/issues/5374
 @compiles(Insert, "mysql")
@@ -226,7 +234,11 @@ def export_all_data():
         
         with pd.ExcelWriter(server_file_path) as writer:
             for key, value in all_services.items():
-                product_url = Yelpurl.query.get(key).product_url.split(',')[0]
+                yelp_url = Yelpurl.query.get(key)
+                if yelp_url is None:
+                    continue
+
+                product_url = yelp_url.product_url.split(',')[0]
                 parsed_url = urllib.parse.urlparse(product_url)
                 business = urllib.parse.parse_qs(parsed_url.query)['find_desc'][0]
                 location = urllib.parse.parse_qs(parsed_url.query)['find_loc'][0]
@@ -570,43 +582,60 @@ def upload_contact():
                 return {"success": False, "message": "Keep column names/order EXACTLY how they are here, and no more and no less!. Missing column: " + col}
 
         description = request.form['description']
-        contact_file = Uploadedcontactfile(filename=f.filename, filepath=filepath, description=description, user_id=current_user.id)
-        db.session.add(contact_file)
-        db.session.flush()
-        file_id = contact_file.id
+        # print(request.form)
+        #  Batch operation 2021-09-07
+        auto_batch = request.form.get('auto-batch', True)
+        batch_out_music_venue = request.form.get('batch-out-music-venue', True)
+
+        # print("auto_batch: ", auto_batch)
+        # print("batch_out_music_venue: ", batch_out_music_venue)
+
+        batch_size = GlobalSetting.query.filter_by(name='batch_size').first()
+        if batch_size is None:
+            batch_size = 105
+        else:
+            batch_size = int(batch_size.value)
+
+        # contact_file = Uploadedcontactfile(filename=f.filename, filepath=filepath, description=description, user_id=current_user.id)
+        # db.session.add(contact_file)
+        # db.session.flush()
+        # file_id = contact_file.id
         
-        services = []
+        batch_filter_venues = GlobalSetting.query.filter_by(name='batch_filter_venues').first()
+        if batch_filter_venues is None:
+            batch_filter_venues = ['Music Venues', 'Stadiums & Arenas']
+        else:
+            batch_filter_venues = batch_filter_venues.value.split(',')
+
+        print("batch_filter_venues: ", batch_filter_venues)
+        print("batch_size: ", batch_size)
+        
+        total_services = []
         df.fillna("", inplace=True)
+
         for idx, item in df.iterrows():
-            venue = item['venue']
-            venue_type = item['type']
-            website = item['website']
-            phone = item['phone']
-            address = item['address']
-            facebook = item['facebook']
-            customtext = item['customtext']
-            originalemail = item['notes']
+            service = dict()
+            service['venue'] = item['venue']
+            service['venue_type'] = item['type']
+            service['website'] = item['website']
+            service['phone'] = item['phone']
+            service['address'] = item['address']
+            service['facebook'] = item['facebook']
+            service['customtext'] = item['customtext']
+            service['originalemail'] = item['notes']
 
             if 'subscribed' in df.columns:
                 is_unsubscribed = 1 if item['subscribed'] == "Unsubscribed" else 0
             else:
                 is_unsubscribed = 0
-                
+            service['is_unsubscribed'] = is_unsubscribed
 
             if 'email' in df.columns:
                 email = item['email'].strip() if item.get('email') else ""
                 if email and check_blacklisted(email):
-                    service = Uploadedservice(name=venue, venue_type=venue_type, email=email, user_id = current_user.id, file_id=file_id)
-                    service.website = website
-                    service.phone = phone
-                    service.address = address
-                    service.facebook = facebook
-                    service.customtext = customtext
-                    service.originalemail = originalemail
-                    service.firstname = item['firstname']
-                    service.is_unsubscribed = is_unsubscribed
-                    services.append(service)
-                    # services.append(service)
+                    service['email'] = email
+                    service['firstname'] = item['firstname']
+                    total_services.append(service)
             
             else:
                 email1 = item['email1'].strip() if item.get('email1') else ""
@@ -618,18 +647,80 @@ def upload_contact():
 
                 for idx, email in enumerate([email1, email2, email3, email4, facebookemail1, facebookemail2]):
                     if email and check_blacklisted(email):
-                        service = Uploadedservice(name=venue, venue_type=venue_type, email=email, user_id = current_user.id, file_id=file_id)
-                        service.website = website
-                        service.phone = phone
-                        service.address = address
-                        service.facebook = facebook
-                        service.customtext = customtext
-                        service.originalemail = originalemail
-                        service.firstname = item['firstname' + str(idx+1)]
-                        services.append(service)
+                        service['email'] = email
+                        service['firstname'] = item['firstname' + str(idx+1)]
+                        total_services.append(service)
 
-        db.session.bulk_save_objects(services)
-        db.session.commit()
+        #  Apply batch algorith, so if auto_batch is checked, we will batch out by batch_size and filter out music venues
+
+        if batch_out_music_venue == "true":
+            music_batch = []
+            other_batch = []
+            for service in total_services:
+                if is_music_venue(service['venue_type'], batch_filter_venues):
+                    music_batch.append(service)
+                else:
+                    other_batch.append(service)
+        else:
+            music_batch = total_services
+            other_batch = []
+
+        music_sub_batches = []
+        other_sub_batches = []
+
+        if auto_batch == "true":
+            music_sub_batches = get_sub_batches(music_batch, batch_size)
+            other_sub_batches = get_sub_batches(other_batch, batch_size)
+        
+        else:
+            music_sub_batches.append(music_batch)
+            other_sub_batches.append(other_batch)
+
+        # print("music_sub_batches: ", len(music_sub_batches))
+        # print("other_sub_batches: ", len(other_sub_batches))
+
+        for group_id, batch_group in enumerate([music_sub_batches, other_sub_batches]):
+            for idx, sub_batch in enumerate(batch_group):
+                if len(sub_batch) == 0:
+                    continue
+
+                if auto_batch == "false" and batch_out_music_venue == "false":
+                    batch_name = description
+                
+                elif auto_batch == "true" and batch_out_music_venue == "false":
+                    batch_name = f"{description} - Batch {idx+1}"
+                
+                elif auto_batch == "false" and batch_out_music_venue == "true":
+                    if group_id == 0:
+                        batch_name = f"{description} - Music Venues - Batch"
+                    else:
+                        batch_name = f"{description} - Batch"
+
+                else:
+                    if group_id == 0: # Music Venues
+                        batch_name = f"{description} - Music Venues - Batch {idx+1}"
+                    else:
+                        batch_name = f"{description} - Batch {idx+1}"
+
+                services = []
+                batch_file = Uploadedcontactfile(filename=f.filename, filepath=filepath, description=batch_name, user_id=current_user.id)
+                db.session.add(batch_file)
+                db.session.flush()
+                file_id = batch_file.id
+                for service in sub_batch:
+                    uservice = Uploadedservice(name=service['venue'], venue_type=service['venue_type'], email=service['email'], user_id = current_user.id, file_id=file_id)
+                    uservice.website = service['website']
+                    uservice.phone = service['phone']
+                    uservice.address = service['address']
+                    uservice.facebook = service['facebook']
+                    uservice.customtext = service['customtext']
+                    uservice.originalemail = service['originalemail']
+                    uservice.is_unsubscribed = service['is_unsubscribed']
+                    uservice.firstname = service['firstname']
+                    services.append(uservice)
+    
+                db.session.bulk_save_objects(services)
+                db.session.commit()
 
         return {"success": True, "message": "File uploaded successfully."}
         
@@ -643,8 +734,18 @@ def contact_delete():
     try:
         if file:
             db.session.delete(file)
-            Uploadedservice.query.filter_by(file_id=file_id).delete()
-            db.session.commit()
+            for service in Uploadedservice.query.filter_by(file_id=file_id).all():
+                #  delete reminder
+                for reminder  in Reminder.query.filter_by(userid=current_user.id, email=service.email).all():
+                    if scheduler.get_job(reminder.job_id):
+                        scheduler.remove_job(reminder.job_id)
+
+                    db.session.delete(reminder)
+                    db.session.commit()
+                
+                db.session.delete(service)
+                db.session.commit()
+
             return {"success": True, 'message': "File deleted successfully."}
         else:
             return {"success": False, 'message': "File not found."}
@@ -900,13 +1001,24 @@ def get_segment(request):
 
 def get_all_filters():
     user_urls = Yelpurl.query.filter_by(userid=current_user.id).count()
+
     return user_urls
 
+def get_email_data():
+    # get total email sent by user, join Automation and Email table
+    total_email_sent = Email.query.join(Automation, Automation.job_id == Email.job_id).filter(Automation.userid == current_user.id, Email.is_sent == 1).count()
+    total_email_opened = Email.query.join(Automation, Automation.job_id == Email.job_id).filter(Automation.userid == current_user.id, Email.is_opened == 1).count()
+    total_email_replied = Email.query.join(Automation, Automation.job_id == Email.job_id).filter(Automation.userid == current_user.id, Email.is_replied == 1).count()
+    return total_email_sent, total_email_opened, total_email_replied
 
 def get_page_data():
     data_filter = get_all_filters()
+    total_email_sent, total_email_opened, total_email_replied = get_email_data()    
     page_data = {
-        'total_filters': data_filter
+        'total_filters': data_filter,
+        'total_email_sent': total_email_sent,
+        'total_email_opened': total_email_opened,
+        'total_email_replied': total_email_replied
     }
     return page_data
 
@@ -1500,7 +1612,7 @@ def user_actions(id):
 @role_required('admin')
 def admin_action_delete():
     actionid = int(request.form['actionid'])
-    tempid = int(request.form['tempid'])
+    # tempid = int(request.form['tempid'])
     tid = request.form['tid']
     action = Action.query.get(actionid)
     db.session.delete(action)
@@ -1717,7 +1829,7 @@ def admin_action_test():
         "originalemail" : "originalemail"
     }
     
-    SENDER_MAIL = os.environ.get('SENDER_MAIL')
+    SENDER_MAIL = os.getenv('SENDER_MAIL')
     
     jinja_temp = JT(action.message)
     mail_body = jinja_temp.render(test_service)
@@ -1870,10 +1982,61 @@ def webhook():
             grant_id = request.json['data']['object']['grant_id']
             message_id = request.json['data']['object']['thread_id']
             email = Email.query.filter_by(mail_id=message_id).first()
+
             if email:
+
+                print("Email replied", email.email, message_id)
                 email.is_replied = 1
                 db.session.commit()
-        
+                
+                service = Uploadedservice.query.filter_by(unsubscribe_token=email.unsubscribe_token).first()
+                if service is None:
+                    print("No service found")
+                    return "OK"
+
+                user_id = service.user_id
+
+                # Create reminder after 7 days 2pm
+                reminder_datetime = datetime.datetime.now() + timedelta(days=7)
+                reminder_datetime = reminder_datetime.replace(hour=14, minute=0, second=0)
+                reminder_local_time_string = reminder_datetime.strftime('%Y-%m-%d %H:%M:%S')
+
+                # convert to utc
+                reminder_datetime_utc = reminder_datetime.astimezone(pytz.utc)
+                utc_time_iso_string = reminder_datetime_utc.strftime('%Y-%m-%d %H:%M:%S')
+                
+                job_id = "job_" + generate_job_id(32)
+                job = {
+                    "id" : job_id,
+                    'trigger' : 'date',
+                    "run_date" : reminder_local_time_string,
+                    "func" : "jobs:job_push_notification_reminder",
+                    "args" : (job_id, user_id)
+                }
+                print(job)
+                try:
+                    scheduler.add_job(**job) # TODO: Uncomment this line
+                    print("created job", job_id)
+                except Exception as e:
+                    print("Failed to create job", str(e))
+                    return {"success": False, "message": "Something went wrong. Please try again."}
+                
+                reminder_template = "Follow up w/ [name] @ [venue] **See email from [email] [phone]"
+                reminder = Reminder()
+                reminder.job_id = job_id
+                reminder.note = ''
+                reminder.name = service.firstname
+                reminder.email = email.email
+                reminder.phone = service.phone
+                reminder.venue = service.name
+                reminder.title = f"Follow up w/ {service.firstname} @ {service.name} **See email from {email.email} {service.phone}"
+                reminder.note_template = reminder_template
+                reminder.reminder_time = utc_time_iso_string  
+                reminder.status = "active"
+                reminder.userid = user_id
+                db.session.add(reminder)
+                db.session.commit()
+
         # reply with 200 status code
         return "OK"
 
@@ -2570,15 +2733,20 @@ def connect_email():
 @user_approved_required
 def nylas_auth():
     if current_user.nylas_access_token is None or current_user.nylas_access_token == "":
+        NYLAS_AUTH_API_URI = os.getenv('NYLAS_AUTH_API_URI')
         NYLAS_CLIENT_ID = os.getenv('NYLAS_CLIENT_ID')
         NYLAS_REDIRECT_URI = os.getenv("WEB_HOST_IP") + "/oauth/exchange"
 
+        nylas_auth = Client(
+            api_key = NYLAS_API_KEY,
+            api_uri = NYLAS_AUTH_API_URI,
+        )
         config = URLForAuthenticationConfig(
             {"client_id": NYLAS_CLIENT_ID, 
             "redirect_uri" : NYLAS_REDIRECT_URI
             })
 
-        url = nylas.auth.url_for_oauth2(config)
+        url = nylas_auth.auth.url_for_oauth2(config)
         return redirect(url)
     
     else:
@@ -2594,18 +2762,31 @@ def authorized():
         NYLAS_CLIENT_ID = os.getenv('NYLAS_CLIENT_ID')
         NYLAS_REDIRECT_URI = os.getenv("WEB_HOST_IP") + "/oauth/exchange"
 
+        retry_count = 0
+        NYLAS_AUTH_API_URI = os.getenv('NYLAS_AUTH_API_URI')
+
+        nylas_auth = Client(
+            api_key = NYLAS_API_KEY,
+            api_uri = NYLAS_AUTH_API_URI,
+        )
+
         exchangeRequest = CodeExchangeRequest(
             {"redirect_uri": NYLAS_REDIRECT_URI,
             "code": code, 
             "client_id": NYLAS_CLIENT_ID})
         while True:
             try:
-                exchange = nylas.auth.exchange_code_for_token(exchangeRequest)
+                exchange = nylas_auth.auth.exchange_code_for_token(exchangeRequest)
                 break
             except requests.exceptions.ConnectionError:
                 print("Connection error")
-                time.sleep(5)
-                continue
+                time.sleep(2)
+                retry_count += 1
+
+            if retry_count > 5:
+                return redirect(url_for('home_blueprint.index'))
+            
+            continue
 
         grant_id = exchange.grant_id
 
@@ -2653,3 +2834,315 @@ def update_howto_text():
     except Exception as e:
         print(repr(e))
         return jsonify({"success": False, "message": repr(e)})
+
+
+@blueprint.route('/reg_push_notify', methods=['POST'])
+@login_required
+def reg_push_notify():
+    subscription_info = request.get_json()
+    user_id = subscription_info.get('user_id')
+    push_notification = PushNotificationInfo.query.filter_by(userid=user_id).first()
+    if push_notification:
+        if subscription_info['endpoint'] == push_notification.subscription_info['endpoint']:
+            print(f"User {user_id} already subscribed")
+            return jsonify({"success": True}), 200
+        else: # Create new subscription
+            push_notification = PushNotificationInfo()
+            push_notification.userid = user_id
+            push_notification.subscription_info = subscription_info
+            db.session.add(push_notification)
+    else:
+        push_notification = PushNotificationInfo()
+        push_notification.userid = user_id
+        push_notification.subscription_info = subscription_info
+        db.session.add(push_notification)
+
+    print(f"User {user_id} subscribed")
+    db.session.commit()
+    return jsonify({"success": True}), 200
+
+
+@blueprint.route('/send_notification', methods=['POST'])
+def send_notification():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    reminder_message = data.get('message')
+    reminder_id = data.get('reminder_id')
+
+    # Get the subscription info from JSON column
+    subscription = PushNotificationInfo.query.filter_by(userid=user_id).first()
+    
+    if subscription:
+        try:
+            sub_info = subscription.subscription_info
+            endpoint_url = sub_info.get('endpoint')
+            parsed_url = urllib.parse.urlparse(endpoint_url)
+            origin = f"{parsed_url.scheme}://{parsed_url.netloc}"
+            vapid_claims = current_app.config.get('VAPID_CLAIMS')
+            vapid_claims.update({'aud' : origin})
+            vapid_private_key = current_app.config.get('VAPID_PRIVATE_KEY')
+            title = "Reminder"
+            body = reminder_message
+            url = f"/reminders"
+            if send_push_notification(sub_info, title,  body, reminder_id, vapid_claims, vapid_private_key, url):
+                return jsonify({"success": True}), 200
+            else:
+                return jsonify({"error": "Failed to send notification"}), 500
+            
+        except WebPushException as ex:
+            return jsonify({"error": str(ex)}), 500
+            
+    return jsonify({"error": "User not subscribed"}), 404
+
+
+@blueprint.route('/get_reminders', methods=['GET'])
+@login_required
+@user_approved_required
+def get_reminders():
+    user_id = request.args.get('_id')
+    reminder_id = request.args.get('reminder_id')
+    if reminder_id:
+        reminders = Reminder.query.filter_by(id=reminder_id, userid=user_id).all()
+    else:
+        reminders = Reminder.query.filter_by(userid=user_id).all()
+    reminder_list = []
+
+    for reminder in reminders:
+        reminder_data = {
+            'reminder_id': reminder.id,
+            'title': reminder.title,
+            'note': reminder.note,
+            'name': reminder.name,
+            'email': reminder.email,
+            'phone': reminder.phone,
+            'venue': reminder.venue,
+            'title_template': reminder.note_template,
+            'reminder_time': reminder.reminder_time,
+            'status': reminder.status,
+            'created_datetime': reminder.create_datetime,
+            'updated_datetime': reminder.update_datetime,
+        }
+        reminder_list.append(reminder_data)
+
+    return jsonify(reminder_list)
+
+# get_reminder
+@blueprint.route('/get_reminder', methods=['POST'])
+@login_required
+@user_approved_required
+def get_reminder():
+    reminder_id = request.json.get('reminder_id')
+    reminder = Reminder.query.filter_by(id=reminder_id).first()
+    if reminder is None:
+        return jsonify({"error": "Reminder not found."}), 404
+    else:
+        reminder_data = {
+            'reminder_id': reminder.id,
+            'title': reminder.title,
+            'note': reminder.note,
+            'name': reminder.name,
+            'email': reminder.email,
+            'phone': reminder.phone,
+            'venue': reminder.venue,
+            'title_template': reminder.note_template,
+            'reminder_time': reminder.reminder_time,
+            'status': reminder.status,
+        }
+        return jsonify(reminder_data)
+
+
+@blueprint.route("/reminders", methods=["GET"])
+@login_required
+@user_approved_required
+def reminders():
+    reminder_id = request.args.get('reminder_id')
+    # print("reminder_id", reminder_id)
+    user_id = current_user.id
+    if reminder_id:
+        reminder = Reminder.query.filter_by(id=reminder_id, userid=user_id).first()
+        if reminder is None:
+            return render_template('home/page-404.html')
+        else:
+            return render_template('home/reminders.html', segment="reminders", user_id=current_user.id, reminder_id=reminder_id)
+    else:
+        return render_template('home/reminders.html', segment="reminders", user_id=current_user.id, reminder_id='')
+    
+
+def get_local_time_from_utc(utc_time):
+    utc_time = datetime.datetime.strptime(utc_time, '%Y-%m-%dT%H:%M:%S.%fZ')
+    utc_time_iso_string = utc_time.strftime('%Y-%m-%d %H:%M:%S')
+    local_zone = tzlocal.get_localzone()
+    utc_zone = pytz.utc
+    reminder_utc_time = utc_zone.localize(utc_time)
+    reminder_local_time = reminder_utc_time.astimezone(local_zone)
+    reminder_local_time_string = reminder_local_time.strftime('%Y-%m-%d %H:%M:%S')
+    print("reminder_local_time_string", reminder_local_time_string)
+    print("utc_time_iso_string", utc_time_iso_string)
+    return reminder_local_time_string, utc_time_iso_string
+
+    
+
+@blueprint.route('/add_reminder', methods=['POST'])
+def add_reminder():
+    data = request.json
+    if data.get('reminder_id'): # Update reminder
+        reminder = Reminder.query.filter_by(id=data.get('reminder_id')).first()
+        if reminder:
+            job_id = reminder.job_id
+            user_id = data.get('userid')
+            reminder.title = data.get('title')
+
+            reminder.note = data.get('note')
+            reminder.name = data.get('name')
+            reminder.email = data.get('email')
+            reminder.phone = data.get('phone')
+            reminder.venue = data.get('venue')
+            reminder.note_template = data.get('title_template')
+            reminder_local_time_string, utc_time_iso_string = get_local_time_from_utc(data['reminder_time'])
+            reminder.reminder_time = utc_time_iso_string
+            reminder.status = "active"
+
+            job = {
+                "id" : job_id,
+                'trigger' : 'date',
+                "run_date" : reminder_local_time_string,
+                "func" : "jobs:job_push_notification_reminder",
+                "args" : (job_id, user_id)
+            }
+            print(job)
+            try:
+                scheduler.add_job(**job) # TODO: Uncomment this line
+                print("created job", job_id)
+            except Exception as e:
+                print("Failed to create job", str(e))
+                return {"success": False, "message": "Something went wrong. Please try again."}
+
+            db.session.commit()
+            return jsonify({"success": True, "message": "Reminder updated successfully."})
+        else:
+            return jsonify({"message": "Reminder not found."}), 404
+        
+    else: # Add reminder
+        job_id = "job_" + generate_job_id(32)
+        user_id = data.get('userid')
+        reminder_local_time_string, utc_time_iso_string = get_local_time_from_utc(data['reminder_time'])
+
+        job = {
+            "id" : job_id,
+            'trigger' : 'date',
+            "run_date" : reminder_local_time_string,
+            "func" : "jobs:job_push_notification_reminder",
+            "args" : (job_id, user_id)
+        }
+        print(job)
+        try:
+            scheduler.add_job(**job) # TODO: Uncomment this line
+            print("created job", job_id)
+        except Exception as e:
+            print("Failed to create job", str(e))
+            return {"success": False, "message": "Something went wrong. Please try again."}
+        
+        reminder = Reminder()
+        reminder.title = data.get('title')
+        reminder.job_id = job_id
+        reminder.note = data.get('note')
+        reminder.name = data.get('name')
+        reminder.email = data.get('email')
+        reminder.phone = data.get('phone')
+        reminder.venue = data.get('venue')
+        reminder.note_template = data.get('title_template')
+        reminder.reminder_time = utc_time_iso_string  
+        reminder.status = "active"
+        reminder.userid = data.get('userid')
+        db.session.add(reminder)
+        db.session.commit()
+
+        return jsonify({"success": True, "message": "Reminder added successfully."})
+    
+
+@blueprint.route('/update_reminder', methods=['POST'])
+def update_reminder():
+    data = request.json
+    reminder_id = data.get('reminder_id')
+    reminder = Reminder.query.filter_by(id=reminder_id).first()
+    reminder.title = data.get('title')
+    reminder.note = data.get('note')
+    reminder.name = data.get('name')
+    reminder.email = data.get('email')
+    reminder.phone = data.get('phone')
+    reminder.venue = data.get('venue')
+    reminder.note_template = data.get('title_template')
+    reminder.reminder_time = data.get('reminder_time')
+    db.session.commit()
+
+    return jsonify({"success": True, "message": "Reminder updated successfully."})
+
+@blueprint.route('/delete_reminder', methods=['POST'])
+def delete_reminder():
+    reminder_id = request.json.get('reminder_id')
+    reminder = Reminder.query.filter_by(id=reminder_id).first()
+
+    job_id = reminder.job_id
+    if scheduler.get_job(job_id):
+        scheduler.remove_job(job_id)
+
+    db.session.delete(reminder)
+    db.session.commit()
+
+    return jsonify({"success": True, "message": "Reminder deleted successfully."})
+
+
+@blueprint.route('/complete_reminder/<int:reminder_id>', methods=['POST'])
+def complete_reminder(reminder_id):
+    reminder = Reminder.query.filter_by(id=reminder_id).first()
+    if reminder is None:
+        return jsonify({"error": "Reminder not found."}), 404
+    
+    reminder.status = "completed"
+    db.session.commit()
+    return jsonify({"success": True, "message": "Reminder completed successfully."})
+
+
+# reschedule_reminder, days and hours
+@blueprint.route('/reschedule_reminder', methods=['POST'])
+def reschedule_reminder():
+    data = request.json
+    reminder_id = data.get('reminder_id')
+    reminder = Reminder.query.filter_by(id=reminder_id).first()
+    reminder_time = reminder.reminder_time # This is in UTC
+    days = data.get('days', 0)
+    hours = data.get('hours', 0)
+    reminder_time = reminder_time + timedelta(days=days, hours=hours)
+
+    utc_time_now = datetime.datetime.utcnow()
+
+    if reminder_time < utc_time_now:
+        return jsonify({"success": False, "message": "Reminder time should be greater than current time."})
+
+    reminder_time_str = reminder_time.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    reminder_local_time_string, utc_time_iso_string = get_local_time_from_utc(reminder_time_str)    
+    reminder.reminder_time = utc_time_iso_string
+
+    job_id = reminder.job_id
+    user_id = reminder.userid
+    job = {
+        "id" : job_id,
+        'trigger' : 'date',
+        "run_date" : reminder_local_time_string,
+        "func" : "jobs:job_push_notification_reminder",
+        "args" : (job_id, user_id)
+    }
+    print("Reschedular reminder", job)
+
+    db.session.commit()
+    if scheduler.get_job(job_id):
+        scheduler.remove_job(job_id)
+
+    try:
+        scheduler.add_job(**job) # TODO: Uncomment this line
+        print("created job", job_id)
+    except Exception as e:
+        print("Failed to create job", str(e))
+        return {"success": False, "message": "Something went wrong. Please try"}
+
+    return jsonify({"success": True, "message": "Reminder rescheduled successfully."})
