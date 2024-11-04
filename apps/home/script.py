@@ -14,6 +14,7 @@ from threading import Thread
 import queue
 import os
 from apps.home.utils import check_blacklisted, is_blacklisted
+from uuid import uuid4
 
 
 #ZYTE Smart Proxy : https://app.zyte.com
@@ -23,6 +24,7 @@ proxies={
     }
 verify='zyte-proxy-ca.crt'
 zyte_api_url = "https://api.zyte.com/v1/extract"
+API_KEY = "be8e0737c3664421a37adc8e0a48d9cf" #Enter_your_api_key
 
 
 def pass_data(item):
@@ -44,6 +46,34 @@ def yelp_scraper_run(url, user_id, id):
     
     start = 0
     page = 0
+    auth = (API_KEY, "")
+    while True:    
+        session_id = str(uuid4())
+
+        response = requests.post(zyte_api_url, auth=auth, json={
+            "browserHtml": True,
+            "url": f"https://www.yelp.com/search/snippet?find_desc={find_desc}&find_loc={find_loc}&start={start}&parent_request_id=cff2259236faa40b&request_origin=user",
+            "session": {
+                    "id": session_id
+                }
+            })
+        try:
+            data = json.loads(response.text)
+            # print("initial request ------" +  str(data["statusCode"])) 
+
+            if data["statusCode"] == 200:
+                break
+            elif data["statusCode"] in [429, 503]:
+                print("Rate limited")
+                time.sleep(1)
+                continue
+            else:
+                print(data["statusCode"], url)
+                return
+        except Exception as e:
+            print(str(e))
+            time.sleep(1)
+            continue
     
     while True:
         search_data = []
@@ -58,11 +88,14 @@ def yelp_scraper_run(url, user_id, id):
         base_url = f"https://www.yelp.com/search/snippet?find_desc={find_desc}&find_loc={find_loc}&start={start}&parent_request_id=cff2259236faa40b&request_origin=user"
         payload = {
             "url" : base_url,
-            "httpResponseBody" : True
+            "httpResponseBody" : True,
+            "session": {
+                "id": session_id
+            }
         }
         
         try:
-            response = requests.post(zyte_api_url, auth=("be8e0737c3664421a37adc8e0a48d9cf", ""), json=payload)
+            response = requests.post(zyte_api_url, auth=auth, json=payload)
         except Exception as e:
             print(str(e))
             break
@@ -356,7 +389,7 @@ def get_fb_info(url):
             #     "browserHtml" : True
             # }
             # try:
-            #     response = requests.post(zyte_api_url, auth=("be8e0737c3664421a37adc8e0a48d9cf", ""), json=payload)
+            #     response = requests.post(zyte_api_url, auth=auth, json=payload)
             # except Exception as e:
             #     print(str(e))
             #     break
