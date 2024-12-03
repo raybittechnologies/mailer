@@ -613,29 +613,32 @@ def upload_contact():
         total_services = []
         df.fillna("", inplace=True)
 
+        emails = []
         for idx, item in df.iterrows():
-            service = dict()
-            service['venue'] = item['venue']
-            service['venue_type'] = item['type']
-            service['website'] = item['website']
-            service['phone'] = item['phone']
-            service['address'] = item['address']
-            service['facebook'] = item['facebook']
-            service['customtext'] = item['customtext']
-            service['originalemail'] = item['notes']
-
             if 'subscribed' in df.columns:
                 is_unsubscribed = 1 if item['subscribed'] == "Unsubscribed" else 0
             else:
                 is_unsubscribed = 0
-            service['is_unsubscribed'] = is_unsubscribed
 
             if 'email' in df.columns:
                 email = item['email'].strip() if item.get('email') else ""
                 if email and check_blacklisted(email):
+                    service = dict()
+                    service['venue'] = item['venue']
+                    service['venue_type'] = item['type']
+                    service['website'] = item['website']
+                    service['phone'] = item['phone']
+                    service['address'] = item['address']
+                    service['facebook'] = item['facebook']
+                    service['customtext'] = item['customtext']
+                    service['originalemail'] = item['notes']
                     service['email'] = email
+                    service['is_unsubscribed'] = is_unsubscribed
                     service['firstname'] = item['firstname']
-                    total_services.append(service)
+
+                    if email not in emails:
+                        emails.append(email)
+                        total_services.append(service)
             
             else:
                 email1 = item['email1'].strip() if item.get('email1') else ""
@@ -647,9 +650,21 @@ def upload_contact():
 
                 for idx, email in enumerate([email1, email2, email3, email4, facebookemail1, facebookemail2]):
                     if email and check_blacklisted(email):
+                        service = dict()
+                        service['venue'] = item['venue']
+                        service['venue_type'] = item['type']
+                        service['website'] = item['website']
+                        service['phone'] = item['phone']
+                        service['address'] = item['address']
+                        service['facebook'] = item['facebook']
+                        service['customtext'] = item['customtext']
+                        service['originalemail'] = item['notes']
                         service['email'] = email
                         service['firstname'] = item['firstname' + str(idx+1)]
-                        total_services.append(service)
+                        service['is_unsubscribed'] = is_unsubscribed
+                        if email not in emails:
+                            emails.append(email)
+                            total_services.append(service)
 
         #  Apply batch algorith, so if auto_batch is checked, we will batch out by batch_size and filter out music venues
 
@@ -675,9 +690,6 @@ def upload_contact():
         else:
             music_sub_batches.append(music_batch)
             other_sub_batches.append(other_batch)
-
-        # print("music_sub_batches: ", len(music_sub_batches))
-        # print("other_sub_batches: ", len(other_sub_batches))
 
         for group_id, batch_group in enumerate([music_sub_batches, other_sub_batches]):
             for idx, sub_batch in enumerate(batch_group):
@@ -718,7 +730,7 @@ def upload_contact():
                     uservice.is_unsubscribed = service['is_unsubscribed']
                     uservice.firstname = service['firstname']
                     services.append(uservice)
-    
+
                 db.session.bulk_save_objects(services)
                 db.session.commit()
 
@@ -733,18 +745,18 @@ def contact_delete():
     file = Uploadedcontactfile.query.get(file_id)
     try:
         if file:
-            db.session.delete(file)
-            for service in Uploadedservice.query.filter_by(file_id=file_id).all():
-                #  delete reminder
-                for reminder  in Reminder.query.filter_by(userid=current_user.id, email=service.email).all():
-                    if scheduler.get_job(reminder.job_id):
-                        scheduler.remove_job(reminder.job_id)
+            Uploadedservice.query.filter_by(file_id=file_id).delete()
+            # for service in Uploadedservice.query.filter_by(file_id=file_id).all():
+            #     #  delete reminder
+            #     for reminder  in Reminder.query.filter_by(userid=current_user.id, email=service.email).all():
+            #         if scheduler.get_job(reminder.job_id):
+            #             scheduler.remove_job(reminder.job_id)
 
-                    db.session.delete(reminder)
-                    db.session.commit()
-                
-                db.session.delete(service)
-                db.session.commit()
+            #         db.session.delete(reminder)
+            #         db.session.commit()
+            #     db.session.delete(service)
+            db.session.delete(file)
+            db.session.commit()
 
             return {"success": True, 'message': "File deleted successfully."}
         else:

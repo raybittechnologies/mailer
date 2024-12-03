@@ -200,6 +200,15 @@ def job_push_notification_reminder(job_id, user_id):
 
             if reminder is None:
                 continue
+
+            reminder_email = reminder.email
+            user_id = reminder.userid
+
+            upload_service = Uploadedservice.query.filter_by(email=reminder_email, userid=user_id).first()
+            if upload_service is None:
+                # delete reminder
+                Reminder.query.filter_by(job_id=job_id).delete()
+                continue
             
             title = reminder.title
             body = reminder.note
@@ -237,6 +246,9 @@ def job_send_weekly_reminding_past_reminder_email():
             user_id = reminder.userid
             user = db.session.get(Users, user_id)
             if user is None:
+                # delete reminders
+                Reminder.query.filter_by(userid=user_id).delete()
+                db.session.commit()
                 continue
 
             user_email = user.email
@@ -256,7 +268,7 @@ def job_send_weekly_reminding_past_reminder_email():
                 <p>Hi,</p>
                 <p>This is a friendly reminder you have active "past due" reminders on Robotic Booking Agent that are requiring your attention.</p>
                 <p>Please login so you can view them to follow up with your hot leads.</p>
-                <p><a href="https://www.roboticbookingagent.com/reminders">https://www.roboticbookingagent.com/</a></p>
+                <p><a href="https://roboticbookingagent.com/reminders">https://roboticbookingagent.com/</a></p>
                 <p>You're soo close to securing that gig; Don't let this fall through the cracks!</p>
                 <p>Please note: you will keep getting this reminder every week if you have any "past due" reminders. So make sure to change them to the future to prevent this reminder from being emailed to you weekly. You can also unsubscribe from these reminder emails using the link below.</p>
                 <p>Sincerely,</p>

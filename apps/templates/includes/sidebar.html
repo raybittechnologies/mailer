@@ -62,6 +62,18 @@
                         <h6 class="ps-4 ms-2 text-uppercase text-xs font-weight-bolder opacity-6">Mailing Robot</h6>
                     </li>
                         <li class="nav-item">
+                            <a style="color:#1b1b1b !important;font-size: 16px;font-weight: bold;" class="nav-link {% if 'reminders' in segment %} active {% endif %}" href="/reminders">
+                                <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+                                    <!-- <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                        class="bi bi-clock-fill" viewBox="0 0 16 16">
+                                        <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+                                    </svg> -->
+                                    <i class="fas fa-bell" style="color: black;"></i>
+                                </div>
+                                <span class="nav-link-text ms-1">Reminders</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a style="color:#1b1b1b !important;font-size: 16px;font-weight: bold;" class="nav-link {% if 'upload_contact' in segment %} active {% endif %}" href="/upload_contact">
                                 <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
@@ -94,18 +106,6 @@
                                     </svg>
                                 </div>
                                 <span class="nav-link-text ms-1">Campaigns</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a style="color:#1b1b1b !important;font-size: 16px;font-weight: bold;" class="nav-link {% if 'reminders' in segment %} active {% endif %}" href="/reminders">
-                                <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
-                                    <!-- <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                        class="bi bi-clock-fill" viewBox="0 0 16 16">
-                                        <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
-                                    </svg> -->
-                                    <i class="fas fa-bell" style="color: black;"></i>
-                                </div>
-                                <span class="nav-link-text ms-1">Reminders</span>
                             </a>
                         </li>
                 {% endif %}

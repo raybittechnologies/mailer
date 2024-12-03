@@ -93,7 +93,7 @@ class Uploadedservice(db.Model):
     originalemail = db.Column(db.Text)
     
     __table_args__ = (
-        db.UniqueConstraint('email', 'user_id', name='unique-service'),
+        db.Index('uploaded-idx', "email", "user_id", unique=True),
     )
     
 class Uploadedcontactfile(db.Model):

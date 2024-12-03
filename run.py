@@ -52,7 +52,12 @@ for command in [gen_api, ]:
     app.cli.add_command(command)
 
 # socketio = SocketIO(app)
-CORS(app)
+# In order to perform authenticated AJAX queries, the server must specify the header "Access-Control-Allow-
+# Credentials: true" and the "Access-Control-Allow-Origin" header must be set to null or the malicious page's domain.
+# Even if this misconfiguration doesn't allow authenticated AJAX requests, unauthenticated sensitive content can still
+# be accessed (e.g intranet websites).
+CORS(app, saccess_control_allow_origin=None, access_control_allow_credentials=True)
+# CORS(app)
 
 # When using Ngrok, uncomment the following lines
 app.wsgi_app = ProxyFix(app.wsgi_app)
