@@ -173,6 +173,7 @@
                 </button>
             </div>
             <form id="update-email-form" action="/update_email" method="post">
+                <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-body">
                   <div class="form-group">
                       <label for="new-email" class="col-form-label">New Email:</label>
@@ -216,12 +217,14 @@
               },
           });
 
+          const formData = new FormData();
+          formData.append('new_email', new_email);
+          formData.append('csrf_token', document.getElementById("csrf_token").value);
+
+
           fetch('/update_email',{
               method: 'POST',
-              headers : { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                  "new_email" : new_email,
-              }),
+              body: formData
           })
           .then((response) => {
               if(!response.ok)

@@ -12,6 +12,7 @@
 <div class="container-fluid">
 
     <form action="/update_howto" method="post" id="action-form">
+        <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
         <div class="d-flex justify-content-end mt-5">
             <input class="btn bg-gradient-primary" type="submit" tabindex="0" value="Update">
         </div>
@@ -92,13 +93,14 @@
                 },
             });
 
+            const formData = new FormData();
+            formData.append('text', text);
+            formData.append('id', howtotext_id);
+            formData.append('csrf_token', document.getElementById("csrf_token").value);
+
             fetch('/update_howto_text', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    "text": text,
-                    "id": howtotext_id,
-                }),
+                body: formData
             })
                 .then((response) => {
                     if (!response.ok)

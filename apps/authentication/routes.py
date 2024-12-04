@@ -52,6 +52,10 @@ def login():
     login_form = LoginForm(request.form)
 
     if flask.request.method == 'POST':
+        # if login_form.validate_on_submit():
+        #     # Process the form data
+        #     return render_template('accounts/login.html',
+        #                        form=login_form) 
 
         # read form data
         email = request.form['email'].lower()

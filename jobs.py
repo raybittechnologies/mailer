@@ -204,7 +204,7 @@ def job_push_notification_reminder(job_id, user_id):
             reminder_email = reminder.email
             user_id = reminder.userid
 
-            upload_service = Uploadedservice.query.filter_by(email=reminder_email, userid=user_id).first()
+            upload_service = Uploadedservice.query.filter_by(email=reminder_email, user_id=user_id).first()
             if upload_service is None:
                 # delete reminder
                 Reminder.query.filter_by(job_id=job_id).delete()
@@ -223,6 +223,7 @@ def job_push_notification_reminder(job_id, user_id):
             vapid_private_key = scheduler.app.config['VAPID_PRIVATE_KEY']
             url = f"/reminders?reminder_id={reminder_id}"
 
+            print("Sending", reminder_email, user_id)
             send_push_notification(sub_info, title,  body, reminder_id, vapid_claims, vapid_private_key, url)
 
 

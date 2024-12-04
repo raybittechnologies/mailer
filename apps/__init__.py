@@ -10,16 +10,18 @@ from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 from importlib import import_module
 from flask_apscheduler import APScheduler
+from flask_wtf.csrf import CSRFProtect #Flask has built-in support for CSRF protection when using the Flask-WTF library: https://flask-wtf.readthedocs.io/en/stable/csrf.html
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 scheduler = APScheduler()
-
+csrf = CSRFProtect()
 
 def register_extensions(app):
     db.init_app(app)
     login_manager.init_app(app)
     scheduler.init_app(app)
+    csrf.init_app(app)
 
 
 def register_blueprints(app):
@@ -57,9 +59,5 @@ def create_app(config):
     app.config.from_object(config)
     register_extensions(app)
     register_blueprints(app)
-
-    # app.register_blueprint(github_blueprint, url_prefix="/login") 
-    # app.register_blueprint(nylas_bp, url_prefix="/login")
-    
     configure_database(app)
     return app

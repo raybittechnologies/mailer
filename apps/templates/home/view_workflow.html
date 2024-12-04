@@ -52,6 +52,7 @@
                     </button>
                     </div>
                     <form action="/add/action" method="post" id="action-form">
+                        <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                         <div class="modal-body">
                             <div class="form-group">
                                 <label for="recipient-name" class="col-form-label">Action Name:</label>
@@ -99,6 +100,7 @@
                   </button>
                 </div>
                 <form style="display: contents"> 
+                    <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="actionid" id="delete-modal-actionid" />
                     <input type="hidden" class="form-control" id="tid" value="{{template.tid}}" name="tid" hidden>
                     
@@ -298,10 +300,14 @@
                 },
             });
 
+            const formData = new FormData();
+            formData.append('actionid', actionid);
+            formData.append('csrf_token', document.getElementById("csrf_token").value);
+
+
             fetch('/action/delete',{
                 method: 'POST',
-                headers : { 'Content-Type': 'application/json' },
-                body: JSON.stringify({"actionid" : actionid}),
+                body: formData
             })
             .then((response) => {
                 if(!response.ok)

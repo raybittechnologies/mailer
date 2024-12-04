@@ -53,6 +53,7 @@
                     </button>
                 </div>
                 <form >
+                    <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="reminder-id" id="reminder-id" />
                     <div class="modal-footer">
                         <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -72,6 +73,7 @@
                     </button>
                 </div>
                 <form id="create-reminder-form" action="/reminder/create" method="post">
+                    <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                     <div class="modal-body">
                         <input type="hidden" name="userid" id="userid" value="{{ user_id }}" />
                         <input type="hidden" name="reminder-id" id="reminder-id" />
@@ -263,11 +265,15 @@
                 document.getElementById("reminder-id").value = reminder_id;
             } else if (event.target.innerText === "EDIT") {
                 const reminder_id = event.target.getAttribute("reminder_id");
+
+                const formData = new FormData();
+                formData.append('reminder_id', reminder_id);
+                formData.append('csrf_token', document.getElementById("csrf_token").value);
+
                 // console.log(reminder_id);
                 fetch('/get_reminder', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ "reminder_id": reminder_id }),
+                    body: formData
                 })
                     .then((response) => {
                         if (!response.ok)
@@ -323,12 +329,13 @@
                 },
             }); 
 
+            const formData = new FormData();
+            formData.append('reminder_id', reminder_id);
+            formData.append('csrf_token', document.getElementById("csrf_token").value);
+
             fetch('/delete_reminder', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    "reminder_id": reminder_id 
-                }),
+                body: formData
             })
                 .then((response) => {
                     if (!response.ok)
@@ -377,6 +384,7 @@
             const venue = document.getElementById("venue").value;
             const title_template = document.getElementById("title-template").value;
             const reminder_time = document.getElementById("reminder_time").value;
+            const csrf_token = document.getElementById("csrf_token").value;
 
             if (title === "" || reminder_time === "") {
                 Swal.fire({
@@ -386,9 +394,22 @@
                 });
                 return;
             }
-
-            // convert reminder_time to UTC
+            
             const reminder_time_utc = new Date(reminder_time).toISOString();
+            // convert reminder_time to UTC
+            
+            const formData = new FormData();
+            formData.append('userid', userid);
+            formData.append('reminder_id', reminder_id);
+            formData.append('title', title);
+            formData.append('note', note);
+            formData.append('name', name);
+            formData.append('phone', phone);
+            formData.append('email', email);
+            formData.append('venue', venue);
+            formData.append('title_template', title_template);
+            formData.append('reminder_time', reminder_time_utc);
+            formData.append('csrf_token', csrf_token);
 
             console.log("===", reminder_time_utc);
 
@@ -404,19 +425,7 @@
 
             fetch('/add_reminder', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    "userid": userid,
-                    "reminder_id": reminder_id,
-                    "title": title,
-                    "name": name,
-                    "phone": phone,
-                    "email": email,
-                    "venue": venue,
-                    "title_template": title_template,
-                    "note": note,
-                    "reminder_time": reminder_time_utc
-                }),
+                body: formData
             })
                 .then((response) => {
                     if (!response.ok)
@@ -519,6 +528,10 @@
             const action = event.target.innerText;
             console.log(reminder_id, action);
 
+            const formData = new FormData();
+            formData.append('reminder_id', reminder_id);
+            formData.append('csrf_token', document.getElementById("csrf_token").value);
+
             // if actions is null then return
             if (!action) {
                 return;
@@ -526,7 +539,7 @@
 
             if (action === "Complete") {
                 fetch('/complete_reminder/' + reminder_id, {
-                    method: 'POST',
+                    method: 'GET',
                 })
                     .then((response) => {
                         if (!response.ok)
@@ -565,10 +578,10 @@
                         });
                     });
             } else if (action === "Remind me in an hour") {
+                formData.append('hours', 1);
                 fetch('/reschedule_reminder', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ "reminder_id": reminder_id, "hours": 1 }),
+                    body: formData
                 })
                     .then((response) => {
                         if (!response.ok)
@@ -606,10 +619,10 @@
                         });
                     })
             } else if (action === "Remind me in 7 days") {
+                formData.append('days', 7);
                 fetch('/reschedule_reminder', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ "reminder_id": reminder_id, "days": 7 }),
+                    body: formData
                 })
                     .then((response) => {
                         if (!response.ok)

@@ -52,6 +52,7 @@
                             </button>
                         </div>
                         <form action="/update/workflow" method="post">
+                            <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                             <div class="modal-body">
                                 <div class="form-group">
                                     <label for="workflow-name" class="col-form-label">Name:</label>
@@ -86,6 +87,7 @@
                             </button>
                         </div>
                         <form action="/import/workflow" method="post">
+                            <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                             <div class="modal-body">
                                 <div class="form-group">
                                     <label for="template-name" class="col-form-label">Select Template:</label>
@@ -117,6 +119,7 @@
                   </button>
                 </div>
                 <form action="/workflow/delete" style="display: contents" method="post"> 
+                    <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="workflowid" id="delete-modal-tempid"/>
                     <div class="modal-footer">
                         <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -320,10 +323,14 @@
                 },
             });
 
+            const formData = new FormData();
+            formData.append('workflowid', workflowid);
+            formData.append('csrf_token', document.getElementById("csrf_token").value);
+
+
             fetch('/workflow/delete',{
                 method: 'POST',
-                headers : { 'Content-Type': 'application/json' },
-                body: JSON.stringify({"workflowid" : workflowid}),
+                body: formData
             })
             .then((response) => {
                 if(!response.ok)

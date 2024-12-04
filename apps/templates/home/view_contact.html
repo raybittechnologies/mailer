@@ -55,6 +55,7 @@
                   </button>
                 </div>
                 <form action="/service/delete" style="display: contents" method="post"> 
+                    <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="jobid" id="delete-modal-serviceid"/>
                     <div class="modal-footer">
                         <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -77,6 +78,7 @@
                   </button>
                 </div>
                 <form action="/service/edit" style="display: contents" method="post"> 
+                    <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="jobid" id="edit-modal-serviceid"/>
                     <div class="modal-body">
                         <div class="form-group">
@@ -298,10 +300,13 @@
                 },
             });
 
+            const formData = new FormData();
+            formData.append('serviceid', serviceid);
+            formData.append('csrf_token', document.getElementById("csrf_token").value);
+
             fetch('/service/delete',{
                 method: 'POST',
-                headers : { 'Content-Type': 'application/json' },
-                body: JSON.stringify({"serviceid" : serviceid}),
+                body: formData,
             })
             .then((response) => {
                 if(!response.ok)
@@ -349,6 +354,17 @@
             const originalemail = document.getElementById("edit-modal-originalemail").value;
             const phone = document.getElementById("edit-modal-phone").value;
 
+            const formData = new FormData();
+            formData.append('serviceid', serviceid);
+            formData.append('venue', venue);
+            formData.append('email', email);
+            formData.append('firstname', firstname);
+            formData.append('customtext', customtext);
+            formData.append('originalemail', originalemail);
+            formData.append('phone', phone);
+            formData.append('csrf_token', document.getElementById("csrf_token").value);
+            
+
             $('#close-editjob-modal').click();
 
             Swal.fire({
@@ -361,16 +377,7 @@
 
             fetch('/service/edit',{
                 method: 'POST',
-                headers : { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    "serviceid" : serviceid,
-                    "venue" : venue,
-                    "email" : email,
-                    "firstname" : firstname,
-                    "customtext" : customtext,
-                    "originalemail" : originalemail,
-                    "phone" : phone
-                }),
+                body: formData,
             })
             .then((response) => {
                 if(!response.ok)

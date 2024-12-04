@@ -37,6 +37,7 @@
                                 </div>
                                 <div class="card-body">
                                     <form action="\admin\login" method="post" role="form">
+                                        <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                                         <label>Email</label>
                                         <div class="mb-3">
                                             <input required type="email" class="form-control" name="email"

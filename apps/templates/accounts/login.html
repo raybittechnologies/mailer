@@ -60,9 +60,7 @@
                                         </div>
 
                                         <div class="text-center">
-                                            <button type="submit" name="login"
-                                                    class="btn bg-gradient-danger w-100 mt-4 mb-0">Sign IN
-                                            </button>
+                                            <button type="submit" name="login" class="btn bg-gradient-danger w-100 mt-4 mb-0">Sign IN</button>
                                         </div>
 
                                         <div class="text-center">
@@ -119,16 +117,12 @@
             const formData = new FormData(e.target)
             const email = formData.get('email');
             const password = formData.get('password');
+            const csrf_token = formData.get('csrf_token');
 
             fetch('/login/jwt/', {
                 method: 'POST',
-                body: JSON.stringify({
-                    email: email,
-                    password: password
-                }),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                // Form data to be sent
+                body: formData
             })
                 .then((response) => response.json())
                 .then((res) => {

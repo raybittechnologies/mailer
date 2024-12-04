@@ -712,20 +712,23 @@
     }
 
     async function subscribeUser() {
-        const registration = await navigator.serviceWorker.register('{{ config.ASSETS_ROOT }}/js/service-worker.js?v=3');
+        const registration = await navigator.serviceWorker.register('{{ config.ASSETS_ROOT }}/js/service-worker.js?v=6');
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(publicKey)
         });
 
         const userId = '{{ user_id }}';
-        
+        const csrf_token = '{{ csrf_token() }}';
+
+        const formData = new FormData();
+        formData.append('user_id', userId);
+        formData.append('subscription', JSON.stringify(subscription));
+        formData.append('csrf_token', csrf_token);
+
         fetch('/reg_push_notify', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ ...subscription.toJSON(), user_id: userId })
+            body: formData
         }).then(response => {
             if (response.ok) {
                 console.log('Successfully subscribed for notifications!');
@@ -736,7 +739,7 @@
     }
 
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('{{ config.ASSETS_ROOT }}/js/service-worker.js?v=5').then(() => {
+        navigator.serviceWorker.register('{{ config.ASSETS_ROOT }}/js/service-worker.js?v=6').then(() => {
             console.log("Service Worker Registered");
         });
     }

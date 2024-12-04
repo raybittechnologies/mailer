@@ -12,7 +12,7 @@ from sys import exit
 from api_generator.commands import gen_api
 from flask_cors import CORS
 from apps.config import config_dict
-from apps import create_app, db, scheduler
+from apps import create_app, db, scheduler, csrf
 from apps.models import Service, Yelpurl, FirstName
 from apps.authentication.models import Users
 from apps.home.emailler import send_email
@@ -56,11 +56,11 @@ for command in [gen_api, ]:
 # Credentials: true" and the "Access-Control-Allow-Origin" header must be set to null or the malicious page's domain.
 # Even if this misconfiguration doesn't allow authenticated AJAX requests, unauthenticated sensitive content can still
 # be accessed (e.g intranet websites).
-CORS(app, saccess_control_allow_origin=None, access_control_allow_credentials=True)
+CORS(app, access_control_allow_origin=None, access_control_allow_credentials=True)
 # CORS(app)
 
 # When using Ngrok, uncomment the following lines
-app.wsgi_app = ProxyFix(app.wsgi_app)
+# app.wsgi_app = ProxyFix(app.wsgi_app)
 
 if not scheduler.running: # Clause suggested by @CyrilleMODIANO
     scheduler.start()
@@ -121,7 +121,7 @@ else:
     except Exception as e:
         print("Failed to create job", str(e))
 
-
+@csrf.exempt
 @app.route('/msg', methods=['POST'])
 def msg1():
     data = request.json['result']

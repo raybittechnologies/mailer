@@ -738,6 +738,7 @@
                   </button>
                 </div>
                 <form action="/admin/users/delete" style="display: contents" method="post"> 
+                    <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="userid" id="userid"/>
                     
                     <div class="modal-footer">
@@ -759,6 +760,7 @@
                   </button>
                 </div>
                 <form action="/admin/users/reset" style="display: contents" method="post"> 
+                    <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="userid" id="reset-userid"/>
                     
                     <div class="modal-footer">

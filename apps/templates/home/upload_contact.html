@@ -19,6 +19,7 @@
                 <div class="card-body">
                     <a class="btn bg-gradient-info" target="_blank" href="https://docs.google.com/spreadsheets/d/17OascTooyDV8vijaqE6442ML4YfOLdBk1Fi0XnSUcrg/export?format=xlsx&gid=0">Add new contacts here <i class="fa fa-download"></i></a>
                     <form method="post" enctype="multipart/form-data" id="upload-contact">
+                        <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                         <div class="form-group">
                             <label class="small mb-1" for="category">Select file:</label>
                            <input class="form-control py-1" id="file" name="file" type="file" accept=".csv,.xlsx" required/>
@@ -74,6 +75,7 @@
                         Are you sure you want to delete this contact?
                     </div>
                     <form action="/contact/delete" style="display: contents" method="post"> 
+                        <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="fileid" id="fileid"/>
                         <div class="modal-footer">
                             <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -215,10 +217,13 @@
                 },
             });
 
+            const formData = new FormData();
+            formData.append('fileid', fileid);
+            formData.append('csrf_token', document.getElementById("csrf_token").value);
+
             fetch('/contact/delete',{
                 method: 'POST',
-                headers : { 'Content-Type': 'application/json' },
-                body: JSON.stringify({"fileid" : fileid}),
+                body: formData
             })
             .then((response) => {
                 if(!response.ok)

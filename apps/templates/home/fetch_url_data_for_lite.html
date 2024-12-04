@@ -122,10 +122,10 @@
     );
         
     var interval = setInterval(function () {
-        fetch('/check_state',{
-            method: 'POST',
-            headers : { 'Content-Type': 'application/json' },
-            body: JSON.stringify({id : '{{ current_url.id }}' }),
+        id = '{{ current_url.id }}';
+
+        fetch('/check_state/' + id,{
+            method: 'GET',
         })
         .then((response) => {
             if (!response.ok) {

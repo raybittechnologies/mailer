@@ -77,10 +77,10 @@ def yelp_scraper_run(url, user_id, id):
     
     while True:
         search_data = []
-        start = page * 10 # 10 business per page
+        start = page * 10 # 10 business per page        
         print("Start", start)
         WEB_HOST_IP = os.getenv("WEB_HOST_IP")
-        response = requests.post(f'{WEB_HOST_IP}/check_state', json={'id': id})
+        response = requests.get(f'{WEB_HOST_IP}/check_state/' + str(id))
         if response.text == "completed":
             return
         
@@ -201,7 +201,7 @@ def yelp_scraper_run(url, user_id, id):
                     except:
                         pass
                     
-                    if not full_address:
+                    if not full_address and address:
                         full_address = f"{address}, {city}, {state} {zip} {country}"
                     
                     data = dict()
@@ -260,7 +260,8 @@ def thread_runner(data):
     website = data['website']
     WEB_HOST_IP = os.getenv("WEB_HOST_IP")
     
-    response = requests.post(f'{WEB_HOST_IP}/check_state', json={'id': data['url_id']})
+    response = requests.get(f'{WEB_HOST_IP}/check_state/' + str(data['url_id']))
+
     if response.text == "completed":
         return
     
@@ -290,7 +291,7 @@ def thread_runner(data):
             except:
                 pass
 
-        response = requests.post(f'{WEB_HOST_IP}/check_state', json={'id': data['url_id']})
+        response = requests.get(f'{WEB_HOST_IP}/check_state/' + str(data['url_id']))
         if response.text == "completed":
             return
         

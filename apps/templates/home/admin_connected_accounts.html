@@ -51,6 +51,7 @@
                             </button>
                         </div>
                         <form action="/admin/disconnect_account" style="display: contents" method="post"> 
+                            <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="email" id="user-email"/>
                             <input type="hidden" name="account_id" id="data-account-id"/>
                             <div class="modal-footer">
@@ -149,13 +150,14 @@
                 },
             });
 
+            const formData = new FormData();
+            formData.append('account_id', account_id);
+            formData.append('email', email);
+            formData.append('csrf_token', document.getElementById("csrf_token").value);
+
             fetch('/admin/disconnect_account',{
                 method: 'POST',
-                headers : { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    "account_id" : account_id,
-                    "email" : email
-                }),
+                body: formData
             })
             .then((response) => {
                 if(!response.ok)

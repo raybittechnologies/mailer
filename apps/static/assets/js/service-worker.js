@@ -43,7 +43,9 @@ self.addEventListener('notificationclick', function(event) {
 });
 
 function completeReminder(reminderId) {
-    fetch(`/complete_reminder/${reminderId}`, { method: 'POST' });
+    // create csrf token
+    // add csrf token to fetch request
+    fetch(`/complete_reminder/${reminderId}`, { method: 'GET' });
 }
 
 function getBrowserType() {
@@ -65,3 +67,21 @@ function getBrowserType() {
         return "Unknown";
     }
 }
+
+
+self.addEventListener('pushsubscriptionchange', function(event) {
+    console.log('Subscription expired');
+    event.waitUntil(
+        self.registration.pushManager.subscribe({ userVisibleOnly: true })
+            .then(function(subscription) {
+                console.log('Subscribed after expiration', subscription.endpoint);
+                return fetch('/update_subscription', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(subscription)
+                });
+            })
+    );
+});

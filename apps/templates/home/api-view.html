@@ -88,6 +88,7 @@
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <form id="create-form">
+          <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-header">
           <h5 class="modal-title" id="exampleModalLabel">Add</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -112,6 +113,7 @@
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <form id="edit-form">
+          <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-header">
           <h5 class="modal-title" id="exampleModalLabel">Edit</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>

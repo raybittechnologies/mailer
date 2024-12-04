@@ -50,6 +50,7 @@
                   </button>
                 </div>
                 <form action="/automation/delete" style="display: contents" method="post"> 
+                    <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="jobid" id="delete-modal-jobid"/>
                     <div class="modal-footer">
                         <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -70,6 +71,7 @@
                 </div>
                 {% if current_user.nylas_access_token %}
                     <form action="/automation/retry" style="display: contents" method="post"> 
+                        <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                         <!-- <p >it will reschedule all failed automations</p> -->
                         <input type="hidden" name="campaignid" id="campaignid" value="{{ campaignid }}"/>
                         <div class="modal-footer">

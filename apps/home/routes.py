@@ -17,8 +17,8 @@ from jinja2 import Template as JT
 
 from apps.config import API_GENERATOR
 import requests
-from datetime import datetime, timedelta
-from apps import db, scheduler
+from datetime import datetime, timedelta, timezone
+from apps import db, scheduler, csrf
 import multiprocessing
 from apps.home.script import yelp_scraper_run
 from apps.models import *
@@ -51,13 +51,18 @@ nylas = Client(
     api_uri = NYLAS_API_URI,
 )
 
-
 # calculate the number of workers to use
 workers = (multiprocessing.cpu_count() * 2) + 1
 print("Number of workers: ", workers)
 executor = ThreadPoolExecutor(max_workers=workers)
 
 processes = {}
+
+@blueprint.after_request
+def set_security_headers(response):
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['Content-Security-Policy'] = "frame-ancestors 'none';"
+    return response
 
 
 def role_required(role):
@@ -417,7 +422,7 @@ def view_master_credited_data():
         url_list.append(url_data)
     return jsonify(url_list)
 
-
+@csrf.exempt
 @blueprint.route('/history', methods=['POST', 'GET'])
 @login_required
 @user_approved_required
@@ -440,7 +445,7 @@ def view_master_credited():
     credited = Service.query.filter_by(user_id=current_user.id, is_credited=1).count()
     return render_template('home/view_master_credited_data.html', segment='history', credited=credited)
 
-
+@csrf.exempt
 @blueprint.route('/update/credit', methods=['POST'])
 @login_required
 @user_approved_required
@@ -477,7 +482,7 @@ def credit_service():
         return {"success": True, 'message': message, "available_credit" : available_credit, "user_credit" : user_credit.credit }
 
 
-
+@csrf.exempt
 @blueprint.route('/fetch/<int:id>', methods=['GET', 'POST'])
 @login_required
 @user_approved_required
@@ -499,7 +504,7 @@ def fetch(id):
         
     return redirect(url_for('home_blueprint.fetching', id=id))
 
-
+@csrf.exempt
 @blueprint.route('/complete', methods=['POST'])
 def complete_process():
     id = request.json['id']
@@ -616,7 +621,7 @@ def upload_contact():
         emails = []
         for idx, item in df.iterrows():
             if 'subscribed' in df.columns:
-                is_unsubscribed = 1 if item['subscribed'] == "Unsubscribed" else 0
+                is_unsubscribed = 1 if item['subscribed'].lower() == "unsubscribed" else 0
             else:
                 is_unsubscribed = 0
 
@@ -741,7 +746,7 @@ def upload_contact():
 @login_required
 @user_approved_required
 def contact_delete():
-    file_id = int(request.json['fileid'])
+    file_id = int(request.form[ 'fileid'])
     file = Uploadedcontactfile.query.get(file_id)
     try:
         if file:
@@ -785,7 +790,7 @@ def view_contact(id):
 def view_all_contact():
     return render_template('home/view_all_contact.html')
         
-        
+@csrf.exempt        
 @blueprint.route('/contacts/list/<int:id>', methods=['GET', 'POST'])
 @login_required
 @user_approved_required
@@ -856,7 +861,7 @@ def get_service(id):
 @login_required
 @user_approved_required
 def service_edit():
-    data = request.json
+    data = request.form
     service = Uploadedservice.query.get(data['serviceid'])
     service.name = data['venue']
     service.email = data['email']
@@ -906,7 +911,7 @@ def contacts_all_list():
 @user_approved_required
 def service_delete():
     
-    serviceid = request.json['serviceid']
+    serviceid = request.form['serviceid']
     service = Uploadedservice.query.get(serviceid)
     
     
@@ -991,10 +996,9 @@ def process_state(id):
     else:
         return redirect(url_for('home_blueprint.url_view', id=id))
 
-
-@blueprint.route('/check_state', methods=['POST'])
-def check_state():
-    id = request.json['id']
+@csrf.exempt
+@blueprint.route('/check_state/<int:id>', methods=['GET'])
+def check_state(id):
     yelpurl = Yelpurl.query.get(int(id))
     return yelpurl.state
 
@@ -1067,7 +1071,7 @@ def starting(urls, user_id, id):
         response = requests.post(f'{WEB_HOST_IP}/msg', json={'result': "completed", 'id' : id, 'user_id' : user_id})
         print("Processes", response.text)
 
-
+@csrf.exempt
 @blueprint.route('/admin/register', methods=['POST'])
 @login_required
 def register():
@@ -1375,7 +1379,7 @@ def add_template():
     else:
         return render_template('home/admin_add_template.html', segment="templates" )
 
-
+@csrf.exempt
 @blueprint.route('/admin/update/template', methods=['POST'])
 @login_required 
 @role_required('admin')
@@ -1392,7 +1396,7 @@ def update_template():
     db.session.commit()
     return {'success': True}
 
-
+@csrf.exempt
 @blueprint.route('/update/workflowstatus', methods=['POST'])
 @login_required 
 @user_approved_required
@@ -1448,7 +1452,7 @@ def template_delete():
 @login_required
 @user_approved_required
 def workflow_delete():
-    templateid = request.json['workflowid']
+    templateid = request.form['workflowid']
     temp = Template.query.get(templateid)
     
     actions = Action.query.filter_by(tempid=templateid).all()
@@ -1637,7 +1641,7 @@ def admin_action_delete():
 @login_required
 @user_approved_required
 def action_delete():
-    actionid = request.json['actionid']
+    actionid = request.form['actionid']
     automations = Automation.query.filter((Automation.action_id == actionid) & (Automation.status != "completed")).all()
     
     if len(automations) > 0:
@@ -1700,7 +1704,7 @@ def get_templates():
         temp_list.append(temp_data)
     return jsonify(temp_list)
 
-
+@csrf.exempt
 @blueprint.route('/get_workflows', methods=['GET', 'POST'])
 @login_required
 @user_approved_required
@@ -1824,7 +1828,7 @@ def update_workflow():
     db.session.commit()
     return redirect(url_for('home_blueprint.my_workflow'))
     
-
+@csrf.exempt
 @blueprint.route('/admin/action/test', methods=['POST'])
 @login_required 
 @role_required('admin')
@@ -1864,7 +1868,7 @@ def cancel_membership():
         return "Failed to send request. Please try again later."
 
     
-
+@csrf.exempt
 @blueprint.route('/action/test', methods=['POST'])
 @login_required 
 @user_approved_required
@@ -1916,7 +1920,7 @@ def action_test():
         else:
             return {"success": False, "message": str(e)}
             
-
+@csrf.exempt
 @blueprint.route('/action/get', methods=['POST'])
 @login_required 
 @user_approved_required
@@ -1936,7 +1940,7 @@ def get_action():
     return jsonify(action_data)
 
     
-    
+@csrf.exempt
 @blueprint.route('/webhooks', methods=['POST', "GET"])
 def webhook():
     if request.method == "GET" : 
@@ -2108,7 +2112,7 @@ def campaigns():
     else:
         return render_template('home/campaigns.html', segment="campaigns")
     
-    
+@csrf.exempt
 @blueprint.route('/create/campaign', methods=['POST'])
 @login_required 
 @user_approved_required
@@ -2258,7 +2262,7 @@ def get_automations(campaignid):
 @login_required 
 @user_approved_required
 def camp_delete():
-    id = request.json['campid']
+    id = request.form['campid']
     camp = Campaign.query.get(id)
     
     if camp:
@@ -2282,7 +2286,7 @@ def camp_delete():
         
     return {"success": True, 'message': "Campaign deleted successfully."}
 
-
+@csrf.exempt
 @blueprint.route('/automation/delete', methods=['POST'])
 @login_required 
 @user_approved_required
@@ -2301,7 +2305,7 @@ def job_delete():
     db.session.commit()
     return {"success": True, 'message': "Job deleted successfully."}
 
-
+@csrf.exempt
 @blueprint.route('/automation/retry', methods=['POST'])
 @login_required 
 @user_approved_required
@@ -2341,7 +2345,7 @@ def job_retry():
                     db.session.commit()
         
             job_starttime = datetime.datetime.now() + timedelta(days=days_diff, seconds=30)
-            job_start_utctime = datetime.datetime.utcnow() + timedelta(days=days_diff, seconds=30)
+            job_start_utctime = datetime.datetime.now(timezone.utc) + timedelta(days=days_diff, seconds=30)
             automation.action_datetime = job_start_utctime
 
             action_id = automation.action_id
@@ -2540,7 +2544,7 @@ def passwordreset():
 
 @blueprint.route('/update_email', methods=['POST'])
 def update_email():
-    email = request.json['new_email'].lower()
+    email = request.form['new_email'].lower()
     user = Users.query.filter_by(email=email).first()
     if user:
         return {"success": False, "message": "This email is already registered."}
@@ -2672,8 +2676,9 @@ def get_connected_accounts():
 @login_required
 @role_required('admin')
 def disconnect_account():
-    grant_id = request.json['account_id']
-    email = request.json['email'].lower()
+    formdata = request.form
+    grant_id =formdata['account_id']
+    email = formdata['email'].lower()
 
     try:
         response = nylas.grants.destroy( grant_id )
@@ -2706,6 +2711,7 @@ def get_users_campaign_settings():
 
     return jsonify(user_list)
 
+@csrf.exempt
 @blueprint.route('/admin/enable_multisearch', methods=['POST'])
 @login_required
 @role_required('admin')
@@ -2716,6 +2722,7 @@ def enable_multisearch():
     user.is_multi_search = is_multisearch
     db.session.commit()
     return {"success": True, "message": "Multi search enabled."}
+
 
 @blueprint.route('/admin/update/campaign_settings', methods=['POST'])
 @login_required 
@@ -2834,8 +2841,8 @@ def get_howto_text():
 @login_required
 @role_required('admin')
 def update_howto_text():
-    text = request.json.get('text')
-    id = request.json.get('id')
+    text = request.form.get('text')
+    id = request.form.get('id')
     howto_text = HowToFAQ.query.filter_by(id=id).first()
     try:
         if howto_text:
@@ -2851,24 +2858,42 @@ def update_howto_text():
 @blueprint.route('/reg_push_notify', methods=['POST'])
 @login_required
 def reg_push_notify():
-    subscription_info = request.get_json()
+    subscription_info = request.form.to_dict()
     user_id = subscription_info.get('user_id')
+    subscrition = json.loads(subscription_info.get('subscription'))
+    subscrition.update({"user_id": user_id})
+
     push_notifications = PushNotificationInfo.query.filter_by(userid=user_id).all()
     for push_notification in push_notifications:
-        if subscription_info['keys']['auth'] == push_notification.subscription_info['keys']['auth']:
+        if subscrition['keys']['auth'] == push_notification.subscription_info['keys']['auth']:
+            # delete existing subscription
+            db.session.delete(push_notification)
+            db.session.commit()
             print(f"User {user_id} already subscribed")
-            return jsonify({"success": True}), 200
+            break
 
     push_notification = PushNotificationInfo()
     push_notification.userid = user_id
-    push_notification.subscription_info = subscription_info
+    push_notification.subscription_info = subscrition
     db.session.add(push_notification)
     print(f"User {user_id} subscribed")
     db.session.commit()
-
     return jsonify({"success": True}), 200
 
 
+@blueprint.route('/update_subscription', methods=['POST'])
+def update_subscription():
+    subscription_info = request.form.to_dict()
+    user_id = subscription_info.get('user_id')
+    subscrition = json.loads(subscription_info.get('subscription'))
+    subscrition.update({"user_id": user_id})
+
+    push_notification = PushNotificationInfo.query.filter_by(userid=user_id).first()
+    push_notification.subscription_info = subscrition
+    db.session.commit()
+    return jsonify({"success": True}), 200
+
+@csrf.exempt
 @blueprint.route('/send_notification', methods=['POST'])
 def send_notification():
     data = request.get_json()
@@ -2938,7 +2963,7 @@ def get_reminders():
 @login_required
 @user_approved_required
 def get_reminder():
-    reminder_id = request.json.get('reminder_id')
+    reminder_id = request.form.get('reminder_id')
     reminder = Reminder.query.filter_by(id=reminder_id).first()
     if reminder is None:
         return jsonify({"error": "Reminder not found."}), 404
@@ -2983,15 +3008,15 @@ def get_local_time_from_utc(utc_time):
     reminder_utc_time = utc_zone.localize(utc_time)
     reminder_local_time = reminder_utc_time.astimezone(local_zone)
     reminder_local_time_string = reminder_local_time.strftime('%Y-%m-%d %H:%M:%S')
-    print("reminder_local_time_string", reminder_local_time_string)
-    print("utc_time_iso_string", utc_time_iso_string)
+    # print("reminder_local_time_string", reminder_local_time_string)
+    # print("utc_time_iso_string", utc_time_iso_string)
     return reminder_local_time_string, utc_time_iso_string
 
     
 
 @blueprint.route('/add_reminder', methods=['POST'])
 def add_reminder():
-    data = request.json
+    data = request.form
     if data.get('reminder_id'): # Update reminder
         reminder = Reminder.query.filter_by(id=data.get('reminder_id')).first()
         if reminder:
@@ -3016,7 +3041,9 @@ def add_reminder():
                 "func" : "jobs:job_push_notification_reminder",
                 "args" : (job_id, user_id)
             }
-            print(job)
+            if scheduler.get_job(job_id):
+                scheduler.remove_job(job_id)
+
             try:
                 scheduler.add_job(**job) # TODO: Uncomment this line
                 print("created job", job_id)
@@ -3067,30 +3094,14 @@ def add_reminder():
         return jsonify({"success": True, "message": "Reminder added successfully."})
     
 
-@blueprint.route('/update_reminder', methods=['POST'])
-def update_reminder():
-    data = request.json
-    reminder_id = data.get('reminder_id')
-    reminder = Reminder.query.filter_by(id=reminder_id).first()
-    reminder.title = data.get('title')
-    reminder.note = data.get('note')
-    reminder.name = data.get('name')
-    reminder.email = data.get('email')
-    reminder.phone = data.get('phone')
-    reminder.venue = data.get('venue')
-    reminder.note_template = data.get('title_template')
-    reminder.reminder_time = data.get('reminder_time')
-    db.session.commit()
-
-    return jsonify({"success": True, "message": "Reminder updated successfully."})
-
 @blueprint.route('/delete_reminder', methods=['POST'])
 def delete_reminder():
-    reminder_id = request.json.get('reminder_id')
+    reminder_id = request.form.get('reminder_id')
     reminder = Reminder.query.filter_by(id=reminder_id).first()
 
     job_id = reminder.job_id
     if scheduler.get_job(job_id):
+        print("Removing job", job_id)
         scheduler.remove_job(job_id)
 
     db.session.delete(reminder)
@@ -3099,8 +3110,9 @@ def delete_reminder():
     return jsonify({"success": True, "message": "Reminder deleted successfully."})
 
 
-@blueprint.route('/complete_reminder/<int:reminder_id>', methods=['POST'])
+@blueprint.route('/complete_reminder/<int:reminder_id>', methods=['GET'])
 def complete_reminder(reminder_id):
+    # Ignore csrf token check
     reminder = Reminder.query.filter_by(id=reminder_id).first()
     if reminder is None:
         return jsonify({"error": "Reminder not found."}), 404
@@ -3113,18 +3125,14 @@ def complete_reminder(reminder_id):
 # reschedule_reminder, days and hours
 @blueprint.route('/reschedule_reminder', methods=['POST'])
 def reschedule_reminder():
-    data = request.json
+    data = request.form
     reminder_id = data.get('reminder_id')
     reminder = Reminder.query.filter_by(id=reminder_id).first()
     reminder_time = reminder.reminder_time # This is in UTC
     days = data.get('days', 0)
     hours = data.get('hours', 0)
-    reminder_time = reminder_time + timedelta(days=days, hours=hours)
-
-    utc_time_now = datetime.datetime.utcnow()
-
-    if reminder_time < utc_time_now:
-        return jsonify({"success": False, "message": "Reminder time should be greater than current time."})
+    utc_time_now = datetime.datetime.now(timezone.utc)
+    reminder_time = utc_time_now + timedelta(days=int(days), hours=int(hours))
 
     reminder_time_str = reminder_time.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
     reminder_local_time_string, utc_time_iso_string = get_local_time_from_utc(reminder_time_str)    
@@ -3141,12 +3149,12 @@ def reschedule_reminder():
     }
     print("Reschedular reminder", job)
 
-    db.session.commit()
     if scheduler.get_job(job_id):
         scheduler.remove_job(job_id)
 
     try:
         scheduler.add_job(**job) # TODO: Uncomment this line
+        db.session.commit()
         print("created job", job_id)
     except Exception as e:
         print("Failed to create job", str(e))
