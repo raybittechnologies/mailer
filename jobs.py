@@ -208,6 +208,7 @@ def job_push_notification_reminder(job_id, user_id):
             if upload_service is None:
                 # delete reminder
                 Reminder.query.filter_by(job_id=job_id).delete()
+                db.session.commit()
                 continue
             
             title = reminder.title

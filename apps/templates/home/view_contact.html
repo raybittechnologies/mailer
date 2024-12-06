@@ -32,6 +32,7 @@
                             <th>state</th>
                             <th>website</th>
                             <th>facebook</th>
+                            <th>bademail</th>
                             <th>subscribed</th>
                             <th>actions</th>
                         </tr>
@@ -99,6 +100,9 @@
 
                             <label for="originalemail">Notes</label>
                             <input type="text" class="form-control" id="edit-modal-originalemail" name="originalemail">
+
+                            <label for="bademail">Bad Email</label>
+                            <input type="text" class="form-control" id="edit-modal-bademail" name="bademail">
 
                         </div>
                         <div class="modal-footer">
@@ -187,6 +191,7 @@
                             return facebook ? '<a href="' + facebook + '" target="_blank" >' + facebook + ' </a>' : ''
                         },
                     },
+                    {data: 'bademail', defaultContent : ""},
                     {
                         data: 'is_unsubscribed',
                         render : function (is_unsubscribed, type, row) {
@@ -212,7 +217,8 @@
                         render: function (id, type, row) {
                             // Create action buttons HTML
                             var buttons = '<button class="btn btn-primary btn-sm" id="' + id + '" data-bs-toggle="modal" data-bs-target="#editServiceModal" >Edit</button> ' +
-                                '<button class="btn btn-danger btn-sm" id="' + id + '" data-bs-toggle="modal" data-bs-target="#deleteServiceModal" >Delete</button>';
+                                '<button class="btn btn-danger btn-sm" id="' + id + '" data-bs-toggle="modal" data-bs-target="#deleteServiceModal" >Delete</button> ' +
+                                '<a class="btn btn-info btn-sm" href="/reminders?serviceid=' + id + '" target="_blank">Create Reminder</a>';
                             return buttons;
                         }
                     }
@@ -245,6 +251,7 @@
                         document.getElementById("edit-modal-customtext").value = data.customtext;
                         document.getElementById("edit-modal-originalemail").value = data.originalemail;
                         document.getElementById("edit-modal-phone").value = data.phone;
+                        document.getElementById("edit-modal-bademail").value = data.bademail;
                     })
                     .catch(error => {
                         //handle error
@@ -353,6 +360,7 @@
             const customtext = document.getElementById("edit-modal-customtext").value;
             const originalemail = document.getElementById("edit-modal-originalemail").value;
             const phone = document.getElementById("edit-modal-phone").value;
+            const bademail = document.getElementById("edit-modal-bademail").value;
 
             const formData = new FormData();
             formData.append('serviceid', serviceid);
@@ -363,6 +371,7 @@
             formData.append('originalemail', originalemail);
             formData.append('phone', phone);
             formData.append('csrf_token', document.getElementById("csrf_token").value);
+            formData.append('bademail', bademail);
             
 
             $('#close-editjob-modal').click();

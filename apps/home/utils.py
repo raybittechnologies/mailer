@@ -310,4 +310,6 @@ def extract_address(address):
 #     return email_name_pairs
 
 if __name__ == '__main__':
-    print(check_blacklisted("efowler@whitelabs.com"))
+    print(check_blacklisted(""))
+
+

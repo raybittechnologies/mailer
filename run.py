@@ -17,8 +17,6 @@ from apps.models import Service, Yelpurl, FirstName
 from apps.authentication.models import Users
 from apps.home.emailler import send_email
 from dotenv import load_dotenv
-from werkzeug.middleware.proxy_fix import ProxyFix
-import datetime
 from apps.home.utils import extract_first_name
 
 load_dotenv()

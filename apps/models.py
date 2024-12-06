@@ -75,25 +75,29 @@ class Service(db.Model):
 
 class Uploadedservice(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(255))
-    venue_type = db.Column(db.String(1024))
+    name = db.Column(db.String(128))
+    venue_type = db.Column(db.String(255))
     email =  db.Column(db.String(255), index=True)
     is_bad =  db.Column(db.Integer, default=0)
-    user_id = db.Column(db.String(255))
+    user_id = db.Column(db.String(32))
     file_id = db.Column(db.String(255))
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
     unsubscribe_token = db.Column(db.String(128), nullable=False, default=generate_unsubscribe_token, index=True)
     is_unsubscribed = db.Column(db.Integer, default=0)
     website = db.Column(db.String(1024))
-    phone = db.Column(db.String(120), index=True)
+    phone = db.Column(db.String(32), index=True)
     address = db.Column(db.String(191), index=True)
     facebook = db.Column(db.Text)
     firstname = db.Column(db.String(255))
     customtext = db.Column(db.String(1024))
     originalemail = db.Column(db.Text)
+    bademail = db.Column(db.String(255), index=True)
     
     __table_args__ = (
-        db.Index('uploaded-idx', "email", "user_id", unique=True),
+        db.Index('uploaded-idx', "email", "user_id"),
+        db.Index('bademail-idx', "bademail", "user_id"),
+        # unique constraint for name, email, user_id, type, phone, address
+        db.UniqueConstraint('name', 'email', 'user_id', 'phone', 'address', name='uploaded_service_name_email_user_id_uc'),
     )
     
 class Uploadedcontactfile(db.Model):
@@ -251,7 +255,7 @@ class Reminder(db.Model):
 
     #  create index for userid , email
     __table_args__ = (
-        db.Index('reminder-idx', "userid", "email"),
+        db.Index('reminder-idx', "userid", "email", unique=True),
     )
 
 

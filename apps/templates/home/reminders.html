@@ -10,6 +10,30 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.3.2/css/fixedHeader.bootstrap.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.bootstrap.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+<style>
+    .list-group {
+        position: absolute;
+        width: 100%;
+        z-index: 1000;
+        background: white;
+        border: 1px solid #ccc;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .list-group-item {
+        padding: 5px 10px;
+        cursor: pointer;
+    }
+
+    .list-group-item:hover {
+        background-color: #f0b3e2;
+    }
+
+    .d-none {
+        display: none;
+    }
+</style>
 {% endblock stylesheets %}
 
 {% block content %}
@@ -79,14 +103,15 @@
                         <input type="hidden" name="reminder-id" id="reminder-id" />
                         <div class="form-group">
                             <div class="input-group">
-                                <span class="input-group-text">Title: </span>
-                                <input type="text" class="form-control" name="title" id="title" maxlength="255" readonly required>
+                                <span class="input-group-text">Venue: </span>
+                                <input type="text" class="form-control" name="venue" maxlength="255" id="venue" >
                             </div>
+                            <ul id="autocomplete-results" class="list-group position-absolute d-none" style="z-index: 100000;"></ul>
                         </div>
                         <div class="form-group">
                             <div class="input-group">
-                                <span class="input-group-text">Note: </span>
-                                <input type="text" class="form-control" name="note"  id="note" >
+                                <span class="input-group-text">Title: </span>
+                                <input type="text" class="form-control" name="title" id="title" maxlength="255" readonly required>
                             </div>
                         </div>
                         <div class="form-group">
@@ -109,8 +134,8 @@
                         </div>
                         <div class="form-group">
                             <div class="input-group">
-                                <span class="input-group-text">Venue: </span>
-                                <input type="text" class="form-control" name="venue" maxlength="255" id="venue" >
+                                <span class="input-group-text">Note: </span>
+                                <input type="text" class="form-control" name="note"  id="note" >
                             </div>
                         </div>
                         <div class="form-group">
@@ -169,6 +194,71 @@
         const formattedDateTime = formatDateToLocalISO(now);
         // Set the min attribute of the input field
         document.getElementById('reminder_time').min = formattedDateTime;
+        
+        const serviceid = '{{ serviceid }}';
+
+        let all_services = [];
+
+        // Call  /services to get all services
+        fetch('/services')  
+            .then((response) => {
+                if (!response.ok)
+                    return response.text().then(text => { throw new Error(text) })
+                else
+                    return response.json()
+            })
+            .then((data) => {
+                all_services = data;
+                // console.log(data);
+            })
+            .catch((err) => {
+                console.log(err);
+                Swal.fire({
+                    icon: "warning",
+                    title: "Oops...",
+                });
+            });
+
+        const venue_input = document.getElementById('venue');
+        const resultsContainer = document.getElementById('autocomplete-results');
+
+        venue_input.addEventListener('input', () => {
+            const query = venue_input.value.toLowerCase();
+            const matches = all_services.filter(service => 
+                service.name.toLowerCase().includes(query)
+            );
+
+            // Clear previous results
+            resultsContainer.innerHTML = '';
+            resultsContainer.classList.toggle('d-none', matches.length === 0);
+
+            // Add matched results
+            matches.forEach(match => {
+                const li = document.createElement('li');
+                li.textContent = match.name + " - " + match.email;
+                li.classList.add('list-group-item');
+                // add attribute serviceid to li
+                li.setAttribute("serviceid", match.serviceid);
+                li.addEventListener('click', () => {
+                    venue_input.value = match.name;
+                    resultsContainer.classList.add('d-none');
+                    // fill in other fields
+                    document.getElementById('phone').value = match.phone;
+                    document.getElementById('email').value = match.email;
+
+                    // update title
+                    updateTitle();
+                });
+                resultsContainer.appendChild(li);
+            });
+        });
+
+        // Hide the results when clicking outside the input
+        document.addEventListener('click', (event) => {
+            if (!resultsContainer.contains(event.target) && event.target !== venue_input) {
+                resultsContainer.classList.add('d-none');
+            }
+        });
 
         // Initialize DataTable
         var dataTable = $('#filtersTable').DataTable({
@@ -196,7 +286,7 @@
                         }
                         let email = row.email;
                         if (email) {
-                            email = '<a class="text-info" href="mailto:' + email + '">' + email + '</a>';
+                            email = '<br> <a class="text-info" href="mailto:' + email + '">' + email + '</a>';
                         }
                         let venue = row.venue;
                         if (title_template) {
@@ -508,16 +598,33 @@
 
         // get event when Create New reminder model is opened
         $('#createNewReminderModal').on('show.bs.modal', function (e) {
+            // Get the current date and time
+            const now = new Date();
+            // Format the date and time to match 'YYYY-MM-DDTHH:MM'
+            const formattedDateTime = formatDateToLocalISO(now);
+            // Set the min attribute of the input field
+            document.getElementById('reminder_time').min = formattedDateTime;
+
+            // after 7 days
+            const after7days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            const formattedDateTimeAfter7days = formatDateToLocalISO(after7days);
+            // Set the min attribute of the input field
             // clear form
             document.getElementById("reminder-id").value = "";
-            document.getElementById("title").value = "";
             document.getElementById("note").value = "";
-            document.getElementById("name").value = "";
-            document.getElementById("phone").value = "";
-            document.getElementById("email").value = "";
-            document.getElementById("venue").value = "";
             document.getElementById("title-template").value = "Follow up w/ [name] @ [venue] **See email from [email] [phone]";
-            document.getElementById("reminder_time").value = '';
+            if (!serviceid) {
+                document.getElementById("title").value = "";
+                document.getElementById("name").value = "";
+                document.getElementById("phone").value = "";
+                document.getElementById("email").value = "";
+                document.getElementById("venue").value = "";
+            } else {
+                document.getElementById('reminder_time').value = formattedDateTimeAfter7days;
+            }
+
+            // Set default datetime 7days from current datetime
+
             document.getElementById("createNewReminderModalLabel").innerText = "Create New Reminder";
             document.getElementById("submit-btn").value = "Create";
         });
@@ -662,8 +769,38 @@
                     });
             }
         });
-
-
+        
+        // serviceid if service , get service details and fill in other fields and show modal
+        // console.log(serviceid);
+        if (serviceid) {
+            // get service details
+            fetch('/service/' + serviceid)
+                .then((response) => {
+                    if (!response.ok)
+                        return response.text().then(text => { throw new Error(text) })
+                    else
+                        return response.json()
+                })
+                .then((data) => {
+                    console.log(data);
+                    document.getElementById("venue").value = data.name;
+                    document.getElementById("phone").value = data.phone;
+                    document.getElementById("email").value = data.email;
+                    document.getElementById("name").value = data.firstname;
+                    // update title
+                    updateTitle();
+                    // show modal
+                    $('#createNewReminderModal').modal('show');
+                })
+                .catch((err) => {
+                    console.log(err);
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Oops...",
+                        text: data.message,
+                    });
+                });
+        }
     });
 </script>
 {% endblock javascripts %}

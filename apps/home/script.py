@@ -49,7 +49,6 @@ def yelp_scraper_run(url, user_id, id):
     auth = (API_KEY, "")
     while True:    
         session_id = str(uuid4())
-
         response = requests.post(zyte_api_url, auth=auth, json={
             "browserHtml": True,
             "url": f"https://www.yelp.com/search/snippet?find_desc={find_desc}&find_loc={find_loc}&start={start}&parent_request_id=cff2259236faa40b&request_origin=user",
@@ -257,45 +256,50 @@ def yelp_scraper_run(url, user_id, id):
     
 
 def thread_runner(data):
-    website = data['website']
-    WEB_HOST_IP = os.getenv("WEB_HOST_IP")
-    
-    response = requests.get(f'{WEB_HOST_IP}/check_state/' + str(data['url_id']))
-
-    if response.text == "completed":
-        return
-    
-    if website:
-        try:
-            fb_link, emails, fb_emails = get_fb_info(website)
-        except Exception as e:
-            print(str(e))
-            fb_link = ""
-            emails = []
-            fb_emails = []
+    try:
+        website = data['website']
+        WEB_HOST_IP = os.getenv("WEB_HOST_IP")
         
-        if fb_link:
-            data['facebook'] = fb_link
-        if fb_emails:
-            try:
-                data['FacebookEmail1'] = fb_emails[0]
-                data['FacebookEmail2'] = fb_emails[1]
-            except:
-                pass
-        if emails:
-            try:
-                data['Email1'] = emails[0]
-                data['Email2'] = emails[1]
-                data['Email3'] = emails[2]
-                data['Email4'] = emails[3]
-            except:
-                pass
-
         response = requests.get(f'{WEB_HOST_IP}/check_state/' + str(data['url_id']))
+
         if response.text == "completed":
             return
         
-    pass_data(data)
+        if website:
+            try:
+                fb_link, emails, fb_emails = get_fb_info(website)
+            except Exception as e:
+                print(str(e))
+                fb_link = ""
+                emails = []
+                fb_emails = []
+            
+            if fb_link:
+                data['facebook'] = fb_link
+            if fb_emails:
+                try:
+                    data['FacebookEmail1'] = fb_emails[0]
+                    data['FacebookEmail2'] = fb_emails[1]
+                except:
+                    pass
+            if emails:
+                try:
+                    data['Email1'] = emails[0]
+                    data['Email2'] = emails[1]
+                    data['Email3'] = emails[2]
+                    data['Email4'] = emails[3]
+                except:
+                    pass
+
+            response = requests.get(f'{WEB_HOST_IP}/check_state/' + str(data['url_id']))
+            if response.text == "completed":
+                return
+            
+        pass_data(data)
+
+    except Exception as e:
+        print("Thread runner", str(e))
+        return
     
     
 def get_fb_info(url):
