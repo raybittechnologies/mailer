@@ -97,6 +97,11 @@ def email_automation_job(nylas_client, actionid, jobid, useremail):
             
             # if serv is None:
             #     continue
+
+            if email.email.lower() != reciver_email.lower():
+                # update email in email table
+                email.email = reciver_email
+                db.session.commit()
             
             venue = email.venue
             firstname = email.firstname if email.firstname and email.firstname != "None" else ""
