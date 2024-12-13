@@ -90,7 +90,7 @@
                             <input type="email" class="form-control" id="edit-modal-email" name="email" required>
 
                             <label for="phone">Phone</label>
-                            <input type="text" class="form-control" id="edit-modal-phone" name="phone" required>
+                            <input type="text" class="form-control" id="edit-modal-phone" name="phone">
 
                             <label for="firstname">Firstname</label>
                             <input type="text" class="form-control" id="edit-modal-firstname" name="firstname" >
@@ -152,7 +152,7 @@
                         extend: 'excel',
                         filename: '{{ file_desc }}',
                         exportOptions: {
-                            columns: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+                            columns: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
                         },
                         title: null
                     },
@@ -160,7 +160,7 @@
                         extend: 'csv',
                         filename: '{{ file_desc }}',
                         exportOptions: {
-                            columns: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+                            columns: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
                         }
                     }],
                 order : [],

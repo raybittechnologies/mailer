@@ -28,6 +28,7 @@ def email_automation_job(nylas_client, actionid, jobid, useremail):
         jinja_temp = JT(message)
         
         emails = Email.query.filter_by(job_id=jobid, is_unsubscribed=0).all()
+
         WEB_HOST_IP = os.getenv('WEB_HOST_IP')
         
         job = Automation.query.filter_by(job_id=jobid).first()
@@ -80,11 +81,18 @@ def email_automation_job(nylas_client, actionid, jobid, useremail):
             except Exception as e:
                 print("Failed to check is_sent: ", email.email, str(e))
                 continue
-            
 
-            print("Sending to", email.email)
+            unsubscribe_token = email.unsubscribe_token
+            reciver = Uploadedservice.query.filter_by(unsubscribe_token=unsubscribe_token).first()
+            if reciver is None:
+                print("No reciver email found")
+                return
             
-            unsubscribe_link = WEB_HOST_IP + "/unsubscribe/choose?token=" + str(email.unsubscribe_token) + "&_id=" + str(action.userid)
+            reciver_email = reciver.email # need to use this email from uploaded service because email might be changed in email table by user
+
+            print("Sending to", reciver_email)
+            
+            unsubscribe_link = WEB_HOST_IP + "/unsubscribe/choose?token=" + str(unsubscribe_token) + "&_id=" + str(action.userid)
             # serv = Uploadedservice.query.filter_by(unsubscribe_token=email.unsubscribe_token).first()
             
             # if serv is None:
@@ -126,7 +134,7 @@ def email_automation_job(nylas_client, actionid, jobid, useremail):
 
             while True:
                 try:
-                    response = send_email_via_nylas(nylas_client, subject, venue, useremail, fromname, mail_body, email.email, grant_id)
+                    response = send_email_via_nylas(nylas_client, subject, venue, useremail, fromname, mail_body, reciver_email, grant_id)
                     is_sent = True
                     break
                 except Exception as e:

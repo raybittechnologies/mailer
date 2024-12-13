@@ -88,7 +88,7 @@
                             <input type="email" class="form-control" id="edit-modal-email" name="email" required>
 
                             <label for="phone">Phone</label>
-                            <input type="text" class="form-control" id="edit-modal-phone" name="phone" required>
+                            <input type="text" class="form-control" id="edit-modal-phone" name="phone" >
 
                             <label for="firstname">Firstname</label>
                             <input type="text" class="form-control" id="edit-modal-firstname" name="firstname" >
@@ -216,7 +216,8 @@
                         render: function (id, type, row) {
                             // Create action buttons HTML
                             var buttons = '<button class="btn btn-primary btn-sm" id="' + id + '" data-bs-toggle="modal" data-bs-target="#editServiceModal" >Edit</button> ' +
-                                '<button class="btn btn-danger btn-sm" id="' + id + '" data-bs-toggle="modal" data-bs-target="#deleteServiceModal" >Delete</button>';
+                                '<button class="btn btn-danger btn-sm" id="' + id + '" data-bs-toggle="modal" data-bs-target="#deleteServiceModal" >Delete</button> ' +
+                                '<a class="btn btn-info btn-sm" href="/reminders?serviceid=' + id + '" target="_blank">Create Reminder</a>';
                             return buttons;
                         }
                     }

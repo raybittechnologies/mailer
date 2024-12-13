@@ -605,9 +605,10 @@
             // Set the min attribute of the input field
             document.getElementById('reminder_time').min = formattedDateTime;
 
-            // after 7 days
+            // after 7 days at 2pm
             const after7days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
             const formattedDateTimeAfter7days = formatDateToLocalISO(after7days);
+            // change the time to 2pm
             // Set the min attribute of the input field
             // clear form
             document.getElementById("reminder-id").value = "";
@@ -619,9 +620,8 @@
                 document.getElementById("phone").value = "";
                 document.getElementById("email").value = "";
                 document.getElementById("venue").value = "";
-            } else {
-                document.getElementById('reminder_time').value = formattedDateTimeAfter7days;
             }
+            document.getElementById('reminder_time').value = formattedDateTimeAfter7days.slice(0, 11) + "14:00";
 
             // Set default datetime 7days from current datetime
 

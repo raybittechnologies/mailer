@@ -2616,15 +2616,13 @@ def unsubscribe(token):
 
     user_id = service.user_id
     email = service.email
-    reminder = Reminder.query.filter_by(userid=user_id, email=email.email).first()
+    reminder = Reminder.query.filter_by(userid=user_id, email=email).first()
     if reminder:
         job_id = reminder.job_id
         if scheduler.get_job(job_id):
             scheduler.remove_job(job_id)
         db.session.delete(reminder)
         db.session.commit()
-
-    
 
     return "You have been unsubscribed successfully."
 
@@ -2639,9 +2637,12 @@ def subscribe(token):
     
     if service:
         service.is_unsubscribed = 0
+
+    serviceid = service.id
+    WEB_HOST_IP = os.getenv("WEB_HOST_IP")
+    creat_reminder_page_url =  f"{WEB_HOST_IP}/reminders?serviceid={serviceid}"
     db.session.commit()
-    
-    return "You have been subscribed successfully."
+    return "You have been subscribed successfully. <a href='" + creat_reminder_page_url + "'>Create Reminder</a>"
 
 @blueprint.route('/passwordreset', methods=['GET', 'POST'])
 def passwordreset():
