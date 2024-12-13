@@ -484,9 +484,21 @@
                 });
                 return;
             }
-            
-            const reminder_time_utc = new Date(reminder_time).toISOString();
+
+            var reminder_time_utc = '';
+            try {
+                reminder_time_utc = new Date(reminder_time).toISOString();
+            } catch (error) {
+                console.log(error);
+                Swal.fire({
+                    icon: "warning",
+                    title: "Oops...",
+                    text: "Invalid date time format",
+                });
+                return;
+            }
             // convert reminder_time to UTC
+            // add excetpion for converting to UTC
             
             const formData = new FormData();
             formData.append('userid', userid);
