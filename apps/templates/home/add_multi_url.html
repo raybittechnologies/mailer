@@ -305,7 +305,7 @@
             
             // submit the form data to the server
             // remove line brak from business and location
-            business = business.replace(/\n/g, '');
+            business = business.replace(/\n/g, ' ');
             console.log('---', location, business, latitude, longitude);
 
             let formdata = new FormData();
