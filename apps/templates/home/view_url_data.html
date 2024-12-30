@@ -155,9 +155,10 @@
             });
 
         }
-
         $(document).ready(function () {
             // Initialize DataTable
+            var short_name = '{{ current_url.name }}';
+            short_name = short_name.length > 50 ? short_name.substring(0, 50) + '...' : short_name;
             $('#filtersTable').DataTable({
                     responsive: true,
                     dom: 'Bfrtip',
@@ -171,21 +172,21 @@
                     buttons: [
                         {
                             extend: 'copy',
-                            filename: '{{ current_url.name }}',
+                            filename: short_name,
                             title: null
                         },
                         {
                             extend: 'csv',
-                            filename: '{{ current_url.name }}'
+                            filename: short_name
                         },
                         {
                             extend: 'excel',
-                            filename: '{{ current_url.name }}',
+                            filename: short_name,
                             title: null
                         },
                         {
                             extend: 'colvis',
-                            filename: '{{ current_url.name }}'
+                            filename: short_name
                         }
                     ],
                     ajax: {

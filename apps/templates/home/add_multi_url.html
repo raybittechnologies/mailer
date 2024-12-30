@@ -291,12 +291,10 @@
             e.preventDefault();
 
             const location = document.getElementById('location').value;
-            const business = document.getElementById('business').value;
+            let business = document.getElementById('business').value;
             const latitude = document.getElementById('latitude').value;
             const longitude = document.getElementById('longitude').value;
             const csrf_token = document.getElementById('csrf_token').value;
-
-            console.log('---', location, business, latitude, longitude);
 
             if (!location || !business || !latitude || !longitude) {
                 console.log('Please fill in all the fields');
@@ -304,8 +302,11 @@
                 $('#modal-body-message').text('Please fill in all the fields');
                 return;
             }
-
+            
             // submit the form data to the server
+            // remove line brak from business and location
+            business = business.replace(/\n/g, '');
+            console.log('---', location, business, latitude, longitude);
 
             let formdata = new FormData();
             formdata.append('location', location);
