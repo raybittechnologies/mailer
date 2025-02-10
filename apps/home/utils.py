@@ -142,7 +142,25 @@ def extract_address(address):
 
     if city == "York":
         city = "New York"
-        
+    if city == "Angeles":
+        city = "Los Angeles"
+    if city == "Vegas":
+        city = "Las Vegas"
+    if city == "Francisco":
+        city = "San Francisco"
+    if city == "Diego":
+        city = "San Diego"
+    if city == "Jose":
+        city = "San Jose"
+    if city == "Antonio":
+        city = "San Antonio"
+    if city == "Orleans":
+        city = "New Orleans"
+    if city == "Beach":
+        city = "Miami Beach"
+    if city == "Clemente":
+        city = "San Clemente"
+
     return city, state
 
 # class Person(BaseModel):

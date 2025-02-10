@@ -68,7 +68,7 @@ def email_automation_job(nylas_client, actionid, jobid, useremail):
                 break
 
             try:
-                if email.is_unsubscribed == 1:
+                if email.is_unsubscribed == 1 or email.is_sent == 1: # if email is unsubscribed or sent, skip
                     continue
             except Exception as e:
                 print("Failed to check is_unsubscribed: ", email.email,  str(e))

@@ -640,6 +640,8 @@ def upload_contact():
                 service['is_unsubscribed'] = is_unsubscribed
                 service['firstname'] = item['firstname']
                 service['bademail'] = item['bademail']
+                # creeat random biz_id
+                service['biz_id'] = generate_random_string()
 
                 if email and check_blacklisted(email):
                     if email not in emails and email:
@@ -655,6 +657,7 @@ def upload_contact():
                 email4 = item['email4'].strip() if item.get('email4') else ""
                 facebookemail1 = item['facebookemail1'].strip() if item.get('facebookemail1') else ""
                 facebookemail2 = item['facebookemail2'].strip() if item.get('facebookemail2') else ""
+                biz_id = generate_random_string()
 
                 is_all_empty = email1 == "" and email2 == "" and email3 == "" and email4 == "" and facebookemail1 == "" and facebookemail2 == ""
 
@@ -679,6 +682,7 @@ def upload_contact():
                     service['is_unsubscribed'] = 1
                     service['firstname'] = item['firstname1']
                     service['bademail'] = item['bademail']
+                    service['biz_id'] = biz_id
                     total_services.append(service)
 
                 else:
@@ -696,6 +700,10 @@ def upload_contact():
                         service['firstname'] = item['firstname' + str(idx+1)]
                         service['is_unsubscribed'] = is_unsubscribed
                         service['bademail'] = item['bademail']
+                        # creeat random biz_id
+                        service['biz_id'] = biz_id
+
+
                         if email and check_blacklisted(email):
                             if email not in emails:
                                 emails.append(email.lower())
@@ -771,6 +779,7 @@ def upload_contact():
                     uservice.is_unsubscribed = service['is_unsubscribed']
                     uservice.firstname = service['firstname']
                     uservice.bademail = service['bademail']
+                    uservice.biz_id = service['biz_id']
                     services.append(uservice)
 
                 db.session.bulk_save_objects(services)
@@ -1019,11 +1028,12 @@ def url_delete():
 @login_required
 def profile():
     user_credit = db.session.query(UserCredit).filter_by(userid=current_user.id).first()
+    is_auto_unsub = current_user.is_auto_unsub
     if user_credit:
         credit  = user_credit.credit
     else:
         credit = None
-    return render_template('home/profile.html', segment='profile', user_credit=credit)
+    return render_template('home/profile.html', segment='profile', user_credit=credit, is_auto_unsub=is_auto_unsub)
 
 
 @blueprint.route('/how-to')
@@ -2070,9 +2080,24 @@ def webhook():
                 db.session.commit()
                 
                 service = Uploadedservice.query.filter_by(unsubscribe_token=email.unsubscribe_token).first()
+                # unsubscribe the email
                 if service is None:
                     print("No service found")
                     return "OK"
+                
+                # Get user id
+                user_id = service.user_id
+                user = Users.query.get(user_id)
+
+                if user.is_auto_unsub:
+                    service.is_unsubscribed = 1
+                    db.session.commit()
+                
+                    # update associated email
+                    emails = Email.query.filter_by(unsubscribe_token=email.unsubscribe_token).all()
+                    for email in emails:
+                        email.is_unsubscribed = 1
+                        db.session.commit()
 
                 user_id = service.user_id
 
@@ -2430,14 +2455,7 @@ def job_retry():
 
             if automation.status == "failed":
                 automation.status = "pending"  
-                emails = Email.query.filter_by(job_id=jobid).all()
-
-                for email in emails:
-                    email.is_sent = 0
-                    email.is_opened = 0
-                    email.is_unsubscribed = 0
-                    email.is_replied = 0
-                    db.session.commit()
+                db.session.commit()
         
             job_starttime = datetime.datetime.now() + timedelta(days=days_diff, seconds=30)
             job_start_utctime = datetime.datetime.now(timezone.utc) + timedelta(days=days_diff, seconds=30)
@@ -2543,7 +2561,34 @@ def unsubscribe_all():
         if service:
             service.is_unsubscribed = 1
             address = service.address
-            if address:
+            biz_id = service.biz_id
+
+            if biz_id:
+                # Unsubscribe all emails from this business : same business
+                services = Uploadedservice.query.filter_by(biz_id=biz_id, user_id = id).all()
+                for service in services:
+                    # Unsubscribe all service with this business
+                    service.is_unsubscribed = 1
+                    
+                    # Unsubscribe all emails from campaigns
+                    unsubscribe_token = service.unsubscribe_token
+                    email = Email.query.filter_by(unsubscribe_token=unsubscribe_token).first()
+                    if email:
+                        print("unsubscribed", email.email)
+                        email.is_unsubscribed = 1
+
+                    db.session.commit()
+                    # 1-25-2025 do not delete reminder
+                    # email = service.email
+                    # reminder = Reminder.query.filter_by(userid=id, email=email).first()
+                    # if reminder:
+                    #     job_id = reminder.job_id
+                    #     if scheduler.get_job(job_id):
+                    #         scheduler.remove_job(job_id)
+                    #     db.session.delete(reminder)
+                    #     db.session.commit()
+
+            elif address:
                 # Unsubscribe all emails from this address : same business
                 services = Uploadedservice.query.filter_by(address=address, user_id = id).all()
                 for service in services:
@@ -2558,21 +2603,21 @@ def unsubscribe_all():
                         email.is_unsubscribed = 1
 
                     db.session.commit()
-
-                    email = service.email
-                    reminder = Reminder.query.filter_by(userid=id, email=email).first()
-                    if reminder:
-                        job_id = reminder.job_id
-                        if scheduler.get_job(job_id):
-                            scheduler.remove_job(job_id)
-                        db.session.delete(reminder)
-                        db.session.commit()
+                    # 1-25-2025 do not delete reminder
+                    # email = service.email
+                    # reminder = Reminder.query.filter_by(userid=id, email=email).first()
+                    # if reminder:
+                    #     job_id = reminder.job_id
+                    #     if scheduler.get_job(job_id):
+                    #         scheduler.remove_job(job_id)
+                    #     db.session.delete(reminder)
+                    #     db.session.commit()
             else:
                 phone = service.phone
 
                 if phone:
                     # Unsubscribe all emails from this phone : same business
-                    services = Uploadedservice.query.filter_by(phone=phone, user_id = current_user.id).all()
+                    services = Uploadedservice.query.filter_by(phone=phone, user_id = id).all()
                     for service in services:
                         # Unsubscribe all service with this phone
                         service.is_unsubscribed = 1
@@ -2586,14 +2631,40 @@ def unsubscribe_all():
 
                         db.session.commit()
 
-                        email = service.email
-                        reminder = Reminder.query.filter_by(userid=id, email=email).first()
-                        if reminder:
-                            job_id = reminder.job_id
-                            if scheduler.get_job(job_id):
-                                scheduler.remove_job(job_id)
-                            db.session.delete(reminder)
+                        # email = service.email
+                        # reminder = Reminder.query.filter_by(userid=id, email=email).first()
+                        # if reminder:
+                        #     job_id = reminder.job_id
+                        #     if scheduler.get_job(job_id):
+                        #         scheduler.remove_job(job_id)
+                        #     db.session.delete(reminder)
+                        #     db.session.commit()
+
+                else:
+                    venue = service.name
+                    if venue:
+                        # Unsubscribe all emails from this venue : same business
+                        services = Uploadedservice.query.filter_by(name=venue, user_id = id).all()
+                        for service in services:
+                            # Unsubscribe all service with this venue
+                            service.is_unsubscribed = 1
+                            
+                            # Unsubscribe all emails from campaigns
+                            unsubscribe_token = service.unsubscribe_token
+                            email = Email.query.filter_by(unsubscribe_token=unsubscribe_token).first()
+                            if email:
+                                print("unsubscribed", email.email)
+                                email.is_unsubscribed = 1
+
                             db.session.commit()
+                            # email = service.email
+                            # reminder = Reminder.query.filter_by(userid=id, email=email).first()
+                            # if reminder:
+                            #     job_id = reminder.job_id
+                            #     if scheduler.get_job(job_id):
+                            #         scheduler.remove_job(job_id)
+                            #     db.session.delete(reminder)
+                            #     db.session.commit()
     
     except Exception as e:
         print(repr(e))
@@ -2614,15 +2685,16 @@ def unsubscribe(token):
         service.is_unsubscribed = 1
         db.session.commit()
 
-    user_id = service.user_id
-    email = service.email
-    reminder = Reminder.query.filter_by(userid=user_id, email=email).first()
-    if reminder:
-        job_id = reminder.job_id
-        if scheduler.get_job(job_id):
-            scheduler.remove_job(job_id)
-        db.session.delete(reminder)
-        db.session.commit()
+    # 1-25-2025 do not delete reminder
+    # user_id = service.user_id
+    # email = service.email
+    # reminder = Reminder.query.filter_by(userid=user_id, email=email).first()
+    # if reminder:
+    #     job_id = reminder.job_id
+    #     if scheduler.get_job(job_id):
+    #         scheduler.remove_job(job_id)
+    #     db.session.delete(reminder)
+    #     db.session.commit()
 
     return "You have been unsubscribed successfully."
 
@@ -3312,3 +3384,16 @@ def reschedule_reminder():
         return {"success": False, "message": "Something went wrong. Please try"}
 
     return jsonify({"success": True, "message": "Reminder rescheduled successfully."})
+
+
+# update /update_auto_unsub
+@blueprint.route('/update_auto_unsub', methods=['POST'])
+@login_required
+@user_approved_required
+def update_auto_unsub():
+    user_id = current_user.id
+    is_auto_unsub = request.form.get('is_auto_unsub')
+    user = Users.query.filter_by(id=user_id).first()
+    user.is_auto_unsub = is_auto_unsub
+    db.session.commit()
+    return jsonify({"success": True, "message": "Auto Unsubscribe updated successfully."})

@@ -161,6 +161,18 @@
                     }
                     businessInput.value = ''; // Clear the input field
                 }
+                // if TAB key is pressed, prevent the default action, add the tag and clear the input field
+                if (event.key === 'Tab') {
+                    event.preventDefault();
+                    let tagText = businessInput.value.trim();
+                    if (tagText) {
+                        addBusinessTag(tagText);
+                    }
+                    businessInput.value = ''; // Clear the input field
+                    
+                    // Focus on the location input field
+                    locinput.focus();
+                }
             });
 
             // Event listener to add a place tag when the user copy and paste  comma-separated text

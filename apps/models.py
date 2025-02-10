@@ -43,13 +43,13 @@ class Service(db.Model):
     facebook = db.Column(db.Text)
     instagram = db.Column(db.String(255))
     twitter = db.Column(db.String(255))
-    email1 = db.Column(db.String(255))
-    email2 = db.Column(db.String(255))
-    email3 = db.Column(db.String(255))
-    email4 = db.Column(db.String(255))
-    fbemail1 = db.Column(db.String(255))
-    fbemail2 = db.Column(db.String(255))
-    bademail = db.Column(db.String(255))
+    email1 = db.Column(db.String(255), index=True)
+    email2 = db.Column(db.String(255), index=True)
+    email3 = db.Column(db.String(255), index=True)
+    email4 = db.Column(db.String(255), index=True)
+    fbemail1 = db.Column(db.String(255), index=True)
+    fbemail2 = db.Column(db.String(255), index=True)
+    bademail = db.Column(db.String(255), index=True)
     url_id = db.Column(db.String(255), nullable=False)
     user_id = db.Column(db.String(255), nullable=False)
     biz_id = db.Column(db.String(255), nullable=False)
@@ -92,10 +92,13 @@ class Uploadedservice(db.Model):
     customtext = db.Column(db.String(1024))
     originalemail = db.Column(db.Text)
     bademail = db.Column(db.String(255), index=True)
+    biz_id = db.Column(db.String(255), index=True)
     
     __table_args__ = (
         db.Index('uploaded-idx', "email", "user_id"),
         db.Index('bademail-idx', "bademail", "user_id"),
+        # index for user_id, biz_id, file_id
+        db.Index('uploaded-service-idx', "user_id", "biz_id"),
         # unique constraint for name, email, user_id, type, phone, address
         db.UniqueConstraint('name', 'email', 'user_id', 'phone', 'address', name='uploaded_service_name_email_user_id_uc'),
     )

@@ -129,15 +129,27 @@
                   </a>
                 </li>
                 {% if current_user.role == "user" %}
-                  <li class="list-group-item border-0 ps-0 text-sm"><strong class="text-dark">Current Plan:</strong> Normal </li>
+                <li class="list-group-item border-0 ps-0 text-sm"><strong class="text-dark">Current Plan:</strong> Normal </li>
                 {% elif current_user.role == "lite" %}
-                  <li class="list-group-item border-0 ps-0 text-sm"><strong class="text-dark">Current Plan:</strong> Lite : {{ user_credit }} Credit </li>
+                <li class="list-group-item border-0 ps-0 text-sm"><strong class="text-dark">Current Plan:</strong> Lite : {{ user_credit }} Credit </li>
                 {% else %}
-                  <li class="list-group-item border-0 ps-0 text-sm"><strong class="text-dark">Current Plan:</strong> Premium </li>
+                <li class="list-group-item border-0 ps-0 text-sm"><strong class="text-dark">Current Plan:</strong> Premium </li>
                 {% endif %}
                 <a class="btn btn-sm" data-bs-toggle="modal" data-bs-target="#deleteServiceModal">
                   <i class="fas fa-user-edit text-primary text-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Cancel Membership"></i> Cancel Membership
                 </a>
+                <!-- checkbox / "Unsubscribe contact upon reply" project (default=yes) Any time nylas web hook is triggered “REPLIED” ALL emails are auto-unsubbed -->
+                <li class="list-group-item border-0 ps-0 text-sm">
+                  <div class="form-check form-switch">
+                    {% if current_user.is_auto_unsub %}
+                      {% set checked = 'checked' %}
+                    {% else %}
+                      {% set checked = '' %}
+                    {% endif %}
+                    <strong class="text-dark">Unsubscribe contact upon reply</strong>
+                    <input class="form-check-input" type="checkbox" id="auto-unsub" {{ checked }}>
+                  </div>
+                </li>
               </ul>
             </div>  
           </div>
@@ -260,7 +272,50 @@
               console.log(err);
           })
       });
+    
+    // Unsubscribe contact upon reply, catch switch event and submit to server
+    $('#auto-unsub').on('change', function() {
+      const is_auto_unsub = this.checked ? 1 : 0;
+      const formData = new FormData();
+      formData.append('is_auto_unsub', is_auto_unsub);
+      formData.append('csrf_token', document.getElementById("csrf_token").value);
 
+      fetch('/update_auto_unsub',{
+          method: 'POST',
+          body: formData
+      })
+      .then((response) => {
+          if(!response.ok)
+              return response.text().then(text => { throw new Error(text) })
+          else
+              return response.json()
+      })
+      .then((data) => {
+          if (data.success) {
+              console.log(data);
+              Swal.fire({
+                  icon: 'success',
+                  title: data.message,
+                  showConfirmButton: false,
+                  timer: 2000,
+                  toast: true,
+                  position: 'top-end',
+                  // top right position
+
+              });
+          } else {
+              console.log(data.message);
+              Swal.fire({
+                  icon: "warning",
+                  title: "Something wrong in updating email!",
+                  text: data.message,
+              });
+          }
+      })
+      .catch((err) => {
+          console.log(err);
+      })
+    });
   });
 </script>
 

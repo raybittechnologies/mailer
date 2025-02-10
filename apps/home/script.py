@@ -31,6 +31,39 @@ def pass_data(item):
     WEB_HOST_IP = os.getenv("WEB_HOST_IP")
     response = requests.post(f'{WEB_HOST_IP}/msg', json={'result': item})
     print("Processes", response.text)
+
+
+def zyte_session(find_desc, find_loc, start):
+    
+    auth = (API_KEY, "")
+    while True:    
+        session_id = str(uuid4())
+        response = requests.post(zyte_api_url, auth=auth, json={
+            "browserHtml": True,
+            "url": f"https://www.yelp.com/search/snippet?find_desc={find_desc}&find_loc={find_loc}&start={start}&parent_request_id=cff2259236faa40b&request_origin=user",
+            "session": {
+                    "id": session_id
+                }
+            })
+        
+        try:
+            data = json.loads(response.text)
+            # print("initial request ------" +  str(data["statusCode"])) 
+
+            if data["statusCode"] == 200:
+                return session_id
+            
+            elif data["statusCode"] in [429, 503]:
+                print("Rate limited")
+                time.sleep(1)
+                continue
+            else:
+                print("Failed to get initial request", data["statusCode"])
+                return None
+        except Exception as e:
+            print("Failed to get initial request", str(e))
+            time.sleep(1)
+            continue
     
 
 def yelp_scraper_run(url, user_id, id):
@@ -47,32 +80,8 @@ def yelp_scraper_run(url, user_id, id):
     start = 0
     page = 0
     auth = (API_KEY, "")
-    while True:    
-        session_id = str(uuid4())
-        response = requests.post(zyte_api_url, auth=auth, json={
-            "browserHtml": True,
-            "url": f"https://www.yelp.com/search/snippet?find_desc={find_desc}&find_loc={find_loc}&start={start}&parent_request_id=cff2259236faa40b&request_origin=user",
-            "session": {
-                    "id": session_id
-                }
-            })
-        try:
-            data = json.loads(response.text)
-            # print("initial request ------" +  str(data["statusCode"])) 
 
-            if data["statusCode"] == 200:
-                break
-            elif data["statusCode"] in [429, 503]:
-                print("Rate limited")
-                time.sleep(1)
-                continue
-            else:
-                print(data["statusCode"], url)
-                return
-        except Exception as e:
-            print(str(e))
-            time.sleep(1)
-            continue
+    session_id = zyte_session(find_desc, find_loc, start)
     
     while True:
         search_data = []
@@ -96,14 +105,12 @@ def yelp_scraper_run(url, user_id, id):
         try:
             response = requests.post(zyte_api_url, auth=auth, json=payload)
         except Exception as e:
-            print(str(e))
+            print("Failed to get data", str(e))
             break
         
-        try:
-            response.json()['statusCode']
-        except Exception as e:
-            print(str(e), response.text)
-            page += 1
+        if "statusCode" not in response.json():
+            print("Invalid response", repr(response.json()))
+            session_id = zyte_session(find_desc, find_loc, start)
             continue
 
         # "venue	city	phone	Venue Type	Website	email	email 2	Email (facebook)	Facebook Link"
@@ -111,7 +118,7 @@ def yelp_scraper_run(url, user_id, id):
             try:
                 response_json = json.loads(b64decode(response.json()["httpResponseBody"]))
             except Exception as e:
-                print(str(e), base_url)
+                print("Failed to parse response", str(e))
                 break
                 
             if "searchExceptionProps" in response_json['searchPageProps']:
@@ -125,7 +132,7 @@ def yelp_scraper_run(url, user_id, id):
                     if is_blacklisted(venue_name):
                         continue
 
-                    if "temp. closed" in venue_name.lower():
+                    if "temp. closed" in venue_name.lower() or "closed" in venue_name.lower():
                         continue
 
                     venue_type = ", ".join([i['title'] for i in business['searchResultBusiness']['categories']])
@@ -137,14 +144,6 @@ def yelp_scraper_run(url, user_id, id):
                             website = ""
                     else:
                         website = ""
-                        
-                    full_address = ""
-                    try:
-                        for location in response_json['searchPageProps']['rightRailProps']['searchMapProps']['hovercardData'].values():
-                            if bizId == location['bizId']:
-                                full_address = " ".join(location['addressLines'])
-                    except:
-                        pass
 
                     latitude = ""
                     longitude = ""
@@ -160,48 +159,28 @@ def yelp_scraper_run(url, user_id, id):
                                 break
                     except:
                         pass
-                    
-                    city = ""
-                    state = ""
-                    zip = ""
-                    country = ""
-                    thumbnail_url = ""
-                    address = ""
+                        
+                    businessUrl = "https://www.yelp.com" + business['searchResultBusiness']['businessUrl']
+                    if "/biz" not in businessUrl:
+                        businessUrl = "https://www.yelp.com/biz/" + business['searchResultBusiness']['alias']
 
-                    # 3714 Main St Houston, TX 77002
+                    photoList = business['scrollablePhotos']['photoList'][0] if len(business['scrollablePhotos']['photoList']) > 0 else {}
+                    thumbnail_url = photoList.get('src') if photoList else ''
+
                     try:
-                        for location in response_json['searchPageProps']['photoMetadata']:
-                            if "businessEncid" in location and bizId == location['businessEncid']:
-                                try:
-                                    address = location['uploadedLocation']['address']
-                                except:
-                                    pass
-                                try:
-                                    city = location['uploadedLocation']['city']
-                                except:
-                                    pass
-                                try:
-                                    state = location['uploadedLocation']['state']
-                                except:
-                                    pass
-                                try:
-                                    zip = location['uploadedLocation']['zip']
-                                except:
-                                    pass
-                                try:
-                                    country = location['uploadedLocation']['country']
-                                except:
-                                    pass
-                                try:
-                                    thumbnail_url = location['thumbnailUrl']
-                                except:
-                                    pass
-                                break
-                    except:
-                        pass
+                        addresses = get_addresses(businessUrl, session_id)
+                    except Exception as e:
+                        print("Failed to get address", str(e), businessUrl)
+                        addresses = {}
+
+                    full_address = ''
+                    city = addresses.get('addressLocality', '')
+                    state = addresses.get('addressRegion', '')
+                    zip = addresses.get('postalCode', '')
+                    country = addresses.get('addressCountry', '')
+                    address = addresses.get('streetAddress', '')
                     
-                    if not full_address and address:
-                        full_address = f"{address}, {city}, {state} {zip} {country}"
+                    full_address = f"{address}, {city}, {state}, {zip} {country}"
                     
                     data = dict()
                     data['url'] = url,
@@ -253,6 +232,34 @@ def yelp_scraper_run(url, user_id, id):
             break
         
         page += 1
+
+
+def get_addresses(url, session_id):
+    try:
+        payload = {
+            "url" : url,
+            "httpResponseBody" : True,
+            "session": {
+                "id": session_id
+            }
+        }
+        auth = (API_KEY, "")
+        response = requests.post(zyte_api_url, auth=auth, json=payload)
+    except Exception as e:
+        print("Failed to get address", url, str(e))
+        return {}
+    
+    if response.json()['statusCode'] == 200:
+        html = b64decode(response.json()["httpResponseBody"]).decode("utf-8")
+        address_text = html.split('"address":')[1].split('},')[0]
+        address_text = address_text.replace("}}", "}")
+
+        address_json = json.loads(address_text)
+        return address_json
+
+    else:
+        print("Failed to get address", url, response.json()['statusCode'])
+        return {}
     
 
 def thread_runner(data):
@@ -269,7 +276,7 @@ def thread_runner(data):
             try:
                 fb_link, emails, fb_emails = get_fb_info(website)
             except Exception as e:
-                print(str(e))
+                print("Failed to get fb info", str(e))
                 fb_link = ""
                 emails = []
                 fb_emails = []
@@ -328,7 +335,7 @@ def get_fb_info(url):
             response = scraper.get(url, proxies=proxies, verify=verify, timeout=60)
             
     except Exception as e:
-        print(url , str(e))
+        print("Failed to get data", url, str(e))
         return FB_link, emails, fb_emails 
         
     #Fetch data
@@ -387,38 +394,7 @@ def get_fb_info(url):
     if FB_link :
         # Some FB page can not access without login
         # TODO : Using ZYTE API instead of smart proxy
-        
-        while True:
-            # payload = {
-            #     "url" : FB_link,
-            #     "browserHtml" : True
-            # }
-            # try:
-            #     response = requests.post(zyte_api_url, auth=auth, json=payload)
-            # except Exception as e:
-            #     print(str(e))
-            #     break
-            try:
-                response = scraper.get(FB_link, proxies=proxies, verify=verify, timeout=60)
-            except Exception as e:
-                print(FB_link, str(e))
-                break
-            
-            if response.status_code == 200:
-                html = response.text.replace(r"\u0040", "@")
-                fb_emails = find_emails(html)
-                
-                # with open("fb.html", "w", encoding="utf-8") as f:
-                #     f.write(html)
-                break
-            
-            # elif response.status_code == 503 or response.status_code == 429:
-            #     print(FB_link, response.status_code)
-            #     continue
-            
-            else:
-                print(FB_link, response.status_code)
-                break
+        fb_emails = get_fb_page_2(FB_link)
             
     if len(emails) == 0 and len(fb_emails) == 0:
         # Possible pages which might have emails
@@ -434,7 +410,7 @@ def get_fb_info(url):
             try:
                 response = scraper.get(contact_url, timeout=10)
             except Exception as e:
-                print(contact_url, str(e))
+                print("Failed to get contact page", contact_url, str(e))
                 continue
                 
             if response.status_code == 200:
@@ -460,4 +436,56 @@ def find_emails(html):
     filtered_emails = [
         email  for email in emails if check_blacklisted(email)]
     return filtered_emails
+
+
+def get_fb_page(url):
+    try:
+        response = requests.get(url, proxies=proxies, verify=verify, timeout=60)
+    except Exception as e:
+        print("Failed to get FB page", url, str(e))
+        return ""
     
+    if response.status_code == 200:
+        html = response.text.replace(r"\u0040", "@")
+        
+        # with open("home.html", "w", encoding="utf-8") as f:
+        #     f.write(html)
+        
+        emails = find_emails(html)
+        return emails
+    
+    else:
+        print(url, response.status_code)
+        return ""
+
+def get_fb_page_2(url):
+    while True:
+        api_response = requests.post(
+            zyte_api_url,
+            auth=(API_KEY, ""),
+            json={
+                "url": url,
+                "browserHtml": True,
+                },
+            )
+
+        if api_response.json()['statusCode'] == 200:
+            browser_html: str = api_response.json()["browserHtml"]
+            emails = find_emails(browser_html)
+            return emails
+    
+        elif api_response.json()['statusCode'] in [429, 503]:
+            print(f"Rate limited for {url}, continuing")
+            time.sleep(3)
+            continue
+        
+        else:
+            print(f"Failed to get FB page for {url}, {api_response.json()['statusCode']}")
+            return []
+
+
+if __name__ == "__main__":
+    # yelp_scraper_run("https://www.yelp.com/search?find_desc=Bars&find_loc=Los+Angeles%2C+CA", 1, 1)
+    fb_url = 'https://www.facebook.com/barleyandboar'
+    print(get_fb_page(fb_url))
+
