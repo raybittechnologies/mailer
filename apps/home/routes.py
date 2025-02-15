@@ -1069,7 +1069,10 @@ def process_state(id):
 @blueprint.route('/check_state/<int:id>', methods=['GET'])
 def check_state(id):
     yelpurl = Yelpurl.query.get(int(id))
-    return yelpurl.state
+    if yelpurl:
+        return yelpurl.state
+    else:
+        return "completed"
 
 
 def get_segment(request):
@@ -2098,7 +2101,80 @@ def webhook():
                     for email in emails:
                         email.is_unsubscribed = 1
                         db.session.commit()
+                        
+                    service = Uploadedservice.query.filter_by(unsubscribe_token=email.unsubscribe_token).first()
+                    
+                    # unsubscribe all emails from this business : same business
+                    if service:
+                        service.is_unsubscribed = 1
+                        address = service.address
+                        biz_id = service.biz_id
 
+                        if biz_id:
+                            # Unsubscribe all emails from this business : same business
+                            services = Uploadedservice.query.filter_by(user_id = user_id, biz_id=biz_id).all()
+                            for service in services:
+                                # Unsubscribe all service with this business
+                                service.is_unsubscribed = 1
+                                
+                                # Unsubscribe all emails from campaigns
+                                unsubscribe_token = service.unsubscribe_token
+                                email = Email.query.filter_by(unsubscribe_token=unsubscribe_token).first()
+                                if email:
+                                    print("unsubscribed", email.email)
+                                    email.is_unsubscribed = 1
+                                db.session.commit()
+                                
+                        elif address:
+                            # Unsubscribe all emails from this address : same business
+                            services = Uploadedservice.query.filter_by(user_id = user_id, address=address).all()
+                            for service in services:
+                                # Unsubscribe all service with this address
+                                service.is_unsubscribed = 1
+                                
+                                # Unsubscribe all emails from campaigns
+                                unsubscribe_token = service.unsubscribe_token
+                                email = Email.query.filter_by(unsubscribe_token=unsubscribe_token).first()
+                                if email:
+                                    print("unsubscribed", email.email)
+                                    email.is_unsubscribed = 1
+
+                                db.session.commit()
+                        else:
+                            phone = service.phone
+                            if phone:
+                                # Unsubscribe all emails from this phone : same business
+                                services = Uploadedservice.query.filter_by(user_id = user_id, phone=phone).all()
+                                for service in services:
+                                    # Unsubscribe all service with this phone
+                                    service.is_unsubscribed = 1
+                                    
+                                    # Unsubscribe all emails from campaigns
+                                    unsubscribe_token = service.unsubscribe_token
+                                    email = Email.query.filter_by(unsubscribe_token=unsubscribe_token).first()
+                                    if email:
+                                        print("unsubscribed", email.email)
+                                        email.is_unsubscribed = 1
+                                    db.session.commit()
+                                    
+                            else:
+                                venue = service.name
+                                if venue:
+                                    # Unsubscribe all emails from this venue : same business
+                                    services = Uploadedservice.query.filter_by(user_id = user_id, name=venue).all()
+                                    for service in services:
+                                        # Unsubscribe all service with this venue
+                                        service.is_unsubscribed = 1
+                                        
+                                        # Unsubscribe all emails from campaigns
+                                        unsubscribe_token = service.unsubscribe_token
+                                        email = Email.query.filter_by(unsubscribe_token=unsubscribe_token).first()
+                                        if email:
+                                            print("unsubscribed", email.email)
+                                            email.is_unsubscribed = 1
+
+                                        db.session.commit()
+                                        
                 user_id = service.user_id
 
                 # Create reminder after 7 days at 2pm
@@ -2565,7 +2641,7 @@ def unsubscribe_all():
 
             if biz_id:
                 # Unsubscribe all emails from this business : same business
-                services = Uploadedservice.query.filter_by(biz_id=biz_id, user_id = id).all()
+                services = Uploadedservice.query.filter_by(user_id = id, biz_id=biz_id).all()
                 for service in services:
                     # Unsubscribe all service with this business
                     service.is_unsubscribed = 1
@@ -2590,7 +2666,7 @@ def unsubscribe_all():
 
             elif address:
                 # Unsubscribe all emails from this address : same business
-                services = Uploadedservice.query.filter_by(address=address, user_id = id).all()
+                services = Uploadedservice.query.filter_by(user_id = id, address=address).all()
                 for service in services:
                     # Unsubscribe all service with this address
                     service.is_unsubscribed = 1
@@ -2617,7 +2693,7 @@ def unsubscribe_all():
 
                 if phone:
                     # Unsubscribe all emails from this phone : same business
-                    services = Uploadedservice.query.filter_by(phone=phone, user_id = id).all()
+                    services = Uploadedservice.query.filter_by(user_id = id, phone=phone).all()
                     for service in services:
                         # Unsubscribe all service with this phone
                         service.is_unsubscribed = 1
@@ -2644,7 +2720,7 @@ def unsubscribe_all():
                     venue = service.name
                     if venue:
                         # Unsubscribe all emails from this venue : same business
-                        services = Uploadedservice.query.filter_by(name=venue, user_id = id).all()
+                        services = Uploadedservice.query.filter_by(user_id = id, name=venue).all()
                         for service in services:
                             # Unsubscribe all service with this venue
                             service.is_unsubscribed = 1

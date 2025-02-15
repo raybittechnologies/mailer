@@ -180,7 +180,8 @@ def yelp_scraper_run(url, user_id, id):
                     country = addresses.get('addressCountry', '')
                     address = addresses.get('streetAddress', '')
                     
-                    full_address = f"{address}, {city}, {state}, {zip} {country}"
+                    if address:
+                        full_address = f"{address}, {city}, {state}, {zip} {country}"
                     
                     data = dict()
                     data['url'] = url,
@@ -250,15 +251,36 @@ def get_addresses(url, session_id):
         return {}
     
     if response.json()['statusCode'] == 200:
-        html = b64decode(response.json()["httpResponseBody"]).decode("utf-8")
-        address_text = html.split('"address":')[1].split('},')[0]
-        address_text = address_text.replace("}}", "}")
+        try:
+            text = b64decode(response.json()["httpResponseBody"]).decode("utf-8")
+            # address_text = html.split('"address":')[1].split('},')[0]
+            # address_text = address_text.replace("}}", "}")
+            # address_json = json.loads(address_text)
+            # Regex patterns to capture the content of each field
+            street_pattern = r'"streetAddress"\s*:\s*"([^"]+)"'
+            locality_pattern = r'"addressLocality"\s*:\s*"([^"]+)"'
+            region_pattern = r'"addressRegion"\s*:\s*"([^"]+)"'
+            postal_pattern = r'"postalCode"\s*:\s*"([^"]+)"'
+            country_pattern = r'"addressCountry"\s*:\s*"([^"]+)"'
 
-        address_json = json.loads(address_text)
-        return address_json
+            streetAddress = re.search(street_pattern, text)
+            addressLocality = re.search(locality_pattern, text)
+            addressRegion = re.search(region_pattern, text)
+            postalCode = re.search(postal_pattern, text)
+            addressCountry = re.search(country_pattern, text)
 
+            return {
+                "streetAddress": streetAddress.group(1) if streetAddress else '',
+                "addressLocality": addressLocality.group(1) if addressLocality else '',
+                "addressRegion": addressRegion.group(1) if addressRegion else '',
+                "postalCode": postalCode.group(1) if postalCode else '',
+                "addressCountry": addressCountry.group(1) if addressCountry else ''
+            }
+        except Exception as e:
+            print("Failed to parse address", url, str(e))
+            return {}
     else:
-        print("Failed to get address", url, response.json()['statusCode'])
+        print("Failed to get response ", url, response.json()['statusCode'])
         return {}
     
 

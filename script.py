@@ -486,6 +486,6 @@ def get_fb_page_2(url):
 
 if __name__ == "__main__":
     # yelp_scraper_run("https://www.yelp.com/search?find_desc=Bars&find_loc=Los+Angeles%2C+CA", 1, 1)
-    fb_url = 'https://www.facebook.com/barleyandboar'
-    print(get_fb_page(fb_url))
+    # fb_url = 'https://www.facebook.com/barleyandboar'
+    # print(get_fb_page(fb_url))
 
