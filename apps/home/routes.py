@@ -226,7 +226,8 @@ def export_all_data():
             'facebook' : service.facebook,
             'customtext' : "",
             'notes' : "",
-            'bademail' : service.bademail
+            'bademail' : service.bademail,
+            'venueid' : service.biz_id
         }
 
         if url_id not in all_services:
@@ -330,6 +331,7 @@ def view_url_history(url_id):
             url_data['first_name4'] = url_entry.first_name4
             url_data['first_name5'] = url_entry.first_name5
             url_data['first_name6'] = url_entry.first_name6
+            url_data['biz_id'] = url_entry.biz_id
 
         url_list.append(url_data)
     return jsonify(url_list)
@@ -574,7 +576,7 @@ def upload_contact():
         else:
             return {"success": False, "message": "File type not supported."}
 
-        columns  = ['venue', 'type', 'website', 'phone', 'address', 'facebook', 'customtext', 'notes', 'bademail']
+        columns  = ['venue', 'type', 'website', 'phone', 'address', 'facebook', 'customtext', 'notes', 'bademail', 'venueid']
         if 'firstname' in df.columns and 'email' in df.columns:
             columns += ['firstname']
             columns += ['email']
@@ -640,8 +642,9 @@ def upload_contact():
                 service['is_unsubscribed'] = is_unsubscribed
                 service['firstname'] = item['firstname']
                 service['bademail'] = item['bademail']
-                # creeat random biz_id
-                service['biz_id'] = generate_random_string()
+                
+                service['biz_id'] = item['venueid']
+                
 
                 if email and check_blacklisted(email):
                     if email not in emails and email:
@@ -657,7 +660,8 @@ def upload_contact():
                 email4 = item['email4'].strip() if item.get('email4') else ""
                 facebookemail1 = item['facebookemail1'].strip() if item.get('facebookemail1') else ""
                 facebookemail2 = item['facebookemail2'].strip() if item.get('facebookemail2') else ""
-                biz_id = generate_random_string()
+                
+                biz_id = item['venueid']
 
                 is_all_empty = email1 == "" and email2 == "" and email3 == "" and email4 == "" and facebookemail1 == "" and facebookemail2 == ""
 
@@ -865,7 +869,8 @@ def contacts_list(id):
                 'originalemail': service.originalemail,
                 'city': city,
                 'state': state,
-                'bademail': service.bademail
+                'bademail': service.bademail,
+                'biz_id': service.biz_id
             }
             all_services.append(data)
 
@@ -903,7 +908,8 @@ def get_service(id):
         'originalemail': service.originalemail,
         'city': city,
         'state': state,
-        'bademail': service.bademail
+        'bademail': service.bademail,
+        'biz_id': service.biz_id
     }
     return jsonify(data)
 
@@ -957,7 +963,8 @@ def contacts_all_list():
             'originalemail': service.originalemail,
             'city': city,
             'state': state,
-            'bademail': service.bademail
+            'bademail': service.bademail,
+            'biz_id': service.biz_id
         }
         all_services.append(data)
 

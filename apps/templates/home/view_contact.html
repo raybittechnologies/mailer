@@ -34,6 +34,7 @@
                             <th>facebook</th>
                             <th>bademail</th>
                             <th>subscribed</th>
+                            <th>venueid</th>
                             <th>actions</th>
                         </tr>
                         </thead>
@@ -152,7 +153,7 @@
                         extend: 'excel',
                         filename: '{{ file_desc }}',
                         exportOptions: {
-                            columns: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+                            columns: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
                         },
                         title: null
                     },
@@ -160,7 +161,7 @@
                         extend: 'csv',
                         filename: '{{ file_desc }}',
                         exportOptions: {
-                            columns: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+                            columns: [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
                         }
                     }],
                 order : [],
@@ -212,6 +213,7 @@
                             return publish_state
                         }
                     },
+                    {data: 'biz_id', defaultContent : ""},
                     {
                         data: 'id', // Assuming the id property is present in your data
                         render: function (id, type, row) {
