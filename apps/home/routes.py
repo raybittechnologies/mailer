@@ -2239,7 +2239,7 @@ def webhook():
 @login_required
 @user_approved_required
 def get_services():
-    services = Uploadedservice.query.filter_by(user_id=current_user.id, is_unsubscribed=0).all()
+    services = Uploadedservice.query.filter_by(user_id=current_user.id).all()
     service_list = []
 
     for service in services:
