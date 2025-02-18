@@ -118,6 +118,14 @@ def url():
         businesses = request.form['business'].split('|')
         latitude = request.form['latitude']
         longitude = request.form['longitude']
+        
+        user = Users.query.get(current_user.id)
+        
+        if user.is_multi_search == 0:
+            yeplurls = Yelpurl.query.filter_by(userid=current_user.id, state="running").all()
+            if yeplurls:
+                return {"success": False, "message": 'Another search is running. Please wait for it to complete.'}
+        
 
         product_url = ""
         base_url = 'https://www.yelp.com/search?'
@@ -143,20 +151,14 @@ def url():
             db.session.flush()
             url_id = new_url.id
             db.session.commit()
-            
-            return redirect(url_for('home_blueprint.fetch', id=url_id))
+            return {"success": True, "message": "Url added successfully.", "url_id": url_id, "redirect": "/fetch/" + str(url_id)}
             
         else:
             print("already present in db")
             message = "This url is already reistered."
-
-            if current_user.role == "lite":
-                credit = UserCredit.query.filter_by(userid=current_user.id).first().credit
-                consumed = Service.query.filter_by(user_id=current_user.id, is_credited=1).count()
-                available_credit = credit - consumed
-                return render_template('home/view_scraped_data.html', segment='history', available_credit=available_credit, user_credit=credit, consumed=consumed, current_url_id=existing_url.id)
+            url_id = existing_url.id
+            return {"success": True, "message": message, "url_id": url_id, "redirect": "/url/view/" + str(url_id)}
             
-            return render_template('home/view_urls.html', segment='history', message=message )
         
     else:
         current_user_id = current_user.id

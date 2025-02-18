@@ -13,7 +13,7 @@
             <div class="card shadow-lg border-0 rounded-lg">
                 <div class="card-header"><h3 class="text-center font-weight-light my-1">Search</h3></div>
                 <div class="card-body">
-                    <form method="post" action="{{ url_for('home_blueprint.url') }}">
+                    <form method="post" action="{{ url_for('home_blueprint.url') }}" id="search_form">
                         <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                          <div class="form-group">
                             <label class="small mb-1" for="business">Business Type</label>
@@ -120,6 +120,66 @@
         window.onload = function () {
             initAutocomplete();
         };
+
+        // Catch form submit and validate
+        $('#search_form').submit(function (e) {
+            e.preventDefault();
+
+            let business = $('#business').val();
+            let location = $('#location').val();
+            let latitude = $('#latitude').val();
+            let longitude = $('#longitude').val();
+            let csrf_token = $('#csrf_token').val();
+
+            let formdata = new FormData();
+            formdata.append('business', business);
+            formdata.append('location', location);
+            formdata.append('latitude', latitude);
+            formdata.append('longitude', longitude);
+            formdata.append('csrf_token', csrf_token);
+
+            if (business === '' || location === '' || latitude === '' || longitude === '') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Updated',
+                    text: 'Please fill in all fields',
+                });
+                return false;
+            }
+
+            // Fetch data
+            fetch("{{ url_for('home_blueprint.url') }}", {
+                method: 'POST',
+                body: formdata
+            }).then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            html: '<p>Your search has been successfully started. You will be notified via email once the search has been completed.</p>',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                        url_id = data.url_id;
+
+                        // redirect to the /fetch/<url_id> page
+                        window.location.href = data.redirect;
+                        
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            html: '<p><b>Only one search at a time.</b><br>Please wait for your running search to complete (recommended), or you can end it manually.<br>Go to "Data History" tab to see status, or to end current running search.<br>Please note: You will be notified via email once the current running search has been completed.<br>This will also act as your cue to start your next search.</p>',
+                        });
+                    }
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                });
+        });
+
     });
 
 
