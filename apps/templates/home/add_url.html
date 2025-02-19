@@ -4,6 +4,35 @@
 
 <!-- Specific CSS goes HERE -->
 {% block stylesheets %}
+<style>
+    .tags-input {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 5px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        width: 100%;
+    }
+    .tag {
+        display: inline-flex;
+        align-items: center;
+        background-color: #d1e7fd;
+        padding: 5px;
+        margin: 2px;
+        border-radius: 4px;
+    }
+    .tag span {
+        margin-left: 5px;
+        cursor: pointer;
+    }
+    .tags-input input {
+        border: none;
+        outline: none;
+        flex: 1;
+        padding: 5px;
+    }
+</style>
 {% endblock stylesheets %}
 
 {% block content %}
@@ -17,14 +46,20 @@
                         <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                          <div class="form-group">
                             <label class="small mb-1" for="business">Business Type</label>
-                            <input class="form-control py-1" id="business" name="business" type="text"
-                                   placeholder="things to do, nail salons, plumbers, Live Music" multiple size="10" required/>
+                            <!-- <input class="form-control py-1" id="business" name="business" type="text"
+                                   placeholder="things to do, nail salons, plumbers, Live Music" multiple size="10" required/> -->
+                            <input id="business" name="business" type="hidden" required/>
+                            <div id="bus_tags-input" class="py-1 tags-input" required>
+                                <input type="text" id="businesses" name="businesses"  placeholder="Add businesses separated by commas" />
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="small mb-1" for="location">Location</label>
-                            <input class="form-control py-1" id="location" name="location" type="text"
-                                   placeholder="address, neighborhood, city, state or zip"  multiple size="10" required/>
-                            
+                            <div id="loc-tags-input" class="py-1 tags-input" required>
+                                <input class="py-1 tags-input" id="location" name="location" type="text"
+                                       placeholder="address, neighborhood, city, state or zip"  multiple size="10" required/>
+                                <!-- <input type="text" id="locations" name="locations" placeholder="Add places"/> -->
+                            </div>
                             <input type="hidden" id="latitude" name="latitude" >
                             <input type="hidden" id="longitude" name="longitude">
 
@@ -57,6 +92,14 @@
         let marker;
         let autocomplete;
 
+        const hiddenbusInput = document.getElementById('business');
+        const busTagsInput = document.getElementById('bus_tags-input');
+        const businessInput = document.getElementById('businesses');
+
+        const locinput = document.getElementById('location');
+
+        let businesses = []; // Array to store selected businesses
+
         function initAutocomplete() {
             // Initialize the map centered on a default location
             // map = new google.maps.Map(document.getElementById('map'), {
@@ -78,6 +121,42 @@
 
             // When the user selects an address from the dropdown, update the map
             autocomplete.addListener('place_changed', onPlaceChanged);
+
+            businessInput.addEventListener('keydown', (event) => {
+                // Check if the user pressed 'Enter' or ',' to create a new tag
+                if (event.key === 'Enter' || event.key === ',') {
+                    event.preventDefault();
+                    let tagText = businessInput.value.trim();
+                    // tagText = tagText.slice(0, -1); // Remove the comma
+                    console.log(tagText);
+                    if (tagText) {
+                        addBusinessTag(tagText);
+                    }
+                    businessInput.value = ''; // Clear the input field
+                }
+                // if TAB key is pressed, prevent the default action, add the tag and clear the input field
+                if (event.key === 'Tab') {
+                    event.preventDefault();
+                    let tagText = businessInput.value.trim();
+                    if (tagText) {
+                        addBusinessTag(tagText);
+                    }
+                    businessInput.value = ''; // Clear the input field
+                    
+                    // Focus on the location input field
+                    locinput.focus();
+                }
+            });
+            
+            // Event listener to add a place tag when the user copy and paste  comma-separated text
+            businessInput.addEventListener('paste', (event) => {
+                event.preventDefault();
+                let paste = (event.clipboardData || window.clipboardData).getData('text');
+                let tags = paste.split(',');
+                tags.forEach(tag => {
+                    addBusinessTag(tag.trim());
+                });
+            });
         }
     
         // When the user selects an address from the dropdown, populate the address fields in the form.
@@ -116,6 +195,39 @@
             //     zoom: 15
             // });
         }
+        
+        // Function to add a business tag to the input
+        function addBusinessTag(businessName) {
+            // Prevent duplicate tags
+            if (businesses.includes(businessName)) {
+                return;
+            }
+            // Create a tag element
+            const tag = document.createElement('div');
+            tag.className = 'tag';
+            tag.textContent = businessName;
+
+            // Create a remove button for the tag
+            const removeButton = document.createElement('span');
+            removeButton.textContent = '✖';
+            removeButton.onclick = () => {
+                busTagsInput.removeChild(tag);
+                businesses = businesses.filter(b => b !== businessName); // Remove from businesses array
+                updateHiddenBusinessedInput();
+            };
+
+            tag.appendChild(removeButton);
+            busTagsInput.insertBefore(tag, businessInput); // Add tag before the input element
+
+            // Add business to the businesses array
+            businesses.push(businessName);
+
+            updateHiddenBusinessedInput();
+        }
+
+        function updateHiddenBusinessedInput() {
+            hiddenbusInput.value = businesses.join('|'); // Store tags as a comma-separated string
+        }
 
         window.onload = function () {
             initAutocomplete();
@@ -130,6 +242,8 @@
             let latitude = $('#latitude').val();
             let longitude = $('#longitude').val();
             let csrf_token = $('#csrf_token').val();
+            
+            business = business.replace(/\n/g, ' ');
 
             let formdata = new FormData();
             formdata.append('business', business);

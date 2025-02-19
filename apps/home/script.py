@@ -33,37 +33,64 @@ def pass_data(item):
     print("Processes", response.text)
 
 
-def zyte_session(find_desc, find_loc, start):
-    
+def zyte_session(url, id):
     auth = (API_KEY, "")
     while True:    
         session_id = str(uuid4())
         response = requests.post(zyte_api_url, auth=auth, json={
             "browserHtml": True,
-            "url": f"https://www.yelp.com/search/snippet?find_desc={find_desc}&find_loc={find_loc}&start={start}&parent_request_id=cff2259236faa40b&request_origin=user",
+            "url": url,
             "session": {
                     "id": session_id
                 }
             })
         
         try:
-            data = json.loads(response.text)
-            # print("initial request ------" +  str(data["statusCode"])) 
-
-            if data["statusCode"] == 200:
-                return session_id
-            
-            elif data["statusCode"] in [429, 503]:
-                print("Rate limited")
-                time.sleep(1)
-                continue
-            else:
-                print("Failed to get initial request", data["statusCode"])
+            if is_scraper_completed(id):
                 return None
+            data = response.json()
+            # print("initial request ------" +  str(data["statusCode"])) 
+            
+            if "statusCode" in data:
+                if data["statusCode"] == 200:
+                    return session_id
+                
+                else:
+                    print("Failed to get initial request", data)
+                    time.sleep(1)
+                    continue
+            else:
+                print("Invalid response", data)
+                if data["status"] in [429, 503]:
+                    time.sleep(1)
+                    continue
+                
+                elif data["status"] == 520:
+                    retry_after = response.headers.get("Retry-After")
+                    if retry_after:
+                        print("Retry after", retry_after, "seconds")
+                        time.sleep(int(retry_after))
+                        continue
+                    else:
+                        time.sleep(1)
+                        print("Retry after not found")
+                        continue
+                else:
+                    time.sleep(1)
+                    return None
+            
         except Exception as e:
-            print("Failed to get initial request", str(e))
+            print("Initial request Error", str(e), data)
             time.sleep(1)
             continue
+        
+        
+def is_scraper_completed(id):
+    WEB_HOST_IP = os.getenv("WEB_HOST_IP")
+    response = requests.get(f'{WEB_HOST_IP}/check_state/' + str(id))
+    if response.text == "completed":
+        return True
+    return False
     
 
 def yelp_scraper_run(url, user_id, id):
@@ -80,20 +107,21 @@ def yelp_scraper_run(url, user_id, id):
     start = 0
     page = 0
     auth = (API_KEY, "")
-
-    session_id = zyte_session(find_desc, find_loc, start)
+    page_url = f"https://www.yelp.com/search?find_desc={find_desc}&find_loc={find_loc}&start={start}"
+    session_id = zyte_session(page_url, id)
+    
+    if not session_id:
+        return
     
     while True:
         search_data = []
         start = page * 10 # 10 business per page        
         print("Start", start)
-        WEB_HOST_IP = os.getenv("WEB_HOST_IP")
-        response = requests.get(f'{WEB_HOST_IP}/check_state/' + str(id))
-        if response.text == "completed":
+        if is_scraper_completed(id):
             return
         
         #ZYTE API 
-        base_url = f"https://www.yelp.com/search/snippet?find_desc={find_desc}&find_loc={find_loc}&start={start}&parent_request_id=cff2259236faa40b&request_origin=user"
+        base_url = f"https://www.yelp.com/search/snippet?find_desc={find_desc}&find_loc={find_loc}&start={start}"
         payload = {
             "url" : base_url,
             "httpResponseBody" : True,
@@ -109,8 +137,12 @@ def yelp_scraper_run(url, user_id, id):
             break
         
         if "statusCode" not in response.json():
-            print("Invalid response", repr(response.json()))
-            session_id = zyte_session(find_desc, find_loc, start)
+            print("Invalid response", response.text)
+            page_url = f"https://www.yelp.com/search?find_desc={find_desc}&find_loc={find_loc}&start={start}"
+            session_id = zyte_session(page_url, id)
+            if not session_id:
+                return None
+            
             continue
 
         # "venue	city	phone	Venue Type	Website	email	email 2	Email (facebook)	Facebook Link"
@@ -168,7 +200,7 @@ def yelp_scraper_run(url, user_id, id):
                     thumbnail_url = photoList.get('src') if photoList else ''
 
                     try:
-                        addresses = get_addresses(businessUrl, session_id)
+                        addresses = get_addresses(businessUrl, session_id, id)
                     except Exception as e:
                         print("Failed to get address", str(e), businessUrl)
                         addresses = {}
@@ -180,8 +212,10 @@ def yelp_scraper_run(url, user_id, id):
                     country = addresses.get('addressCountry', '')
                     address = addresses.get('streetAddress', '')
                     
-                    if address:
-                        full_address = f"{address}, {city}, {state}, {zip} {country}"
+                    # if address, city and state, zip , country is empty then skip this record
+                    full_address = f"{address}, {city}, {state}, {zip} {country}"
+                    if full_address == ", , ,  ":
+                        full_address = ""
                     
                     data = dict()
                     data['url'] = url,
@@ -235,53 +269,78 @@ def yelp_scraper_run(url, user_id, id):
         page += 1
 
 
-def get_addresses(url, session_id):
-    try:
-        payload = {
-            "url" : url,
-            "httpResponseBody" : True,
-            "session": {
-                "id": session_id
-            }
-        }
-        auth = (API_KEY, "")
-        response = requests.post(zyte_api_url, auth=auth, json=payload)
-    except Exception as e:
-        print("Failed to get address", url, str(e))
-        return {}
+def get_addresses(url, session_id, id):
+    scraper = cloudscraper.create_scraper(browser={
+        'browser': 'chrome',
+        'platform': 'windows'
+    })
     
-    if response.json()['statusCode'] == 200:
+    while True:
+        # try:
+        #     payload = {
+        #         "url" : url,
+        #         "browserHtml" : True,
+        #         "session": {
+        #             "id": session_id
+        #         }
+        #     }
+        #     auth = (API_KEY, "")
+        #     response = requests.post(zyte_api_url, auth=auth, json=payload)
+        # except Exception as e:
+        #     print("Failed to get address", url, str(e))
+        #     return {}
+        
+        # if "statusCode" not in response.json():
+        #     print("Invalid response in address", response.text)
+            
+        #     session_id = zyte_session(url, id)
+        #     if not session_id:
+        #         return {}
+        #     continue
+        
+        # else:
+        #     break
+        
         try:
-            text = b64decode(response.json()["httpResponseBody"]).decode("utf-8")
-            # address_text = html.split('"address":')[1].split('},')[0]
-            # address_text = address_text.replace("}}", "}")
-            # address_json = json.loads(address_text)
-            # Regex patterns to capture the content of each field
-            street_pattern = r'"streetAddress"\s*:\s*"([^"]+)"'
-            locality_pattern = r'"addressLocality"\s*:\s*"([^"]+)"'
-            region_pattern = r'"addressRegion"\s*:\s*"([^"]+)"'
-            postal_pattern = r'"postalCode"\s*:\s*"([^"]+)"'
-            country_pattern = r'"addressCountry"\s*:\s*"([^"]+)"'
-
-            streetAddress = re.search(street_pattern, text)
-            addressLocality = re.search(locality_pattern, text)
-            addressRegion = re.search(region_pattern, text)
-            postalCode = re.search(postal_pattern, text)
-            addressCountry = re.search(country_pattern, text)
-
-            return {
-                "streetAddress": streetAddress.group(1) if streetAddress else '',
-                "addressLocality": addressLocality.group(1) if addressLocality else '',
-                "addressRegion": addressRegion.group(1) if addressRegion else '',
-                "postalCode": postalCode.group(1) if postalCode else '',
-                "addressCountry": addressCountry.group(1) if addressCountry else ''
-            }
+            response = scraper.get(url, proxies=proxies, verify=verify, timeout=60)
         except Exception as e:
-            print("Failed to parse address", url, str(e))
-            return {}
-    else:
-        print("Failed to get response ", url, response.json()['statusCode'])
-        return {}
+            print("Failed to Biz detail page", url, str(e))
+            time.sleep(1)
+            continue
+        
+        if response.status_code == 200:
+            try:
+                # text = b64decode(response.json()["browserHtml"]).decode("utf-8")
+                # text = response.json()["browserHtml"]
+                text = response.text
+                
+                # Regex patterns to capture the content of each field
+                street_pattern = r'"streetAddress"\s*:\s*"([^"]+)"'
+                locality_pattern = r'"addressLocality"\s*:\s*"([^"]+)"'
+                region_pattern = r'"addressRegion"\s*:\s*"([^"]+)"'
+                postal_pattern = r'"postalCode"\s*:\s*"([^"]+)"'
+                country_pattern = r'"addressCountry"\s*:\s*"([^"]+)"'
+
+                streetAddress = re.search(street_pattern, text)
+                addressLocality = re.search(locality_pattern, text)
+                addressRegion = re.search(region_pattern, text)
+                postalCode = re.search(postal_pattern, text)
+                addressCountry = re.search(country_pattern, text)
+
+                return {
+                    "streetAddress": streetAddress.group(1) if streetAddress else '',
+                    "addressLocality": addressLocality.group(1) if addressLocality else '',
+                    "addressRegion": addressRegion.group(1) if addressRegion else '',
+                    "postalCode": postalCode.group(1) if postalCode else '',
+                    "addressCountry": addressCountry.group(1) if addressCountry else ''
+                }
+            except Exception as e:
+                print("Failed to parse address", url, str(e))
+                return {}
+        else:
+            print("Failed to get response ", url, response.status_code, response.text)
+            # return {}
+            continue
     
 
 def thread_runner(data):

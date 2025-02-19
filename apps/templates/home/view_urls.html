@@ -69,7 +69,13 @@
                         dataSrc: ''
                     },
                     columns: [
-                        {data: 'name'},
+                        {
+                            data: 'name',
+                            render: function (name, type, row) {
+                            //     // split the name by , and add <br> tag
+                                return name.split(',').join(',<br>');
+                            }
+                        },
                         {
                             data: 'product_url',
                             render: function (product_url, type, row) {

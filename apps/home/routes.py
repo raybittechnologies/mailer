@@ -132,6 +132,8 @@ def url():
         urls = []
         for location in locations:
             for business in businesses:
+                if business.strip() == "" or location.strip() == "":
+                    continue
                 encoded_business = urllib.parse.quote(business)
                 encoded_location = urllib.parse.quote(location)
 
@@ -1141,12 +1143,24 @@ def lets_start(urls, user_id, id):
     process.join()
 
 
+def is_scraper_completed(id):
+    WEB_HOST_IP = os.getenv("WEB_HOST_IP")
+    response = requests.get(f'{WEB_HOST_IP}/check_state/' + str(id))
+    if response.text == "completed":
+        return True
+    return False
+
+
 def starting(urls, user_id, id):
     if len(urls) > 0:
         
         WEB_HOST_IP = os.getenv("WEB_HOST_IP")
+        
         for url in urls:
             try:
+                if is_scraper_completed(id):
+                    break
+                
                 yelp_scraper_run(url, user_id, id)
             except Exception as e:
                 print(e)
