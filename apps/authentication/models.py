@@ -30,6 +30,7 @@ class Users(db.Model, UserMixin):
     password_reset_token = db.Column(db.String(128)) 
     is_multi_search = db.Column(db.Integer, default=0) # 1: multi search, 0: single search
     is_auto_unsub = db.Column(db.Integer, default=1) # 1: auto unsub, 0: manual unsub : default is auto unsub, for replied emails, it will be unsubscribed automatically
+    is_opt_musicians= db.Column(db.Integer, default=1) # 1: opt music venue, 0: no opt music venue : default is opt music venue
     
     def __init__(self, **kwargs):
         for property, value in kwargs.items():

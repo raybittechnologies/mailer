@@ -21,39 +21,125 @@ load_dotenv()
 import os
 openai_api_key=os.getenv("OPENAI_API_KEY")
 # print(openai_api_key)
+# eben@eyebytes.com & also reject Name Eben along w/ it in the firstname field 
+# amkryukov@gmail.com & also reject Name amkryukov or amy along w it in the firstname field 
+# eyebytes.com
+# @yourwebsite.com
+# Any emails with u00 in it (u003efmbboxoffice@livenation.com , for example..sometime they will be u002, u001, etc..)
+# your@
+# @email.com
+# @uber.com
+# @lyft.com
+# @doordash.com
+# @yelp.com
+# @grubhub.com
+# yourname@
+# @yourname.com
+# @youraddress.com 
+# youraddress@
+# you@
+# @whatever.com
+# username@
+# noreply@
+# firstlast@
+# @pixelspread.com
+# Emails with more than 1 period after the @ sign (ex.materialdesigniconsfont@4.5.95.min.css)
+# Emails ending in .webp (not even necessarily directly after the @ sign too!)
 
-blacklist = ['@email.com', 
-             '@example.com',
-             '@domain.com',
-             '@godaddy.com',
-             '@address.com',
-             '@filler.com',
-             '@xyz.com',
-             '@newsletter.com',
-             '@mystore.com', 
-             'example@gmail.com', 
-             '@sentry', 
-             'mail@mail.com', 
-             '@mail.com', 
-             'example@mail.com', 
-             '.png', 
-             '.jpg', 
-             'sentry.io', 
-             '@mysite.com', 
-             'example@', 
-             'sample@', 
-             'donotreply@', 
-             '@company.com', 
-             '@yourdomain.com', 
-             'accessibility@wyndham.com',
-             'email@',
-             '@latofonts.com',
-             '@fontawesome.com',
-             '.gif',
+
+email_blacklist = [
+                '@email.com', 
+                '@example.com',
+                '@domain.com',
+                '@godaddy.com',
+                '@address.com',
+                '@filler.com',
+                '@xyz.com',
+                '@newsletter.com',
+                '@mystore.com', 
+                'example@gmail.com', 
+                '@sentry', 
+                'mail@mail.com', 
+                '@mail.com', 
+                'example@mail.com', 
+                '.png', 
+                '.jpg', 
+                'sentry.io', 
+                '@mysite.com', 
+                'example@', 
+                'sample@', 
+                'donotreply@', 
+                '@company.com', 
+                '@yourdomain.com', 
+                'accessibility@wyndham.com',
+                'email@',
+                '@latofonts.com',
+                '@fontawesome.com',
+                '.gif',
+                'eben@',
+                'amkryukov@',
+                'eyebytes.com',
+                '@yourwebsite.com',
+                'your@',
+                '@uber.com',
+                '@lyft.com',
+                '@doordash.com',
+                '@yelp.com',
+                '@grubhub.com',
+                'yourname@',
+                '@yourname.com',
+                '@youraddress.com',
+                'youraddress@',
+                'you@',
+                '@whatever.com',
+                'username@',
+                'noreply@',
+                'firstlast@',
+                '@pixelspread.com',
+                '.webp',
+                '.css',
              ]
 
+black_list_venue_types = "Lighting Fixtures & Equipment, DJs, Adult Education, Performing Arts, Comedy Clubs, Airlines, Airport Shuttles, Party Bus Rentals, Airport Terminals, Limos, Town Car Service, Airports, Car Rental, Music & DVDs, Music Production Services, Museums, Dance, Classes, Teacher, Musician, Band, Hookah Bars, Musical Instruments & Teachers, Recording & Rehearsal Studios, Observatories, Historical Tours, Opera & Ballet, Outdoor Movies, Paint & Sip, Art Classes, Party & Event Planning, Venues & Event Spaces, Parking, Psychics, Feng Shui, Private Tutors, Musicians, Ramen, Tattoo, Art Galleries, Piercing, Taxis, Tea Room, Teppanyaki, Tours, Boat Charters, Ferries, Flight Instruction, Travel Services, Toy Stores, Comic Books, Trains, Trampoline Parks, Indoor Playcentre, Transportation, Bus Tours, bus stations, buses, Travel Agents, Tutoring Centers, Summer Camps, Vacation Rentals, Video/Film Production, Audio/Visual Equipment Rental, Vocal Coach, Virtual Reality Centers, Yoga, Health Retreats, Pole Dancing Classes, Women's Clothing, Men’s Clothing, Amusement Parks, Arcades, Go Karts, Specialty Schools, Kids Activities, Bingo Halls, Karaoke, Food Trucks, Amateur Sports Teams, Social Clubs, Dance Schools, Landmarks & Historical Buildings, Town Hall, Professional Sports Teams, Accessories, Attraction Farms, Antiques, Mini Golf, Batting Cages, Astrologers, Psychic Mediums, Caricatures, Commissioned Artists, Car Share Services, Clowns, Magicians, Counseling & Mental Health, Framing, Printing Services, Flea Markets, Used, Vintage & Consignment, Haunted Houses, Hobby Shops, Jewelry, Watches, Race Tracks, Home Decor, Gift Shops, Indian, Guitar Stores, Photo Booth Rentals, Reiki, Supernatural Readings, Meditation Centers, Web Design, Graphic Design, Clock Repair, Snuggle Services, Musical Instruments & Teachers, Musicians, Vocal Coach, Pet Boarding, Pet Groomers, Pet Sitting, Pet Training, Pet Stores, Resorts, Water Parks, Sunglasses, Aerial Fitness, butcher, Caterers, dog parks, Commissioned Artists, cupcakes, Drive-In Theater, fast food, fishing, flea markets, florists, Food Delivery Services, gas stations, gold buyers, Hair Salons, Women's Clothing, hiking, health markets, Ice Cream & Frozen Yogurt, Juice Bars & Smoothies, Hot Dogs, Jet Skis, Paddleboarding, Tours, Paint-Your-Own Pottery, korean, life coach, makerspaces, marketing, Medical Transportation, private investigation, Private Jet Charter, Rafting/Kayaking, thai, Ticket Sales, courthouses, Fire Departments, Jails & Prisons, language schools, Public Services & Government, beverage stores, Bike Sharing, Calligraphy, Cheerleading, Childbirth Education, Doulas, Childbirth Education, Midwives, Prenatal/Perinatal Care, Childbirth Education, Prenatal/Perinatal Care, Lactation Services, College Counseling, Career Counseling, Editorial Services, Test Preparation, Educational Services, Tutoring Centers, CPR Classes, First Aid Classes, Criminal Defense Law, Personal Injury Law, General Litigation, Divorce & Family Law, Immigration Law, Wills, Trusts, & Probates, Elementary Schools, Middle Schools & High Schools, Flight Instruction, Aerial Tours, Private Jet Charter, Aircraft Dealers, Immigration Law, Personal Injury Law, Criminal Defense Law, Specialty Schools, Middle Schools & High Schools, Musical Instruments & Teachers, Performing Arts, Divey, Summer Camps, Kids Activities, Special Education, Speech Therapists, Parenting Classes, Home Health Care, Speech Training, game truck rental"
+black_list_venue_types = black_list_venue_types.split(', ')
+
+must_not_include_venue_types = [
+    'musician',
+    'musicians',
+    'dj',
+    'djs',
+    'symphony'
+]
+
 venue_black_list = [
-    'applebee'
+    'applebee',
+    'symphony',
+    'orchestra',
+    'Subway',
+    'IHOP',
+    'Panera Bread',
+    'Moe’s Southwest Grill',
+    'Burlington Mall',
+    'P.F. Chang’s',
+    'Chuck E. Cheese',
+    'Seasons 52',
+    'Taco Bell',
+    'Chili’s',
+    'Applebee’s Grill + Bar',
+    'Dave & Buster’s',
+    'Yard House',
+    'Buffalo Wild Wings',
+    'School of Rock',
+    'RaceTrac',
+    'Ruby Tuesday',
+    'Chuy’s',
+    'Eddie V’s Prime Seafood',
+    'Main Event',
+    'Fleming’s Prime Steakhouse & Wine Bar',
+    'Bowlero Chula Vista',
+    'Sammy’s Restaurant & Bar',
+    'red roof inn',
+    'best buy'
 ]
 llm = ChatOpenAI(
     model_name="gpt-3.5-turbo-0125",
@@ -61,10 +147,33 @@ llm = ChatOpenAI(
     openai_api_key=openai_api_key
 )
 def check_blacklisted(email):
-    return all([black not in email for black in blacklist] + ['@' in email])
+    return all([black not in email for black in email_blacklist] + ['@' in email] + [email.startswith('u00') == False] + [email.count('@') == 1])
 
-def is_blacklisted(venue_name):
+def is_blacklisted_venue(venue_name):
     return any([black.lower() in venue_name.lower() for black in venue_black_list])
+
+# … for example “museums, music venues” KEEP IT IN THAT CASE. The only exception to this rule is if 
+# it says “musician, music venue” if "musician" is in there with “music venue” it still gets deleted. 
+# Also have scraper reject any venues that come back with a blank “type” UNLESS it has emails with it
+# REJECT THESE “TYPE” COLUMN (UNLESS “MUSIC VENUES” IS TIED INTO THE KEYWORDS!!!! BUT unless one of the 
+# keywords is “musicians” or “dj” or “symphony” even if music venue is tied to those 2 - reject) / 
+# Also make it easy to add more “rejected types” later if we need to. 
+# Also reject for “DJ” also have the db look at “venue” and reject if “dj” is in the venue name. 
+# (meaning crawler doesn’t scrape it, and moves on to next work)
+def is_blackeslisted_venue_type(venue_types):
+    
+    for venue_type in venue_types:
+        if venue_type.strip().lower() in must_not_include_venue_types:
+            return True
+        
+    low_cases_venue_types = [venue_type.strip().lower() for venue_type in venue_types]
+    
+    for venue_type in venue_types:
+        if venue_type.strip() in black_list_venue_types and not "music venue" in low_cases_venue_types and not "music venues" in low_cases_venue_types:
+            return True
+    
+    return False
+    
 
 def send_push_notification(subscription, title,  body, reminder_id, vapid_claims, vapid_private_key, url):
     try:
@@ -328,6 +437,8 @@ def extract_address(address):
 #     return email_name_pairs
 
 if __name__ == '__main__':
-    print(check_blacklisted(""))
+    # print(check_blacklisted(""))
+    
+    print(is_blackeslisted_venue_type(['symphony', 'Music Venue']))
 
 

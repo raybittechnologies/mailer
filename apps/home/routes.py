@@ -504,7 +504,7 @@ def fetch(id):
         db.session.commit()
         # run scraper
         try:
-            executor.submit(lets_start, urls, current_user.id, id)
+            executor.submit(lets_start, urls, current_user.id, id, current_user.is_opt_musicians)
         except:
             print("something went wrong")
         
@@ -1135,9 +1135,9 @@ def get_admin_data():
     return page_data
 
 
-def lets_start(urls, user_id, id):
+def lets_start(urls, user_id, id, is_opt_musicians):
     process = multiprocessing.Process(target=starting,
-                                      args=(urls, user_id, id))
+                                      args=(urls, user_id, id, is_opt_musicians))
     process.start()
 
     process.join()
@@ -1151,7 +1151,7 @@ def is_scraper_completed(id):
     return False
 
 
-def starting(urls, user_id, id):
+def starting(urls, user_id, id, is_opt_musicians):
     if len(urls) > 0:
         
         WEB_HOST_IP = os.getenv("WEB_HOST_IP")
@@ -1161,10 +1161,9 @@ def starting(urls, user_id, id):
                 if is_scraper_completed(id):
                     break
                 
-                yelp_scraper_run(url, user_id, id)
+                yelp_scraper_run(url, user_id, id, is_opt_musicians)
             except Exception as e:
-                print(e)
-                print("Something went wrong in starting function", str(e))
+                print("Something went wrong in while scraping", str(e))
                 continue
         
         response = requests.post(f'{WEB_HOST_IP}/complete', json={'id': id})
@@ -2340,6 +2339,9 @@ def create_campaign():
     workflow_id = request.json['workflow_id']
     contactfile_id = request.json['contactfile_id']
     max_emails_per_day = request.json['max_emails_per_day']
+    # is_round_robin = request.json['is_round_robin']
+    
+    # print("is_round_robin", is_round_robin)
     # number of emails in a Group is 150 , so we need to divide emails into groups
     group_size = int(max_emails_per_day)
     
@@ -3496,3 +3498,51 @@ def update_auto_unsub():
     user.is_auto_unsub = is_auto_unsub
     db.session.commit()
     return jsonify({"success": True, "message": "Auto Unsubscribe updated successfully."})
+
+
+#  update /update_opt_musicians
+@blueprint.route('/update_opt_musicians', methods=['POST'])
+@login_required
+@user_approved_required
+def update_opt_musicians():
+    user_id = current_user.id
+    is_opt_musicians = request.form.get('is_opt_musicians')
+    user = Users.query.filter_by(id=user_id).first()
+    user.is_opt_musicians = is_opt_musicians
+    db.session.commit()
+    return jsonify({"success": True, "message": "Opt Musicians updated successfully."})
+
+
+@blueprint.route('/get_service_with_bizid', methods=['GET'])
+def get_service_with_bizid():
+    biz_id = request.args.get('biz_id')
+    services = Service.query.filter(Service.biz_id == biz_id).all()
+
+    final_service = dict()
+    emails = []
+    for service in services:
+        service_data = service.to_dict()
+        
+        for k, v in service_data.items():
+            if 'email' in k  and 'bademail' not in k and 'fbemail' not in k:
+                if v and v.lower() not in emails:
+                    emails.append(v.lower())
+                    
+            if final_service.get(k) is None:
+                final_service[k] = v
+            else:
+                if isinstance(final_service[k], str) and isinstance(v, str):
+                    if len(v) > len(final_service[k]):
+                        final_service[k] = v
+    
+    if final_service:
+        final_service['email1'] = emails[0] if len(emails) > 0 else ''
+        final_service['email2'] = emails[1] if len(emails) > 1 else ''
+        final_service['email3'] = emails[2] if len(emails) > 2 else ''
+        final_service['email4'] = emails[3] if len(emails) > 3 else ''
+        
+                        
+    # convert service model to dict
+    return jsonify(final_service)
+
+    

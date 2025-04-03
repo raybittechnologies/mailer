@@ -70,7 +70,11 @@ class Service(db.Model):
     
     __table_args__ = (
         db.Index('sevice-idx', "url_id", "user_id", "biz_id", unique=True), 
+        db.Index('biz-idx', "biz_id"),
     )
+    
+    def to_dict(self):
+        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
 
 
 class Uploadedservice(db.Model):

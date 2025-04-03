@@ -13,7 +13,7 @@ import cloudscraper
 from threading import Thread
 import queue
 import os
-from apps.home.utils import check_blacklisted, is_blacklisted_venue, is_blackeslisted_venue_type
+from apps.home.utils import check_blacklisted, is_blacklisted
 from uuid import uuid4
 
 
@@ -25,10 +25,6 @@ proxies={
 verify='zyte-proxy-ca.crt'
 zyte_api_url = "https://api.zyte.com/v1/extract"
 API_KEY = "be8e0737c3664421a37adc8e0a48d9cf" #Enter_your_api_key
-
-
-ZENROW_API_KEY = "88ea2ce3aa3fe48ab806519f26c7bf16948ddceb"
-ZENROW_API_URL = "https://api.zenrows.com/v1/"
 
 
 def pass_data(item):
@@ -95,119 +91,84 @@ def is_scraper_completed(id):
     if response.text == "completed":
         return True
     return False
-
-def create_session():
-    # Create a session
-    session = requests.session()
-    return session
-
-
-def get_geo_location(address):
-    session = create_session()
-    google_api_key = os.getenv("GOOGLE_GEOCODING_API_KEY")
-    
-    address = urllib.parse.quote_plus(address, safe='/:,')
-    
-    url = f"https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={google_api_key}"
-    
-    response = session.get(url)
-    
-    if response.json()['status'] == 'OK':
-        return response.json()['results'][0]['geometry']['location']
-    else:
-        return None
-    
-    
-def get_service_with_bizId(bizId):
-    WEB_HOST_IP = os.getenv("WEB_HOST_IP")
-    response = requests.get(f'{WEB_HOST_IP}/get_service_with_bizid?biz_id=' + str(bizId))
-    if response.status_code == 200:
-        return response.json()
-    else:
-        return {}
-    
     
 
-def yelp_scraper_run(url, user_id, id, is_opt_musicians):
+def yelp_scraper_run(url, user_id, id):
     # url = urllib.parse.unquote(url).replace("+", " ") # Needed when using pure request query string
     try:
         find_desc = url.split("find_desc=")[1].split("&")[0]
         find_loc = url.split("find_loc=")[1].split("&")[0]
     except Exception as e:
-        print("Invalid URL", url, str(e))
+        print("Invalid URL")
         return
     
     print("Start scraping", url)
     
-    session = create_session()
-    
     start = 0
     page = 0
+    auth = (API_KEY, "")
+    page_url = f"https://www.yelp.com/search?find_desc={find_desc}&find_loc={find_loc}&start={start}"
+    session_id = zyte_session(page_url, id)
+    
+    if not session_id:
+        return
     
     while True:
         search_data = []
         start = page * 10 # 10 business per page        
+        print("Start", start)
         if is_scraper_completed(id):
             return
         
-        print("Start", start)
-        
         #ZYTE API 
-        base_url = f"https://www.yelp.com/search?find_desc={find_desc}&find_loc={find_loc}&start={start}"
-        params = {
-            'url': base_url,
-            'apikey': ZENROW_API_KEY,
-            'js_render': 'true',
-            'premium_proxy': 'true',
+        base_url = f"https://www.yelp.com/search/snippet?find_desc={find_desc}&find_loc={find_loc}&start={start}"
+        payload = {
+            "url" : base_url,
+            "httpResponseBody" : True,
+            "session": {
+                "id": session_id
+            }
         }
         
         try:
-            response = session.get(ZENROW_API_URL, params=params)
+            response = requests.post(zyte_api_url, auth=auth, json=payload)
         except Exception as e:
             print("Failed to get data", str(e))
             break
         
+        if "statusCode" not in response.json():
+            print("Invalid response", response.text)
+            page_url = f"https://www.yelp.com/search?find_desc={find_desc}&find_loc={find_loc}&start={start}"
+            session_id = zyte_session(page_url, id)
+            if not session_id:
+                return None
+            
+            continue
+
         # "venue	city	phone	Venue Type	Website	email	email 2	Email (facebook)	Facebook Link"
-        if response.status_code == 200:
+        if response.json()['statusCode'] == 200:
             try:
-                contents_text = '{"locale"' + response.text.split('<!--{"locale"')[1].split("--></script>")[0] 
-                response_json = json.loads(contents_text)
+                response_json = json.loads(b64decode(response.json()["httpResponseBody"]))
             except Exception as e:
                 print("Failed to parse response", str(e))
                 break
                 
-            if "searchExceptionProps" in response_json['legacyProps']['searchAppProps']['searchPageProps']:
+            if "searchExceptionProps" in response_json['searchPageProps']:
                 break
             
-            for business in response_json['legacyProps']['searchAppProps']['searchPageProps']['mainContentComponentsListProps']:
+            for business in response_json['searchPageProps']['mainContentComponentsListProps']:
                 if "bizId" in business:
                     bizId = business['bizId']
                     venue_name = business['searchResultBusiness']['name']
-                    venue_types = [i['title'] for i in business['searchResultBusiness']['categories']]
-                    phone = business['searchResultBusiness']['phone']
-                    
-                    if len(venue_types) == 0: ## if venue type is empty then skip this record
+
+                    if is_blacklisted(venue_name):
                         continue
-                    
-                    if is_scraper_completed(id):
-                        return
-                    
-                    if is_opt_musicians :
-                        if is_blacklisted_venue(venue_name):
-                            continue
-                        
-                        if is_blackeslisted_venue_type(venue_types):
-                            continue
-                        
-                        # if phone start with - or has wrong format then skip this record
-                        if phone and phone.startswith("-") or len(phone) < 10:
-                            continue
 
                     if "temp. closed" in venue_name.lower() or "closed" in venue_name.lower():
                         continue
 
-
-                    venue_type = ", ".join(venue_types)
+                    venue_type = ", ".join([i['title'] for i in business['searchResultBusiness']['categories']])
+                    phone = business['searchResultBusiness']['phone']
                     
                     if business['searchResultBusiness']['website']:
                         website = business['searchResultBusiness']['website']['href']
@@ -215,6 +176,21 @@ def yelp_scraper_run(url, user_id, id, is_opt_musicians):
                             website = ""
                     else:
                         website = ""
+
+                    latitude = ""
+                    longitude = ""
+                    try:
+                        for location in response_json['searchPageProps']['rightRailProps']['searchMapProps']['mapState']['markers']:
+                            if "resourceId" in location and bizId == location['resourceId']:
+                                try:
+                                    latitude = location['location']['latitude']
+                                    longitude = location['location']['longitude']
+                                except:
+                                    pass
+
+                                break
+                    except:
+                        pass
                         
                     businessUrl = "https://www.yelp.com" + business['searchResultBusiness']['businessUrl']
                     if "/biz" not in businessUrl:
@@ -222,44 +198,24 @@ def yelp_scraper_run(url, user_id, id, is_opt_musicians):
 
                     photoList = business['scrollablePhotos']['photoList'][0] if len(business['scrollablePhotos']['photoList']) > 0 else {}
                     thumbnail_url = photoList.get('src') if photoList else ''
-                    
-                    service = get_service_with_bizId(bizId)
-                    
-                    full_address = service.get('address', '')
-                    city = service.get('city', '')
-                    state = service.get('state', '')
-                    zip = service.get('zip', '')
-                    country = service.get('country', '')
-                    latitude = service.get('latitude', '')
-                    longitude = service.get('longitude', '')
-                        
-                    if full_address == "":
-                        try:
-                            addresses = get_addresses(session, businessUrl)
-                        except Exception as e:
-                            print("Failed to get address", str(e), businessUrl)
-                            addresses = {}
 
-                        full_address = ''
-                        city = addresses.get('addressLocality', '')
-                        state = addresses.get('addressRegion', '')
-                        zip = addresses.get('postalCode', '')
-                        country = addresses.get('addressCountry', '')
-                        address = addresses.get('streetAddress', '')
-                        
-                        # if address, city and state, zip , country is empty then skip this record
-                        full_address = f"{address}, {city}, {state}, {zip} {country}"
-                        if full_address == ", , ,  ":
-                            full_address = ""
+                    try:
+                        addresses = get_addresses(businessUrl, session_id, id)
+                    except Exception as e:
+                        print("Failed to get address", str(e), businessUrl)
+                        addresses = {}
+
+                    full_address = ''
+                    city = addresses.get('addressLocality', '')
+                    state = addresses.get('addressRegion', '')
+                    zip = addresses.get('postalCode', '')
+                    country = addresses.get('addressCountry', '')
+                    address = addresses.get('streetAddress', '')
                     
-                    
-                    if full_address and latitude == "" and longitude == "":
-                        location = get_geo_location(full_address)
-                        if location:
-                            latitude = location['lat']
-                            longitude = location['lng']
-                        
-                    print("Venue", venue_name, "Address", full_address)
+                    # if address, city and state, zip , country is empty then skip this record
+                    full_address = f"{address}, {city}, {state}, {zip} {country}"
+                    if full_address == ", , ,  ":
+                        full_address = ""
                     
                     data = dict()
                     data['url'] = url,
@@ -268,15 +224,15 @@ def yelp_scraper_run(url, user_id, id, is_opt_musicians):
                     data['website'] = website
                     data['Phone'] = phone
                     data['address'] = full_address
-                    data['facebook'] = service.get('facebook', '')
-                    data['instagram'] = service.get('instagram', '')
-                    data['twitter'] = service.get('twitter', '')
-                    data['Email1'] = service.get('email1', '') if check_blacklisted(service.get('email1', '')) else ''
-                    data['Email2'] = service.get('email2', '') if check_blacklisted(service.get('email2', '')) else ''
-                    data['Email3'] = service.get('email3', '') if check_blacklisted(service.get('email3', '')) else ''
-                    data['Email4'] = service.get('email4', '') if check_blacklisted(service.get('email4', '')) else ''
-                    data['FacebookEmail1'] = service.get('fbemail1', '') if check_blacklisted(service.get('fbemail1', '')) else ''
-                    data['FacebookEmail2'] = service.get('fbemail2', '') if check_blacklisted(service.get('fbemail2', '')) else ''
+                    data['facebook'] = ""
+                    data['instagram'] = ""
+                    data['twitter'] = ""
+                    data['Email1'] = ""
+                    data['Email2'] = ""
+                    data['Email3'] = ""
+                    data['Email4'] = ""
+                    data['FacebookEmail1'] = ""
+                    data['FacebookEmail2'] = ""
                     data['url_id'] = id
                     data['user_id'] = user_id
                     data['bizId'] = bizId
@@ -301,24 +257,52 @@ def yelp_scraper_run(url, user_id, id, is_opt_musicians):
             for th in threads:
                 th.join()
             
+        elif response.status_code in [429, 503]:
+            print("Rate limited")
+            time.sleep(1)
+            continue
+        
         else:
-            print("Status Code: ", response.status_code, base_url)
+            print(response.status_code, base_url)
             break
         
         page += 1
 
 
-def get_addresses(session, url):
+def get_addresses(url, session_id, id):
+    scraper = cloudscraper.create_scraper(browser={
+        'browser': 'chrome',
+        'platform': 'windows'
+    })
     
     while True:
-        params = {
-            'url': url,
-            'apikey': ZENROW_API_KEY,
-            'js_render': 'true',
-            'premium_proxy': 'true',
-        }
+        # try:
+        #     payload = {
+        #         "url" : url,
+        #         "browserHtml" : True,
+        #         "session": {
+        #             "id": session_id
+        #         }
+        #     }
+        #     auth = (API_KEY, "")
+        #     response = requests.post(zyte_api_url, auth=auth, json=payload)
+        # except Exception as e:
+        #     print("Failed to get address", url, str(e))
+        #     return {}
+        
+        # if "statusCode" not in response.json():
+        #     print("Invalid response in address", response.text)
+            
+        #     session_id = zyte_session(url, id)
+        #     if not session_id:
+        #         return {}
+        #     continue
+        
+        # else:
+        #     break
+        
         try:
-            response = session.get(ZENROW_API_URL, params=params)
+            response = scraper.get(url, proxies=proxies, verify=verify, timeout=60)
         except Exception as e:
             print("Failed to Biz detail page", url, str(e))
             time.sleep(1)
@@ -358,7 +342,6 @@ def get_addresses(session, url):
             # return {}
             continue
     
-    
 
 def thread_runner(data):
     try:
@@ -371,34 +354,30 @@ def thread_runner(data):
             return
         
         if website:
-            # if any emails is in data then skip this process
-            if data.get('Email1') or data.get('Email2') or data.get('Email3') or data.get('Email4') or data.get('FacebookEmail1') or data.get('FacebookEmail2'):
-                pass
-            else:
+            try:
+                fb_link, emails, fb_emails = get_fb_info(website)
+            except Exception as e:
+                print("Failed to get fb info", str(e))
+                fb_link = ""
+                emails = []
+                fb_emails = []
+            
+            if fb_link:
+                data['facebook'] = fb_link
+            if fb_emails:
                 try:
-                    fb_link, emails, fb_emails = get_fb_info(website)
-                except Exception as e:
-                    print("Failed to get fb info", str(e))
-                    fb_link = ""
-                    emails = []
-                    fb_emails = []
-                
-                if fb_link:
-                    data['facebook'] = fb_link
-                if fb_emails:
-                    try:
-                        data['FacebookEmail1'] = fb_emails[0]
-                        data['FacebookEmail2'] = fb_emails[1]
-                    except:
-                        pass
-                if emails:
-                    try:
-                        data['Email1'] = emails[0]
-                        data['Email2'] = emails[1]
-                        data['Email3'] = emails[2]
-                        data['Email4'] = emails[3]
-                    except:
-                        pass
+                    data['FacebookEmail1'] = fb_emails[0]
+                    data['FacebookEmail2'] = fb_emails[1]
+                except:
+                    pass
+            if emails:
+                try:
+                    data['Email1'] = emails[0]
+                    data['Email2'] = emails[1]
+                    data['Email3'] = emails[2]
+                    data['Email4'] = emails[3]
+                except:
+                    pass
 
             response = requests.get(f'{WEB_HOST_IP}/check_state/' + str(data['url_id']))
             if response.text == "completed":
@@ -413,18 +392,28 @@ def thread_runner(data):
     
 def get_fb_info(url):
     
-    scraper = create_session()
-    params = {
-        'url': url,
-        'apikey': ZENROW_API_KEY
-    }
+    scraper = cloudscraper.create_scraper(browser={
+        'browser': 'chrome',
+        'platform': 'windows'
+    })
     
     FB_link = ""
     emails = []
     fb_emails = []
     
     try:
-        response = scraper.get(ZENROW_API_URL, params=params)
+        if url == "http://www.whiskyagogo.com":
+            url = "https://www.whiskyagogo.com/calendar/"
+            response = scraper.get(url, timeout=30)
+        
+        elif url == "http://www.musictunnelktv.com/":
+            response = scraper.get("https://www.musictunnelktv.com/home", timeout=10)
+            
+        elif url == "https://www.musictunnelktv.com":
+            response = scraper.get("https://www.musictunnelktv.com/home", timeout=10)
+        
+        else:
+            response = scraper.get(url, proxies=proxies, verify=verify, timeout=60)
             
     except Exception as e:
         print("Failed to get data", url, str(e))
@@ -490,7 +479,7 @@ def get_fb_info(url):
             
     if len(emails) == 0 and len(fb_emails) == 0:
         # Possible pages which might have emails
-        possible_contact_pages = ['contact', 'contact-us', 'info', 'barmenu', 'about']
+        possible_contact_pages = ['contact', 'contact-us', 'info', 'barmenu']
         base_url = url.split(":")[0] + "://" + urllib.parse.urlparse(url).netloc
         
         for contact in possible_contact_pages:
@@ -499,13 +488,8 @@ def get_fb_info(url):
             else:
                 contact_url = base_url + "/" + contact
                 
-            params = {
-                'url': contact_url,
-                'apikey': ZENROW_API_KEY,
-            }
-                
             try:
-                response = scraper.get(ZENROW_API_URL, params=params)
+                response = scraper.get(contact_url, timeout=10)
             except Exception as e:
                 print("Failed to get contact page", contact_url, str(e))
                 continue
@@ -568,8 +552,7 @@ def get_fb_page_2(url):
 
         if api_response.json()['statusCode'] == 200:
             browser_html: str = api_response.json()["browserHtml"]
-            html = browser_html.replace(r"\u0040", "@")
-            emails = find_emails(html)
+            emails = find_emails(browser_html)
             return emails
     
         elif api_response.json()['statusCode'] in [429, 503]:

@@ -147,7 +147,12 @@ def msg1():
 
             if existing_url is None:
                 user = db.session.get(Users, int(data['user_id']))
-
+                
+                emails = [data['Email1'], data['Email2'], data['Email3'], data['Email4']]
+                
+                # remove duplicates and empty strings
+                emails = list(set(filter(None, emails)))
+                
                 new_service = Service(
                     name= data['venue'] if isinstance(data, str) else data['venue'][0],
                     venue_type= data['venuetype'] if type(data) == 'str' else data['venuetype'][0],
@@ -157,10 +162,10 @@ def msg1():
                     facebook=data['facebook'],
                     instagram=data['instagram'],
                     twitter=data['twitter'],
-                    email1=data['Email1'],
-                    email2=data['Email2'],
-                    email3=data['Email3'],
-                    email4=data['Email4'],
+                    email1= emails[0] if len(emails) > 0 else '',
+                    email2= emails[1] if len(emails) > 1 else '',
+                    email3= emails[2] if len(emails) > 2 else '',
+                    email4= emails[3] if len(emails) > 3 else '',
                     fbemail1=data['FacebookEmail1'],
                     fbemail2=data['FacebookEmail2'],
                     url_id=data['url_id'],

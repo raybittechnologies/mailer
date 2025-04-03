@@ -73,6 +73,10 @@
                                         <input type="number" class="form-control" id="max-emails-per-day" min="1" max="" name="max-emails-per-day" required></input>
                                         <input type="hidden" id="emails-daily-limit" name="emails-daily-limit" >
                                     </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="checked" id="round-robin-email" checked="checked">
+                                        <label class="custom-control-label" for="round-robin-email">Round Robin Email Sending</label>
+                                    </div>
                                     <p class="mb-4 mx-auto text-info" id="user-notification"></p>
                                     <!-- Error notification when user put over max emails per day -->
                                     <p class="mb-4 mx-auto text-danger" role="alert" id="error-notification" style="display: none;">
@@ -288,6 +292,8 @@
             const workflow_id = document.getElementById("select-workflow").value;
             const contactfile_id = document.getElementById("select-contacts").value;
             const max_emails_per_day = document.getElementById("max-emails-per-day").value;
+            const is_round_robin = document.getElementById("round-robin-email").checked;
+            
             // const start_date = document.getElementById("start-date").value;
 
             $('#close-modal').click();
@@ -306,7 +312,8 @@
                 body: JSON.stringify({
                     "workflow_id" : workflow_id,
                     "contactfile_id" : contactfile_id,
-                    "max_emails_per_day" :max_emails_per_day
+                    "max_emails_per_day" :max_emails_per_day,
+                    "is_round_robin" : is_round_robin,
                     // 'start_date' : start_date
                 }),
             })
@@ -473,6 +480,24 @@
                 document.getElementById("create-campaign-button").disabled = false;
             }
 
+        });
+
+        $('#round-robin-email').on('change', function() {
+            if ($(this).is(':checked')) {
+                // Enable multi-select
+                $("#select-contacts").attr("multiple", "multiple");
+            } else {
+                // Disable multi-select and reset selection to a single value
+                $("#select-contacts").removeAttr("multiple");
+                // Optionally, clear multiple selections by selecting only the first option:
+                let selectElem = document.getElementById("select-contacts");
+                if (selectElem.options.length > 0) {
+                    for (var i = 0; i < selectElem.options.length; i++) {
+                        selectElem.options[i].selected = false;
+                    }
+                    selectElem.options[0].selected = true;
+                }
+            }
         });
 
 
