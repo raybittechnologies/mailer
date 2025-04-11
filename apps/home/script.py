@@ -186,9 +186,6 @@ def yelp_scraper_run(url, user_id, id, is_opt_musicians):
                     venue_types = [i['title'] for i in business['searchResultBusiness']['categories']]
                     phone = business['searchResultBusiness']['phone']
                     
-                    if len(venue_types) == 0: ## if venue type is empty then skip this record
-                        continue
-                    
                     if is_scraper_completed(id):
                         return
                     
@@ -259,7 +256,7 @@ def yelp_scraper_run(url, user_id, id, is_opt_musicians):
                             latitude = location['lat']
                             longitude = location['lng']
                         
-                    print("Venue", venue_name, "Address", full_address)
+                    print("<Venue>", venue_name, "<Address>", full_address)
                     
                     data = dict()
                     data['url'] = url,
@@ -403,6 +400,10 @@ def thread_runner(data):
             response = requests.get(f'{WEB_HOST_IP}/check_state/' + str(data['url_id']))
             if response.text == "completed":
                 return
+            
+        # if venuetype is empty and no email then ignore this record
+        if data['venuetype'] == "" and data['Email1'] == "" and data['Email2'] == "" and data['Email3'] == "" and data['Email4'] == "" and data['FacebookEmail1'] == "" and data['FacebookEmail2'] == "":
+            return
             
         pass_data(data)
 

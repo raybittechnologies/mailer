@@ -1164,7 +1164,8 @@ def starting(urls, user_id, id, is_opt_musicians):
                 yelp_scraper_run(url, user_id, id, is_opt_musicians)
             except Exception as e:
                 print("Something went wrong in while scraping", str(e))
-                continue
+                raise e
+                # continue
         
         response = requests.post(f'{WEB_HOST_IP}/complete', json={'id': id})
         response = requests.post(f'{WEB_HOST_IP}/msg', json={'result': "completed", 'id' : id, 'user_id' : user_id})

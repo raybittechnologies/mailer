@@ -148,7 +148,7 @@ def msg1():
             if existing_url is None:
                 user = db.session.get(Users, int(data['user_id']))
                 
-                emails = [data['Email1'], data['Email2'], data['Email3'], data['Email4']]
+                emails = [data['Email1'], data['Email2'], data['Email3'], data['Email4'], data['FacebookEmail1'], data['FacebookEmail2']]
                 
                 # remove duplicates and empty strings
                 emails = list(set(filter(None, emails)))
@@ -187,6 +187,7 @@ def msg1():
                         if fn is None:
                             email_str = email.split('@')[0]
                             first_name = extract_first_name(email_str)
+                            
                             venue = data['venue'] if isinstance(data, str) else data['venue'][0]
 
                             if first_name != "None" and first_name.lower() in venue.lower(): # Check if first name is in venue name
@@ -211,6 +212,13 @@ def msg1():
 
                         else:
                             first_name = fn.first_name
+                            
+                        # eben@eyebytes.com & also reject Name Eben along w/ it in the firstname field 
+                        # amkryukov@gmail.com & also reject Name amkryukov or amy along w it in the firstname field 
+                        # eyebytes.com & also reject Name eyebytes along w it in the firstname field
+
+                        if 'eben' in first_name.lower() or 'amkryukov' in first_name.lower():
+                            return "None"
 
                         # add first names to service
                         setattr(new_service, f"first_name{idx+1}", first_name)

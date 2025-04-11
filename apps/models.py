@@ -74,7 +74,7 @@ class Service(db.Model):
     )
     
     def to_dict(self):
-        return {column.name: getattr(self, column.name) for column in self.__table__.columns}
+        return {column.name: getattr(self, column.name) if getattr(self, column.name) else '' for column in self.__table__.columns}
 
 
 class Uploadedservice(db.Model):
