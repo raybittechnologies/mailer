@@ -330,21 +330,33 @@
             // close the modal
             $('#confirm-modal-close').click();
 
-            fetch('/url', {
+            fetch("{{ url_for('home_blueprint.url') }}", {
                 method: 'POST',
                 body: formdata
-            }).then(response => {
-                console.log(response);
-                return response.url;
-            }).then(data => {
+            }).then(response => response.json())
+            .then(data => {
                 console.log(data);
-                // Redirect to the view page
-                window.location.href = data;
-            }).catch(error => {
-                console.error(error);
-            });
-                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        html: '<p>Your search has been successfully started. You will be notified via email once the search has been completed.</p>',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                    url_id = data.url_id;
 
+                    // redirect to the /fetch/<url_id> page
+                    window.location.href = data.redirect;
+                    
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        html: '<p><b>Only one search at a time.</b><br>Please wait for your running search to complete (recommended), or you can end it manually.<br>Go to "Data History" tab to see status, or to end current running search.<br>Please note: You will be notified via email once the current running search has been completed.<br>This will also act as your cue to start your next search.</p>',
+                    });
+                }
+            });
         });
 
         window.onload = initAutocomplete;

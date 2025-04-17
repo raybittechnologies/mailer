@@ -114,7 +114,14 @@
                             render: function (id, type, row) {
                                 // Create action buttons HTML
                                 var state_text = ''
-                                state_text = row.state === "running" ? '<a class="btn btn-success btn-sm" href="/fetching?id=' + id + '">View Processes</a> ' : '<a class="btn btn-facebook btn-sm" href="/url/view/' + id + '">View Data</a> ';
+                                state_text = row.state === "running" || row.state === 'idle' ? '<a class="btn btn-success btn-sm" href="/fetching?id=' + id + '">View Processes</a> ' : '<a class="btn btn-facebook btn-sm" href="/url/view/' + id + '">View Data</a> ';
+                                if (row.state === "running") {
+                                    state_text = '<a class="btn btn-success btn-sm" href="/fetching?id=' + id + '">View Processes</a> ';
+                                } else if (row.state === "idle") {
+                                    state_text = '<a class="btn btn-info btn-sm" href="/fetch/' + id + '">Start</a> '
+                                } else {
+                                    state_text = '<a class="btn btn-facebook btn-sm" href="/url/view/' + id + '">View Data</a> ';
+                                }
                                 var buttons = state_text +
                                     '<form action="/url/delete" style="display: contents" method="post"> <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}"> <input type="hidden" name="urlid" value="' + id + '"/><input class="btn btn-danger btn-sm" type="submit" value="Delete"></form>';
                                 return buttons;
