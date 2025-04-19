@@ -183,6 +183,19 @@
                     addBusinessTag(tag.trim());
                 });
             });
+
+            // Event lister to add ad bisiness tag when user click somewhere in the page, document or input field
+            document.addEventListener('click', (event) => {
+                if (event.target !== businessInput && event.target !== busTagsInput) {
+                    // If the user clicks outside add bisiness input field
+                    let tagText = businessInput.value.trim();
+                    if (tagText) {
+                        addBusinessTag(tagText);
+                    }
+                    businessInput.value = ''; // Clear the input field
+                    
+                }
+            });
         }
     
         // When the user selects an address from the dropdown, populate the address fields in the form.
