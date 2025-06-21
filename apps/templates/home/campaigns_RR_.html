@@ -1,0 +1,693 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}  {% endblock title %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.3.2/css/fixedHeader.bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+    <!-- Choices.js CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"/>
+
+{% endblock stylesheets %}
+
+{% block content %}
+
+    <div class="container-fluid py-4">
+        
+        <div class="container mt-5">
+            <button class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#creatCampaignModalMessage" {% if current_user.nylas_access_token %} onclick="createCampaign()"{% endif %}  >Create campaign</button>
+            <div class="card col shadow-lg border-0 rounded-lg">
+                <div class="card-header"><h3 class="text-center font-weight-light my-4">My Campaign</h3></div>
+                <div class="card-body">
+                <table style="width:100%" id="filtersTable" class="table table-striped table-bordered nowrap">
+                    <thead>
+                    <tr>
+                        <th>ContactFile</th>
+                        <th>Workflow</th>
+                        <th>Created On</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <!-- Rows will be added dynamically using JavaScript -->
+                    </tbody>
+                </table>
+                </div>
+            </div>
+        </div>
+
+        {% include "includes/footer.html" %}
+        <div class="col-md-6 col-xl-6">
+            <!-- Modal -->
+            <div class="modal fade" id="creatCampaignModalMessage" data-bs-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="importTemplateModalMessageTitle" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="importTemplateModalLabel">Create Campaign</h5>
+                            <button type="button" class="btn-close text-dark" id="close-modal" data-bs-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">×</span>
+                            </button>
+                        </div>
+                        <form id="create-campaign-form" action="/create/campaign" method="post">
+                            <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
+                            <div class="modal-body">
+                                {% if current_user.nylas_access_token %}
+                                    <div class="form-group" >
+                                        <label for="select-contacts" class="col-form-label">Select Contacts:</label>
+                                        <!-- <select class="form-control form-select" id="select-contacts" name="select-contacts">
+                                        </select> -->
+                                        <select class="form-control form-select" id="select-contacts" name="select-contacts[]" multiple></select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="select-workflow" class="col-form-label">Select Workflow:</label>
+                                        <select class="form-control form-select" id="select-workflow" name="select-workflow">
+                                        </select>
+                                    </div>
+                                    <!-- <div class="form-group">
+                                        <label for="workflow-description" class="col-form-label">Description:</label>
+                                        <textarea type="text" class="form-control" id="workflow-description" name="workflow-description" readonly></textarea>
+                                    </div> -->
+                                    <div class="form-group">
+                                        <label for="max-emails-per-day" class="col-form-label">Max Emails Per Day:</label>
+                                        <input type="number" class="form-control" id="max-emails-per-day" min="1" max="" name="max-emails-per-day" required></input>
+                                        <input type="hidden" id="emails-daily-limit" name="emails-daily-limit" >
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="checked" id="round-robin-email" checked="checked">
+                                            <label class="custom-control-label" for="round-robin-email">Round Robin Email Sending</label>
+                                        </div>
+                                    </div>  
+                                    <!-- add a switch "Throttling" and after it, question mark for tooltip-->
+                                    <div  class="form-group" id="throttling-options">
+                                        <!-- add drop down -->
+                                        <label for="throttling-options-select" class="col-form-label">Max batches at once:</label>
+                                        <!-- add questionmark icon  -->
+                                        <i class="fas fa-question-circle" data-bs-toggle="tooltip" data-bs-placement="top" 
+                                        title="Switch OFF = 1 batch at a time: if your email/domain is BRAND NEW, or has been inactive for a period of time
+                                                2 batches at a time: if email is NOT a domain email, but rather a gmail, yahoo, aol, etc..
+                                                3 batches at a time: if your email/domain IS a domain email (john@johndoe.com), AND AS WELL AS old/active & sent/received tons of email in the past, and present (it’s actively being used!) ">
+                                        </i>
+
+                                        <select class="form-select" id="throttling-options-select" name="throttling-options-select">
+                                            <option value="1">1 batch at a time</option>
+                                            <option value="2">2 batches at a time</option>
+                                            <option value="3">3 batches at a time</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="throttling" checked>
+                                        <label class="form-check-label" for="throttling">Warm-Up</label>
+                                        <!-- add a drop down for throttling options -->
+                                    
+                                    </div>
+                                    <p class="mb-4 mx-auto text-info" id="user-notification"></p>
+                                    <!-- Error notification when user put over max emails per day -->
+                                    <p class="mb-4 mx-auto text-danger" role="alert" id="error-notification" style="display: none;">
+                                    </p>
+
+                                {% else %}
+                                    <a href='{{ url_for("home_blueprint.nylas_auth") }}' class="btn btn-primary">Connect EMAIL</a>
+                                {% endif %}
+                            </div>
+                            {% if current_user.nylas_access_token %}
+                                <div class="modal-footer form-group">
+                                    <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="submit" class="btn bg-gradient-primary" id="create-campaign-button" >Create</button>
+                                </div>
+                            {% endif %}
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="deleteCampaignModal" tabindex="-1" role="dialog" aria-labelledby="deleteCampaignModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="deleteCampaignModalLabel">Are you sure to delete this Campaign?</h5>
+                  <button type="button" class="btn-close text-dark" id="close-deletejob-modal" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <form action="/campaign/delete" style="display: contents" method="post"> 
+                    <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="campaignid" id="delete-modal-campid"/>
+                    <div class="modal-footer">
+                        <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <input class="btn btn-danger" type="submit" tabindex="0" value="Delete">
+                    </div>
+                </form>
+              </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
+
+<!-- Specific JS goes HERE -->
+{% block javascripts %}
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap.min.js"></script>
+<script src="https://cdn.datatables.net/fixedheader/3.3.2/js/dataTables.fixedHeader.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.4.1/js/responsive.bootstrap.min.js"></script>
+<!-- <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script> -->
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script>
+    var templates = null;
+    
+    const selectEl = document.getElementById('select-contacts');
+    let isMultiple = true;
+    let contactchoises;  // our Choices.js instance
+    let contact_options = [];
+
+    function initChoices() {
+        // 1) Make sure the <select> has or doesn’t have the multiple attribute
+        if (isMultiple) {
+            selectEl.setAttribute('multiple', '');
+        } else {
+            selectEl.removeAttribute('multiple');
+        }
+
+        // 2) Destroy old instance (if any)
+        if (contactchoises) {
+            contactchoises.destroy();
+        }
+
+        // 3) Init new instance with proper options
+        contactchoises = new Choices(selectEl, {
+            removeItemButton: isMultiple,      // show “×” only in multi-mode
+            shouldSort: false,                 // preserve insertion order
+            searchEnabled: true
+        });
+    }
+
+
+    function createCampaign() {
+        // create swal loading
+        Swal.fire({
+            title: 'Loading...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            },
+        });
+
+        fetch('/get_workflows',{
+            method: 'POST',
+        })
+        .then((response) => {
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+            return response.json(); // Extract the response body as text
+        })
+        .then((res) => {
+            swal.close();   
+            console.log(res);
+            templates = res.templates;
+            contacts = res.contacts;
+
+            emails_daily_limit = res.emails_daily_limit;
+
+            if (templates.length == 0) {
+                document.getElementById("select-workflow").innerHTML = '<option value="">No Workflow Available</option>';
+                
+            } else {
+                for (let i = 0; i < templates.length; i++) {
+                    // console.log(res[i])
+                    options += '<option ' +  ' value="' + templates[i].id +'">' + templates[i].template_name + "</option>" ;
+                }
+                document.getElementById("select-workflow").innerHTML = options;
+                // document.getElementById("workflow-description").innerHTML = templates[0].template_desc;
+            }
+
+            if (contacts.length == 0) {
+                document.getElementById("select-contacts").innerHTML = '<option value="">No Contact Available</option>';
+            } else {
+                // clear options
+                contact_options = [];
+                const select_contacts = document.getElementById("select-contacts");
+                for (let i = 0; i < contacts.length; i++) {
+
+                    contact_options.push({
+                        value: contacts[i].id,
+                        label: contacts[i].description + "(" + contacts[i].service_count +")",
+                        selected: i === 0, // Select the first option by default,
+                        customProperties: {
+                            service_count: contacts[i].service_count
+                        }
+                    });
+                    
+                }
+
+                // clear select-contacts
+                select_contacts.innerHTML = '';
+
+                initChoices();
+                contactchoises.setChoices(contact_options, 'value', 'label', true);
+
+            }
+
+            if (templates.length == 0 || contacts.length == 0) {
+                document.getElementById("create-campaign-button").disabled = true;
+                return;
+            } else {
+                document.getElementById("create-campaign-button").disabled = false;
+            }
+
+            document.getElementById("max-emails-per-day").max = emails_daily_limit;
+            document.getElementById("emails-daily-limit").value = emails_daily_limit;
+            document.getElementById("user-notification").innerHTML = "*The daily email sending limit is a suggested maximum of 50 emails PER day PER email address. Please contact support for anything above this daily suggested limit for a workaround.";
+            document.getElementById("error-notification").innerHTML = "ERROR: Only " + emails_daily_limit +" emails per day max; Please reduce your Contacts list to no more than " + emails_daily_limit * 7 + " total (" + emails_daily_limit + " per day 7 days a week )"
+
+            // // active option total emails
+            // var total_emails = document.getElementById("select-contacts").selectedOptions[0].getAttribute("data-service-count");
+            var total_emails = contacts[0].service_count;
+            
+            console.log(total_emails);
+
+            total_emails = parseInt(total_emails);
+
+            if (emails_daily_limit * 7 < total_emails) {
+                 document.getElementById("error-notification").style.display = "block";
+                 document.getElementById("create-campaign-button").disabled = true;
+            }
+
+            calculateMaxEmailsPerDay(contacts[0].service_count, emails_daily_limit);
+
+        })
+        .catch((err) => {
+            console.log(err);
+            Swal.fire({
+                icon: "warning",
+                title: "Oops...",
+                text: "Something went wrong!",
+            });
+        });
+
+        // For showing start time of Campaign : might be needed in the future
+        // var now = new Date();
+        // local_now = new Date(now.getTime() - now.getTimezoneOffset()*60000 + 2).toISOString().substring(0,19)
+        // console.log(now);
+        // document.getElementById("automation-datetime-local-input").value = local_now;
+
+    };
+
+
+    // create function to calculate max_emails_per_day
+    function calculateMaxEmailsPerDay(total_emails, emails_daily_limit) {
+        // if total_emails / 7 is bigger than max_emails_per_day, then set max_emails_per_day to total_emails // 7 + 1
+        // else set max_emails_per_day to total_emails
+        var max_emails_daily = 0;
+        if (total_emails / 7 < emails_daily_limit) {
+            max_emails_daily = Math.floor(total_emails / 7) + 1;
+        } else {
+            max_emails_daily = emails_daily_limit;
+        }
+
+        document.getElementById("max-emails-per-day").value = max_emails_daily;
+
+    }
+
+
+    $(document).ready(function () {
+        // const selectElement = document.getElementById("select-workflow");
+        // const result = document.querySelector(".result");
+
+        // selectElement.addEventListener("change", (event) => {
+        //     for (let  i = 0; i <  templates.length; i++) {
+        //         if (templates[i].id == event.target.value) {
+        //             document.getElementById("workflow-description").innerHTML = templates[i].template_desc
+        //         }
+        //     }
+
+        // });
+
+
+        // Initialize DataTable
+        var dataTable = $('#filtersTable').DataTable({
+                responsive: true,
+                pageLength: 50,
+                columnDefs: [
+                {
+                    target: 2,
+                    render: DataTable.render.datetime()
+                }],
+                order : [],
+                ajax: {
+                    url: '/get_campaigns',
+                    dataSrc: ''
+                },
+                columns: [
+                    {data: 'contact_name'},
+                    {data: 'templatename'},
+                    {data: 'create_datetime'},
+                    {
+                        data: 'id', // Assuming the id property is present in your data
+                        render: function (id, type, row) {
+                            // Create action buttons HTML'
+                            var campaignid = row.campaignid;
+                            var buttons = '<a class="btn btn-success btn-sm" href="/campaign/view/' + campaignid + '">View</a> ' +
+                                '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" id="camp_' + id + '" data-bs-target="#deleteCampaignModal" type="submit">Delete</button>';
+                                
+                            return buttons;
+                        }
+                    }
+                    
+                ]
+            },
+        );
+        
+        $('#filtersTable').on('click', 'button', event => {
+            // console.log(data)
+            if (event.target.innerText === "DELETE") {
+                const id = event.target.id.split("_")[1];
+                document.getElementById("delete-modal-campid").value = id;
+            } else {
+                console.log(event.target.innerText)
+            }
+        });
+
+        $('#create-campaign-form').on('submit', function(e) { //use on if jQuery 1.7+
+            e.preventDefault();  //prevent form from submitting
+            const workflow_id = document.getElementById("select-workflow").value;
+            const selected_contacts = document.getElementById("select-contacts");
+            const max_emails_per_day = document.getElementById("max-emails-per-day").value;
+            const is_round_robin = document.getElementById("round-robin-email").checked;
+
+            // get selected contacts ids
+            const selected_contacts_ids = Array.from(selected_contacts.selectedOptions).map(option => option.value);
+            console.log(selected_contacts_ids);
+
+            if (selected_contacts_ids.length == 0) {
+                Swal.fire({
+                    icon: "warning",
+                    title: "Please select at least one contact.",
+                });
+                return false;
+            }
+            if (workflow_id == "") {
+                Swal.fire({
+                    icon: "warning",
+                    title: "Please select a workflow.",
+                });
+                return false;
+            }
+
+            
+            $('#close-modal').click();
+
+            Swal.fire({
+                title: 'Creating Campaign...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
+
+            fetch('/create/campaign',{
+                method: 'POST',
+                headers : { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    "workflow_id" : workflow_id,
+                    "contactfile_ids" : selected_contacts_ids,
+                    "max_emails_per_day" :max_emails_per_day,
+                    "is_round_robin" : is_round_robin,
+                    // 'start_date' : start_date
+                }),
+            })
+            .then((response) => {
+                if(!response.ok)
+                    return response.text().then(text => { throw new Error(text) })
+                else
+                    return response.json()
+            })
+            .then((data) => {
+                if (data.success) {
+                    console.log(data);
+                    dataTable.ajax.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: data.message,
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                } else {
+                    console.log(data.message);
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Sorry but you can't create new campaign.",
+                        text: data.message,
+                    });
+                }
+            })
+            .catch((err) => {
+                console.log(err);
+                Swal.fire({
+                    icon: "warning",
+                    title: "Oops...",
+                    text: data.message,
+                });
+            })
+        });
+
+        $('#deleteCampaignModal').on('submit', function(e) { //use on if jQuery 1.7+
+            e.preventDefault();  //prevent form from submitting
+            const campid = document.getElementById("delete-modal-campid").value;
+
+            $('#close-deletejob-modal').click();
+
+            Swal.fire({
+                title: 'Deleting Campaign...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
+
+            const formData = new FormData();
+            formData.append('campid', campid);
+            formData.append('csrf_token', document.getElementById("csrf_token").value);
+
+            fetch('/campaign/delete',{
+                method: 'POST',
+                body: formData
+            })
+            .then((response) => {
+                if(!response.ok)
+                    return response.text().then(text => { throw new Error(text) })
+                else
+                    return response.json()
+            })
+            .then((data) => {
+                if (data.success) {
+                    // console.log(data);
+                    dataTable.ajax.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: data.message,
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                } else {
+                    console.log(data.message);
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Oops...",
+                        text: data.message,
+                    });
+                }
+            })
+            .catch((err) => {
+                console.log(err);
+                Swal.fire({
+                    icon: "warning",
+                    title: "Oops...",
+                    text: data.message,
+                });
+            })
+        });
+
+        // var interval = setInterval(function () {
+        //     dataTable.ajax.reload();
+        // }, 30000);
+
+        // contacts option changed event
+        $('#select-contacts').on('change', function() {
+            // var total_emails = document.getElementById("select-contacts").selectedOptions[0].getAttribute("data");
+
+            var total_emails = 0;
+
+            // get all selected choices
+            const allSelectedChoices = contactchoises.getValue();
+
+            if (isMultiple) {
+                // loop through all selected choices
+                allSelectedChoices.forEach((choice) => {
+                    // get the data-service-count attribute
+                    var service_count = choice.customProperties.service_count;
+                    total_emails += parseInt(service_count);
+                });
+            } else {
+                total_emails = allSelectedChoices.customProperties.service_count;
+            }
+
+            console.log("total_emails: " + total_emails);
+
+            var emails_daily_limit = document.getElementById("max-emails-per-day").max;
+
+            // convert to integer
+            total_emails = parseInt(total_emails);
+            emails_daily_limit = parseInt(emails_daily_limit);
+
+            calculateMaxEmailsPerDay(total_emails, emails_daily_limit);
+
+            // hide error notification
+            document.getElementById("error-notification").style.display = "none";
+
+            if (emails_daily_limit * 7 < total_emails) {
+                document.getElementById("error-notification").style.display = "block";
+                document.getElementById("create-campaign-button").disabled = true;
+            } else {
+                document.getElementById("error-notification").style.display = "none";
+                document.getElementById("create-campaign-button").disabled = false;
+            }
+
+        });
+        // max-emails-per-day user input event
+        $('#max-emails-per-day').on('input', function(e) {
+            var max_emails_per_day = e.target.value;
+            var emails_daily_limit = document.getElementById("emails-daily-limit").value;
+            var total_emails = 0;
+
+            // get all selected choices
+            const allSelectedChoices = contactchoises.getValue();
+
+            if (isMultiple) {
+                // loop through all selected choices
+                allSelectedChoices.forEach((choice) => {
+                    // get the data-service-count attribute
+                    var service_count = choice.customProperties.service_count;
+                    total_emails += parseInt(service_count);
+                });
+            } else {
+                total_emails = allSelectedChoices.customProperties.service_count;
+            }
+
+            // convert to integer
+            max_emails_per_day = parseInt(max_emails_per_day);
+            emails_daily_limit = parseInt(emails_daily_limit);
+            total_emails = parseInt(total_emails);
+
+            if (max_emails_per_day <= emails_daily_limit && max_emails_per_day * 7 >= total_emails) {
+                document.getElementById("error-notification").style.display = "none";
+                document.getElementById("create-campaign-button").disabled = false;
+            } else {
+                document.getElementById("error-notification").style.display = "block";
+                document.getElementById("create-campaign-button").disabled = true;
+            }
+            
+        });
+
+        // open modal event
+        $('#creatCampaignModalMessage').on('show.bs.modal', function (e) {
+           // hide error notification
+            var max_emails_per_day_input = document.getElementById("max-emails-per-day");
+            if (max_emails_per_day_input) {
+                var max_emails_per_day = max_emails_per_day_input.value;
+            } else {
+                return;
+            }
+            var emails_daily_limit = document.getElementById("emails-daily-limit").value;
+
+            // convert to integer
+            max_emails_per_day = parseInt(max_emails_per_day);
+            emails_daily_limit = parseInt(emails_daily_limit);
+
+            if (max_emails_per_day > emails_daily_limit) {
+                document.getElementById("error-notification").style.display = "block";
+                document.getElementById("create-campaign-button").disabled = true;
+            } else {
+                document.getElementById("error-notification").style.display = "none";
+                document.getElementById("create-campaign-button").disabled = false;
+            }
+
+        });
+
+        $('#round-robin-email').on('change', function() {
+
+            isMultiple = $(this).is(':checked'); // toggle the isMultiple variable
+            initChoices();
+            contactchoises.setChoices(contact_options, 'value', 'label', true);
+            
+            // update max-emails-per-day value
+            var emails_daily_limit = document.getElementById("emails-daily-limit").value;
+
+            var total_emails = 0;
+            // get all selected choices
+            const choise = contactchoises.getValue();
+            // loop through all selected choices
+            if (isMultiple) {
+                // loop through all selected choices
+                choise.forEach((choice) => {
+                    // get the data-service-count attribute
+                    var service_count = choice.customProperties.service_count;
+                    total_emails += parseInt(service_count);
+                });
+            } else {
+                total_emails = choise.customProperties.service_count;
+            }
+            // convert to integer
+            total_emails = parseInt(total_emails);
+            emails_daily_limit = parseInt(emails_daily_limit);
+
+            calculateMaxEmailsPerDay(total_emails, emails_daily_limit);
+
+            // if RR is off, hide the throttling options and worm up switch
+            if (!isMultiple) {
+                $('#throttling-options').hide();
+                $('#throttling').hide();
+                $('#throttling-options-select').remove();
+            } else {
+                $('#throttling-options').show();
+                // if throttling is checked, show the dropdown
+                if ($('#throttling').is(':checked')) {
+                    $('#throttling-options-select').show();
+                } else {
+                    $('#throttling-options-select').hide();
+                }
+            }
+
+        });
+
+        // throttling options
+        $('#throttling').on('change', function() {
+            var isChecked = $(this).is(':checked');
+            
+            // if checked, add a dropdown with options
+            if (isChecked) {
+                // create a dropdown with options
+                var options = '<select class="form-select" id="throttling-options-select" name="throttling-options-select">' +
+                    '<option value="1">1 batch at a time</option>' +
+                    '<option value="2">2 batches at a time</option>' +
+                    '<option value="3">3 batches at a time</option>' +
+                    '</select>';
+                $(this).html(options);
+            } else {
+                // remove the dropdown
+                $(this).html('');
+            }
+        });
+
+    });
+</script>
+{% endblock javascripts %}
