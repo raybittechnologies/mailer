@@ -161,6 +161,21 @@
                     <input class="form-check-input" type="checkbox" id="opt-musicians" {{ checked }}>
                   </div>
                 </li>
+                <li class="list-group-item border-0 ps-0 text-sm">
+                  <div class="form-check form-switch">
+                    {% if current_user.is_allow_duplicate %}
+                      {% set checked = 'checked' %}
+                    {% else %}
+                      {% set checked = '' %}
+                    {% endif %}
+                    <strong class="text-dark">Deduplicate venues across entire database?</strong>
+                    <input class="form-check-input" type="checkbox" id="allow_deduplication" {{ checked }}>
+                    <!-- add question mark for tooltip  -->
+                    <span class="form-text text-secondary">
+                      <i class="fas fa-question-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="You won't get duplicate results across each of the 'fetch data' searches that you run"></i>
+                    </span>
+                  </div>
+                </li>
               </ul>
             </div>  
           </div>
@@ -363,6 +378,50 @@
               Swal.fire({
                   icon: "warning",
                   title: "Something wrong in updating email!",
+                  text: data.message,
+              });
+          }
+      })
+      .catch((err) => {
+          console.log(err);
+      })
+    });
+
+    // Allow deduplication, catch switch event and submit to server
+    $('#allow_deduplication').on('change', function() {
+      const is_allow_duplicate = this.checked ? 1 : 0;
+      const formData = new FormData();
+      formData.append('is_allow_duplicate', is_allow_duplicate);
+      formData.append('csrf_token', document.getElementById("csrf_token").value);
+
+      fetch('/update_allow_duplication',{
+          method: 'POST',
+          body: formData
+      })
+      .then((response) => {
+          if(!response.ok)
+              return response.text().then(text => { throw new Error(text) })
+          else
+              return response.json()
+      })
+      .then((data) => {
+          if (data.success) {
+              console.log(data);
+              Swal.fire({
+                  icon: 'success',
+                  title: data.message,
+                  showConfirmButton: false,
+                  timer: 2000,
+                  toast: true,
+                  position: 'top-end',
+                  // top right position
+
+              });
+          } else {
+              console.log(data.message);
+              Swal.fire({
+                  icon: "warning",
+                  title: "Something wrong in updating!",
                   text: data.message,
               });
           }

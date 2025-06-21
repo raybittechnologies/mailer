@@ -195,9 +195,13 @@ def url():
 def export_all_data():
     services = Service.query.filter_by(user_id=current_user.id).all()
     all_services = {}
+    services_list = []
     # make differnt dataframe per url_id and save it to excel in different sheet
-
+    print("Total services: ", len(services))
     for service in services:
+        biz_id = service.biz_id
+        if biz_id in services_list:
+            continue
         url_id = service.url_id
         address = service.address
 
@@ -237,6 +241,11 @@ def export_all_data():
         if url_id not in all_services:
             all_services[url_id] = []
         all_services[url_id].append(data)
+
+        services_list.append(biz_id)
+
+    print("Total unique services: ", len(services_list))
+
 
     if all_services:
         upload_folder = "uploads"
@@ -503,8 +512,15 @@ def fetch(id):
         Service.query.filter_by(url_id=id).delete()
         db.session.commit()
         # run scraper
+        user_info = {
+            'id': current_user.id,
+            'email': current_user.email,
+            'role': current_user.role,
+            'is_opt_musicians': current_user.is_opt_musicians,
+            'is_allow_duplicate': current_user.is_allow_duplicate
+        }
         try:
-            executor.submit(lets_start, urls, current_user.id, id, current_user.is_opt_musicians)
+            executor.submit(lets_start, urls, id, user_info)
         except:
             print("something went wrong")
         
@@ -947,8 +963,18 @@ def contacts_all_list():
     services = Uploadedservice.query.filter_by(user_id=current_user.id).order_by(Uploadedservice.create_datetime.desc()).all()
     all_services = []
 
+    biz_list = []
+
     for service in services:
         city, state = extract_address(service.address)
+        biz_id = service.biz_id
+        if not biz_id:
+            continue
+
+        if biz_id in biz_list:
+            continue
+
+        biz_list.append(biz_id)
         data = {
             'id': service.id,
             'name': service.name,
@@ -1135,9 +1161,9 @@ def get_admin_data():
     return page_data
 
 
-def lets_start(urls, user_id, id, is_opt_musicians):
+def lets_start(urls, id, user_info):
     process = multiprocessing.Process(target=starting,
-                                      args=(urls, user_id, id, is_opt_musicians))
+                                      args=(urls, id, user_info))
     process.start()
 
     process.join()
@@ -1151,7 +1177,7 @@ def is_scraper_completed(id):
     return False
 
 
-def starting(urls, user_id, id, is_opt_musicians):
+def starting(urls, id, user_info):
     if len(urls) > 0:
         
         WEB_HOST_IP = os.getenv("WEB_HOST_IP")
@@ -1160,15 +1186,15 @@ def starting(urls, user_id, id, is_opt_musicians):
             try:
                 if is_scraper_completed(id):
                     break
-                
-                yelp_scraper_run(url, user_id, id, is_opt_musicians)
+
+                yelp_scraper_run(url, id, user_info)
             except Exception as e:
                 print("Something went wrong in while scraping", str(e))
                 raise e
                 # continue
         
         response = requests.post(f'{WEB_HOST_IP}/complete', json={'id': id})
-        response = requests.post(f'{WEB_HOST_IP}/msg', json={'result': "completed", 'id' : id, 'user_id' : user_id})
+        response = requests.post(f'{WEB_HOST_IP}/msg', json={'result': "completed", 'id' : id, 'user_id' : user_info['id']})
         print("Processes", response.text)
 
 @csrf.exempt
@@ -3512,6 +3538,19 @@ def update_opt_musicians():
     user.is_opt_musicians = is_opt_musicians
     db.session.commit()
     return jsonify({"success": True, "message": "Opt Musicians updated successfully."})
+
+
+#  update /update_allow_deduplication
+@blueprint.route('/update_allow_duplication', methods=['POST'])
+@login_required
+@user_approved_required
+def update_allow_duplicate():
+    user_id = current_user.id
+    is_allow_duplicate = request.form.get('is_allow_duplicate')
+    user = Users.query.filter_by(id=user_id).first()
+    user.is_allow_duplicate = is_allow_duplicate
+    db.session.commit()
+    return jsonify({"success": True, "message": "Allow Deduplication updated successfully."})
 
 
 @blueprint.route('/get_service_with_bizid', methods=['GET'])
