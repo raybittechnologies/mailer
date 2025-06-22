@@ -131,7 +131,7 @@ def get_service_with_bizId(bizId):
 def yelp_scraper_run(url, id, user_info):
     user_id = user_info.get('id')
     is_opt_musicians = user_info.get('is_opt_musicians') # 1: opt musicians, 0: no opt musicians
-    is_allowed_duplicate = user_info.get('is_allow_duplicate') # 1: allow duplicate, 0: no duplicate
+    is_allow_deduplicate = user_info.get('is_allow_deduplicate') # 1: allow duplicate, 0: no duplicate
 
     # url = urllib.parse.unquote(url).replace("+", " ") # Needed when using pure request query string
     try:
@@ -226,7 +226,7 @@ def yelp_scraper_run(url, id, user_info):
                     
                     service = get_service_with_bizId(bizId)
 
-                    if not is_allowed_duplicate and service:
+                    if is_allow_deduplicate and service:
                         # if service is not empty then skip this record
                         print("Service already exists for bizId", bizId, "skipping")
                         continue

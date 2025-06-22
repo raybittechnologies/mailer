@@ -517,7 +517,7 @@ def fetch(id):
             'email': current_user.email,
             'role': current_user.role,
             'is_opt_musicians': current_user.is_opt_musicians,
-            'is_allow_duplicate': current_user.is_allow_duplicate
+            'is_allow_deduplicate': current_user.is_allow_deduplicate
         }
         try:
             executor.submit(lets_start, urls, id, user_info)
@@ -3541,14 +3541,14 @@ def update_opt_musicians():
 
 
 #  update /update_allow_deduplication
-@blueprint.route('/update_allow_duplication', methods=['POST'])
+@blueprint.route('/update_allow_deduplication', methods=['POST'])
 @login_required
 @user_approved_required
-def update_allow_duplicate():
+def update_allow_deduplication():
     user_id = current_user.id
-    is_allow_duplicate = request.form.get('is_allow_duplicate')
+    is_allow_deduplicate = request.form.get('is_allow_deduplicate')
     user = Users.query.filter_by(id=user_id).first()
-    user.is_allow_duplicate = is_allow_duplicate
+    user.is_allow_deduplicate = is_allow_deduplicate
     db.session.commit()
     return jsonify({"success": True, "message": "Allow Deduplication updated successfully."})
 

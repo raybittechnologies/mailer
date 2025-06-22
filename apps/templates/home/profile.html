@@ -163,7 +163,7 @@
                 </li>
                 <li class="list-group-item border-0 ps-0 text-sm">
                   <div class="form-check form-switch">
-                    {% if current_user.is_allow_duplicate %}
+                    {% if current_user.is_allow_deduplicate %}
                       {% set checked = 'checked' %}
                     {% else %}
                       {% set checked = '' %}
@@ -389,9 +389,9 @@
 
     // Allow deduplication, catch switch event and submit to server
     $('#allow_deduplication').on('change', function() {
-      const is_allow_duplicate = this.checked ? 1 : 0;
+      const is_allow_deduplicate = this.checked ? 1 : 0;
       const formData = new FormData();
-      formData.append('is_allow_duplicate', is_allow_duplicate);
+      formData.append('is_allow_deduplicate', is_allow_deduplicate);
       formData.append('csrf_token', document.getElementById("csrf_token").value);
 
       fetch('/update_allow_duplication',{

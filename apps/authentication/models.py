@@ -31,8 +31,8 @@ class Users(db.Model, UserMixin):
     is_multi_search = db.Column(db.Integer, default=0) # 1: multi search, 0: single search
     is_auto_unsub = db.Column(db.Integer, default=1) # 1: auto unsub, 0: manual unsub : default is auto unsub, for replied emails, it will be unsubscribed automatically
     is_opt_musicians= db.Column(db.Integer, default=1) # 1: opt music venue, 0: no opt music venue : default is opt music venue
-    is_allow_duplicate = db.Column(db.Integer, default=0) # 1: allow duplicate, 0: no duplicate : default is no duplicate
-    
+    is_allow_deduplicate = db.Column(db.Integer, default=1) # 1: allow deduplicate, 0: no deduplicate : default is no deduplicate
+
     def __init__(self, **kwargs):
         for property, value in kwargs.items():
             # depending on whether value is an iterable or not, we must
