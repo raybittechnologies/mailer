@@ -394,7 +394,7 @@
       formData.append('is_allow_deduplicate', is_allow_deduplicate);
       formData.append('csrf_token', document.getElementById("csrf_token").value);
 
-      fetch('/update_allow_duplication',{
+      fetch('/update_allow_deduplication',{
           method: 'POST',
           body: formData
       })

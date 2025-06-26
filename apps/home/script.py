@@ -116,11 +116,11 @@ def get_geo_location(address):
         return response.json()['results'][0]['geometry']['location']
     else:
         return None
-    
-    
-def get_service_with_bizId(bizId):
+
+
+def get_service_with_bizId(bizId, user_id):
     WEB_HOST_IP = os.getenv("WEB_HOST_IP")
-    response = requests.get(f'{WEB_HOST_IP}/get_service_with_bizid?biz_id=' + str(bizId))
+    response = requests.get(f'{WEB_HOST_IP}/get_service_with_userid_bizid?user_id={user_id}&biz_id={bizId}')
     if response.status_code == 200:
         return response.json()
     else:
@@ -173,15 +173,30 @@ def yelp_scraper_run(url, id, user_info):
         
         # "venue	city	phone	Venue Type	Website	email	email 2	Email (facebook)	Facebook Link"
         if response.status_code == 200:
+
+            if "We're sorry, the page of results you requested is unavailable." in response.text:
+                print("No more results found, stopping scraper")
+                break
+
             try:
                 contents_text = '{"locale"' + response.text.split('<!--{"locale"')[1].split("--></script>")[0] 
                 response_json = json.loads(contents_text)
             except Exception as e:
                 print("Failed to parse response", str(e))
                 break
-                
-            if "searchExceptionProps" in response_json['legacyProps']['searchAppProps']['searchPageProps']:
+            
+            if "searchPageProps" not in response_json['legacyProps']['searchAppProps']:
                 break
+            
+            try:
+                if "searchExceptionProps" in response_json['legacyProps']['searchAppProps']['searchPageProps']:
+                    break
+            except Exception as e:
+                # write reponse to json  file for debugging
+                # with open("response.json", "w", encoding="utf-8") as f:
+                #     json.dump(response_json, f, indent=4)
+                # page += 1
+                continue
             
             for business in response_json['legacyProps']['searchAppProps']['searchPageProps']['mainContentComponentsListProps']:
                 if "bizId" in business:
@@ -224,13 +239,15 @@ def yelp_scraper_run(url, id, user_info):
                     photoList = business['scrollablePhotos']['photoList'][0] if len(business['scrollablePhotos']['photoList']) > 0 else {}
                     thumbnail_url = photoList.get('src') if photoList else ''
                     
-                    service = get_service_with_bizId(bizId)
+                    service_data = get_service_with_bizId(bizId, user_id)
 
-                    if is_allow_deduplicate and service:
+                    if is_allow_deduplicate and service_data['is_exist']:
                         # if service is not empty then skip this record
                         print("Service already exists for bizId", bizId, "skipping")
                         continue
-                    
+
+                    service = service_data.get('service', {})
+
                     full_address = service.get('address', '')
                     city = service.get('city', '')
                     state = service.get('state', '')

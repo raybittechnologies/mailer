@@ -200,8 +200,10 @@ def export_all_data():
     print("Total services: ", len(services))
     for service in services:
         biz_id = service.biz_id
-        if biz_id in services_list:
+        if biz_id in services_list and current_user.is_allow_deduplicate:
+            print("Duplicate service found: ", biz_id)
             continue
+
         url_id = service.url_id
         address = service.address
 
@@ -241,7 +243,6 @@ def export_all_data():
         if url_id not in all_services:
             all_services[url_id] = []
         all_services[url_id].append(data)
-
         services_list.append(biz_id)
 
     print("Total unique services: ", len(services_list))
@@ -963,18 +964,9 @@ def contacts_all_list():
     services = Uploadedservice.query.filter_by(user_id=current_user.id).order_by(Uploadedservice.create_datetime.desc()).all()
     all_services = []
 
-    biz_list = []
-
     for service in services:
         city, state = extract_address(service.address)
         biz_id = service.biz_id
-        if not biz_id:
-            continue
-
-        if biz_id in biz_list:
-            continue
-
-        biz_list.append(biz_id)
         data = {
             'id': service.id,
             'name': service.name,
@@ -3553,16 +3545,23 @@ def update_allow_deduplication():
     return jsonify({"success": True, "message": "Allow Deduplication updated successfully."})
 
 
-@blueprint.route('/get_service_with_bizid', methods=['GET'])
-def get_service_with_bizid():
+@blueprint.route('/get_service_with_userid_bizid', methods=['GET'])
+def get_service_with_userid_bizid():
     biz_id = request.args.get('biz_id')
+    user_id = request.args.get('user_id')
     services = Service.query.filter(Service.biz_id == biz_id).all()
+
+    is_exist = False
 
     final_service = dict()
     emails = []
     for service in services:
         service_data = service.to_dict()
-        
+
+        service_user_id = service_data.get('user_id')
+        if service_user_id == user_id:
+            is_exist = True
+
         for k, v in service_data.items():
             if 'email' in k  and 'bademail' not in k and 'fbemail' not in k:
                 if v and v.lower() not in emails:
@@ -3583,6 +3582,4 @@ def get_service_with_bizid():
         
                         
     # convert service model to dict
-    return jsonify(final_service)
-
-    
+    return jsonify({"service": final_service, "is_exist": is_exist, "user_id": user_id}) 
