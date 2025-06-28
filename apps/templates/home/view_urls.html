@@ -33,6 +33,7 @@
                         <th>Business Name</th>
                         <th>Location</th>
                         <th>Status</th>
+                        <th>Last Updated At</th>
                         <th>Actions</th>
                     </tr>
                     </thead>
@@ -64,6 +65,11 @@
             $('#filtersTable').DataTable({
                     responsive: true,
                     order : [],
+                    columnDefs: [
+                    {
+                        target: 3,
+                        render: DataTable.render.datetime()
+                    }],
                     ajax: {
                         url: '/url_history',
                         dataSrc: ''
@@ -108,6 +114,9 @@
                             render: function (state, type, row) {
                                 return state === "running" ? '<span class="badge bg-gradient-success">' + state + '</span>' : '<span class="badge bg-gradient-info">' + state + '</span>';
                             }
+                        },
+                        {
+                            data: 'updated_datetime',
                         },
                         {
                             data: 'id', // Assuming the id property is present in your data

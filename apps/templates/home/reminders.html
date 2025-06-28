@@ -54,6 +54,7 @@
                             <th>Note</th>
                             <th>Status</th>
                             <th>Run on</th>
+                            <th>Subscribed</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -335,6 +336,23 @@
                     }
                 },
                 { data: 'reminder_time' },
+                {
+                    data: 'unsub_token', // Assuming the id property is present in your data
+                    render: function (id, type, row) {
+                        // Create action buttons HTML'
+                        const unsub_token = row.unsub_token;
+                        const is_unsubscribed = row.is_unsubscribed;
+                        // if unsub_token is null then grey out the button , disable it
+                        const is_disabled = unsub_token ? '' : 'disabled';
+                        if (is_unsubscribed) {
+                            button = '<button class="btn bg-gradient-success btn-sm" unsub_token="' + unsub_token + '" ' + is_disabled + '>Subscribe</button>';
+                        } else {
+                            button = '<button class="btn bg-gradient-danger btn-sm" unsub_token="' + unsub_token + '" ' + is_disabled + '>Unsubscribe</button>';
+                        }
+
+                        return button;
+                    }
+                },
                 {
                     data: 'reminder_id', // Assuming the id property is present in your data
                     render: function (reminder_id, type, row) {
@@ -812,7 +830,53 @@
                         text: data.message,
                     });
                 });
-        }
+        };
+
+        
+        $('#filtersTable').on('click', 'button', event => {
+            // console.log(data)
+            const unsubscribe_token = event.target.getAttribute("unsub_token");
+            if (event.target.innerText === "UNSUBSCRIBE") { 
+                url = "/unsubscribe/" + unsubscribe_token;
+            } else {
+                url = "/subscribe/" + unsubscribe_token;
+            }
+            fetch(url ,{
+                    method: 'GET',
+                })
+                .then((response) => {
+                    if(!response.ok)
+                        return response.text().then(text => { throw new Error(text) })
+                    else
+                        return response.text()
+                })
+                .then((data) => {
+                    // console.log(data);
+                    dataTable.ajax.reload();
+
+                    // Sweet alert like toast message on top right
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Successfully ' + (event.target.innerText === "UNSUBSCRIBE" ? "Unsubscribed" : "Subscribed"),
+                        showConfirmButton: false,
+                        timer: 2000,
+                        toast: true,
+                        position: 'top-end',
+                    });
+                })
+                .catch((err) => {
+                    console.log(err);
+                    Swal.fire({
+                        icon: "error",
+                        title: "Oops...",
+                        text: err.message,
+                        showConfirmButton: false,
+                        timer: 2000,
+                        toast: true,
+                        position: 'top-end',
+                    });
+                })
+        });
     });
 </script>
 {% endblock javascripts %}

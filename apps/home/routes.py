@@ -33,6 +33,7 @@ from nylas import Client
 from nylas.models.auth import URLForAuthenticationConfig
 from nylas.models.auth import CodeExchangeRequest
 import pyap
+from sqlalchemy import or_ , and_
 
 import pandas as pd
 import urllib.parse
@@ -221,22 +222,22 @@ def export_all_data():
             'state' : state,
             'type': service.venue_type,
             'website': service.website,
-            'email1' : service.email1,
-            'firstname1' : service.first_name1,
-            'email2' : service.email2,
-            'firstname2' : service.first_name2,
-            'email3' : service.email3,
-            'firstname3' : service.first_name3,
-            'email4' : service.email4,
-            'firstname4' : service.first_name4,
-            'facebookemail1' : service.fbemail1,
-            'firstname5' : service.first_name5,
-            'facebookemail2' : service.fbemail2,
-            'firstname6' : service.first_name6,
-            'facebook' : service.facebook,
+            'email1' : service.email1 if service.email1 else "",
+            'firstname1' : service.first_name1 if service.first_name1 else "",
+            'email2' : service.email2 if service.email2 else "",
+            'firstname2' : service.first_name2 if service.first_name2 else "",
+            'email3' : service.email3 if service.email3 else "",
+            'firstname3' : service.first_name3 if service.first_name3 else "",
+            'email4' : service.email4 if service.email4 else "",
+            'firstname4' : service.first_name4 if service.first_name4 else "",
+            'facebookemail1' : service.fbemail1 if service.fbemail1 else "",
+            'firstname5' : service.first_name5 if service.first_name5 else "",
+            'facebookemail2' : service.fbemail2 if service.fbemail2 else "",
+            'firstname6' : service.first_name6 if service.first_name6 else "",
+            'facebook' : service.facebook if service.facebook else "",
             'customtext' : "",
             'notes' : "",
-            'bademail' : service.bademail,
+            'bademail' : service.bademail if service.bademail else "",
             'venueid' : service.biz_id
         }
 
@@ -289,7 +290,8 @@ def url_history():
             'product_url': url_entry.product_url,
             'id': url_entry.id,
             'name': url_entry.name,
-            'state' : url_entry.state
+            'state' : url_entry.state,
+            'updated_datetime' : url_entry.create_datetime
         }
         url_list.append(url_data)
 
@@ -558,7 +560,9 @@ def fetching():
 @login_required
 @user_approved_required
 def uploaded_files():
-    uploaded_files = Uploadedcontactfile.query.filter_by(user_id=current_user.id).order_by(Uploadedcontactfile.create_datetime.desc()).all()
+    uploaded_files = Uploadedcontactfile.query.filter(Uploadedcontactfile.user_id == current_user.id, \
+                                                    or_(Uploadedcontactfile.is_archived == None, Uploadedcontactfile.is_archived == False))\
+                                                    .order_by(Uploadedcontactfile.create_datetime.desc()).all() # In SQL, NULL != 1 is unknown, not true.
     files = []
 
     for file in uploaded_files:
@@ -571,6 +575,28 @@ def uploaded_files():
         }
         files.append(url_data)
 
+    print("Total files: ", len(files))
+    return jsonify(files)
+
+@blueprint.route('/archive_contacts', methods=['GET'])
+@login_required
+@user_approved_required
+def archive_contacts():
+    uploaded_files = Uploadedcontactfile.query.filter(Uploadedcontactfile.user_id == current_user.id, Uploadedcontactfile.is_archived == 1)\
+                                                    .order_by(Uploadedcontactfile.create_datetime.desc()).all() #
+    files = []
+
+    for file in uploaded_files:
+        url_data = {
+            'id': file.id,
+            'description': file.description,
+            'filepath': file.filepath,
+            'filename': file.filename,
+            'create_datetime' : file.create_datetime
+        }
+        files.append(url_data)
+
+    print("Total files: ", len(files))
     return jsonify(files)
     
     
@@ -596,6 +622,12 @@ def upload_contact():
             df = pd.read_excel(filepath)
         else:
             return {"success": False, "message": "File type not supported."}
+
+        # total rows
+        total_rows = len(df)
+
+        if total_rows > 1000:
+            return {"success": False, "message": "File contains more than 1000 rows. Please upload a file with less than 1000 rows."}
 
         columns  = ['venue', 'type', 'website', 'phone', 'address', 'facebook', 'customtext', 'notes', 'bademail', 'venueid']
         if 'firstname' in df.columns and 'email' in df.columns:
@@ -766,15 +798,17 @@ def upload_contact():
             other_sub_batches.append(other_batch)
 
         for group_id, batch_group in enumerate([music_sub_batches, other_sub_batches]):
-            for idx, sub_batch in enumerate(batch_group):
+            idx = 0
+            for sub_batch in batch_group:
                 if len(sub_batch) == 0:
                     continue
-
+                
+                idx += 1
                 if auto_batch == "false" and batch_out_music_venue == "false":
                     batch_name = description
                 
                 elif auto_batch == "true" and batch_out_music_venue == "false":
-                    batch_name = f"{description} - Batch {idx+1}"
+                    batch_name = f"{description} - Batch {idx}"
                 
                 elif auto_batch == "false" and batch_out_music_venue == "true":
                     if group_id == 0:
@@ -784,9 +818,10 @@ def upload_contact():
 
                 else:
                     if group_id == 0: # Music Venues
-                        batch_name = f"{description} - Music Venues - Batch {idx+1}"
+                        batch_name = f"{description} - Music Venues - Batch {idx}"
                     else:
-                        batch_name = f"{description} - Batch {idx+1}"
+                        batch_name = f"{description} - Batch {idx}"
+
 
                 services = []
                 batch_file = Uploadedcontactfile(filename=f.filename, filepath=filepath, description=batch_name, user_id=current_user.id)
@@ -813,15 +848,15 @@ def upload_contact():
         return {"success": True, "message": "File uploaded successfully."}
         
         
-@blueprint.route('/contact/delete', methods=['POST'])
+@blueprint.route('/contact/archive', methods=['POST'])
 @login_required
 @user_approved_required
-def contact_delete():
+def contact_archive():
     file_id = int(request.form[ 'fileid'])
     file = Uploadedcontactfile.query.get(file_id)
     try:
         if file:
-            Uploadedservice.query.filter_by(file_id=file_id).delete()
+            file.is_archived = True
             # for service in Uploadedservice.query.filter_by(file_id=file_id).all():
             #     #  delete reminder
             #     for reminder  in Reminder.query.filter_by(userid=current_user.id, email=service.email).all():
@@ -831,15 +866,15 @@ def contact_delete():
             #         db.session.delete(reminder)
             #         db.session.commit()
             #     db.session.delete(service)
-            db.session.delete(file)
+            # db.session.delete(file)
             db.session.commit()
 
-            return {"success": True, 'message': "File deleted successfully."}
+            return {"success": True, 'message': "File archived successfully."}
         else:
             return {"success": False, 'message': "File not found."}
     except Exception as e:
-        return {"success": False, 'message': "Failed to delete file."}
-        
+        return {"success": False, 'message': "Failed to archive file."}
+
  
 @blueprint.route('/contact/<int:id>', methods=['GET'])
 @login_required
@@ -860,7 +895,22 @@ def view_contact(id):
 @user_approved_required
 def view_all_contact():
     return render_template('home/view_all_contact.html')
-        
+
+@blueprint.route('/archived_contacts_view', methods=['GET'])
+@login_required
+@user_approved_required
+def view_archived_contact():
+    return render_template('home/upload_contact_archive_view.html')
+
+
+# archived_campaigns_view
+@blueprint.route('/archived_campaigns_view', methods=['GET'])
+@login_required
+@user_approved_required
+def view_archived_campaign():
+    return render_template('home/campaigns_archived_view.html')
+
+
 @csrf.exempt        
 @blueprint.route('/contacts/list/<int:id>', methods=['GET', 'POST'])
 @login_required
@@ -898,7 +948,6 @@ def contacts_list(id):
         return jsonify(all_services)
     else:
         data = request.json
-        print(data)
         return jsonify(data)
 
 
@@ -2458,7 +2507,27 @@ def create_campaign():
 @user_approved_required
 def get_campaigns():
     userid = current_user.id
-    campaigns = Campaign.query.filter_by(userid=userid).order_by(Campaign.create_datetime.desc()).all()
+    campaigns = Campaign.query.filter(Campaign.userid == userid, or_(Campaign.is_archived == None, Campaign.is_archived == 0)).order_by(Campaign.create_datetime.desc()).all()
+    temp_list = []
+
+    for temp in campaigns:
+        temp_data = {
+            'id': temp.id,
+            'campaignid': temp.campaignid,
+            'contact_name': temp.contact_name,
+            'templatename': temp.templatename,
+            'create_datetime' : temp.create_datetime,
+        }
+        temp_list.append(temp_data)
+        
+    return jsonify(temp_list)
+
+@blueprint.route('/get_archived_campaigns', methods=['GET'])
+@login_required
+@user_approved_required
+def get_archived_campaigns():
+    userid = current_user.id
+    campaigns = Campaign.query.filter(Campaign.userid == userid, Campaign.is_archived == 1).order_by(Campaign.create_datetime.desc()).all()
     temp_list = []
 
     for temp in campaigns:
@@ -2525,6 +2594,34 @@ def camp_delete():
             scheduler.remove_job(jobid)
         
     return {"success": True, 'message': "Campaign deleted successfully."}
+
+@blueprint.route('/campaign/archive', methods=['POST'])
+@login_required 
+@user_approved_required
+def camp_archive():
+    id = request.form['campid']
+    camp = Campaign.query.get(id)
+    
+    if camp:
+        campid = camp.campaignid
+        camp.is_archived = 1
+        db.session.commit()
+    
+    if campid is None:
+        return {"success": False, 'message': "Campaign not found."}
+        
+    # automations = Automation.query.filter_by(campaignid=campid).all()
+    
+    # for automation in automations:
+    #     jobid = automation.job_id
+    #     db.session.delete(automation)
+    #     Email.query.filter_by(job_id=jobid).delete()
+    #     db.session.commit()
+        
+    #     if scheduler.get_job(jobid):
+    #         scheduler.remove_job(jobid)
+
+    return {"success": True, 'message': "Campaign archived successfully."}
 
 @csrf.exempt
 @blueprint.route('/automation/delete', methods=['POST'])
@@ -2869,6 +2966,7 @@ def update_email():
     
     user = Users.query.get(current_user.id)
     user.email = email
+    user.username = email
     # reset nylas access token
     user.nylas_access_token = None
 
@@ -3252,12 +3350,35 @@ def get_reminders():
     user_id = request.args.get('_id')
     reminder_id = request.args.get('reminder_id')
     if reminder_id:
-        reminders = Reminder.query.filter_by(id=reminder_id, userid=user_id).all()
+        reminders = (
+                db.session.query(Reminder, Uploadedservice)
+                .outerjoin(
+                    Uploadedservice,
+                    and_(
+                        Reminder.email == Uploadedservice.email,
+                        Reminder.userid == Uploadedservice.user_id
+                    )
+                )
+                .filter(Reminder.id == reminder_id, Reminder.userid == user_id)
+                .all()
+            )
     else:
-        reminders = Reminder.query.filter_by(userid=user_id).all()
+        reminders = (
+            db.session.query(Reminder, Uploadedservice)
+            .outerjoin(
+                Uploadedservice,
+                and_(
+                    Reminder.email == Uploadedservice.email,
+                    Reminder.userid == Uploadedservice.user_id
+                )
+            )
+            .filter(Reminder.userid == user_id)
+            .all()
+        )
+        
     reminder_list = []
 
-    for reminder in reminders:
+    for reminder, uploadservice in reminders:
         reminder_data = {
             'reminder_id': reminder.id,
             'title': reminder.title,
@@ -3271,8 +3392,12 @@ def get_reminders():
             'status': reminder.status,
             'created_datetime': reminder.create_datetime,
             'updated_datetime': reminder.update_datetime,
+            'unsub_token' : uploadservice.unsubscribe_token if uploadservice else None,
+            'is_unsubscribed' : uploadservice.is_unsubscribed if uploadservice else False,
         }
         reminder_list.append(reminder_data)
+
+    print("reminder_list", reminder_list[0])
 
     return jsonify(reminder_list)
 

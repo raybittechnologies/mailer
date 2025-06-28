@@ -28,7 +28,7 @@ class Yelpurl(db.Model):
     product_url = db.Column(db.Text)
     userid = db.Column(db.Integer)
     state = db.Column(db.String(20))
-    create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, index=True)
+    create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow, index=True)
     latitude = db.Column(db.String(255))
     longitude = db.Column(db.String(255))
 
@@ -114,6 +114,7 @@ class Uploadedcontactfile(db.Model):
     description = db.Column(db.String(1024))
     user_id = db.Column(db.String(255), nullable=False, index=True)
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow, index=True)
+    is_archived = db.Column(db.Integer, default=0)  # 0: not archived, 1: archived
     
     
 class Admin(db.Model, UserMixin):
@@ -187,6 +188,7 @@ class Campaign(db.Model):
     templatename = db.Column(db.String(255))
     userid = db.Column(db.Integer)
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
+    is_archived = db.Column(db.Integer, default=0)  # 0: not archived, 1: archived
     
         
 class Email(db.Model):

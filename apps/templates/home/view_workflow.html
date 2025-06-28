@@ -143,7 +143,9 @@
             theme: 'snow', 
             modules: {
                 toolbar: [
-                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                    // set default font size to normal
+                    [{ 'font': ['sans-serif'] }],
+                    [{ 'size': [false] }],
                     ['bold', 'italic', 'underline'],
                     [{ 'list': 'ordered'}, { 'list': 'bullet' }],
                     [{ 'indent': '-1'}, { 'indent': '+1' }, { 'align': [] }],

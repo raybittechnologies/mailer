@@ -102,13 +102,36 @@ email_blacklist = [
                 '@youremail.com',
                 'eben@eyebytes.com',
                 'eyebytes.com',
-                'amkryukov@gmail.com'
+                'amkryukov@gmail.com',
+                '@doe.com',
+                '@xxx.com',
+                '@web.com'
              ]
 
-black_list_venue_types = "Lighting Fixtures & Equipment, DJs, Adult Education, Performing Arts, Comedy Clubs, Airlines, Airport Shuttles, Party Bus Rentals, Airport Terminals, Limos, Town Car Service, Airports, Car Rental, Music & DVDs, Music Production Services, Museums, Dance, Classes, Teacher, Musician, Band, Hookah Bars, Musical Instruments & Teachers, Recording & Rehearsal Studios, Observatories, Historical Tours, Opera & Ballet, Outdoor Movies, Paint & Sip, Art Classes, Party & Event Planning, Venues & Event Spaces, Parking, Psychics, Feng Shui, Private Tutors, Musicians, Ramen, Tattoo, Art Galleries, Piercing, Taxis, Tea Room, Teppanyaki, Tours, Boat Charters, Ferries, Flight Instruction, Travel Services, Toy Stores, Comic Books, Trains, Trampoline Parks, Indoor Playcentre, Transportation, Bus Tours, bus stations, buses, Travel Agents, Tutoring Centers, Summer Camps, Vacation Rentals, Video/Film Production, Audio/Visual Equipment Rental, Vocal Coach, Virtual Reality Centers, Yoga, Health Retreats, Pole Dancing Classes, Women's Clothing, Men’s Clothing, Amusement Parks, Arcades, Go Karts, Specialty Schools, Kids Activities, Bingo Halls, Karaoke, Food Trucks, Amateur Sports Teams, Social Clubs, Dance Schools, Landmarks & Historical Buildings, Town Hall, Professional Sports Teams, Accessories, Attraction Farms, Antiques, Mini Golf, Batting Cages, Astrologers, Psychic Mediums, Caricatures, Commissioned Artists, Car Share Services, Clowns, Magicians, Counseling & Mental Health, Framing, Printing Services, Flea Markets, Used, Vintage & Consignment, Haunted Houses, Hobby Shops, Jewelry, Watches, Race Tracks, Home Decor, Gift Shops, Indian, Guitar Stores, Photo Booth Rentals, Reiki, Supernatural Readings, Meditation Centers, Web Design, Graphic Design, Clock Repair, Snuggle Services, Musical Instruments & Teachers, Musicians, Vocal Coach, Pet Boarding, Pet Groomers, Pet Sitting, Pet Training, Pet Stores, Resorts, Water Parks, Sunglasses, Aerial Fitness, butcher, Caterers, dog parks, Commissioned Artists, cupcakes, Drive-In Theater, fast food, fishing, flea markets, florists, Food Delivery Services, gas stations, gold buyers, Hair Salons, Women's Clothing, hiking, health markets, Ice Cream & Frozen Yogurt, Juice Bars & Smoothies, Hot Dogs, Jet Skis, Paddleboarding, Tours, Paint-Your-Own Pottery, korean, life coach, makerspaces, marketing, Medical Transportation, private investigation, Private Jet Charter, Rafting/Kayaking, thai, Ticket Sales, courthouses, Fire Departments, Jails & Prisons, language schools, Public Services & Government, beverage stores, Bike Sharing, Calligraphy, Cheerleading, Childbirth Education, Doulas, Childbirth Education, Midwives, Prenatal/Perinatal Care, Childbirth Education, Prenatal/Perinatal Care, Lactation Services, College Counseling, Career Counseling, Editorial Services, Test Preparation, Educational Services, Tutoring Centers, CPR Classes, First Aid Classes, Criminal Defense Law, Personal Injury Law, General Litigation, Divorce & Family Law, Immigration Law, Wills, Trusts, & Probates, Elementary Schools, Middle Schools & High Schools, Flight Instruction, Aerial Tours, Private Jet Charter, Aircraft Dealers, Immigration Law, Personal Injury Law, Criminal Defense Law, Specialty Schools, Middle Schools & High Schools, Musical Instruments & Teachers, Performing Arts, Divey, Summer Camps, Kids Activities, Special Education, Speech Therapists, Parenting Classes, Home Health Care, Speech Training, game truck rental, Advertising, Child Care & Day Care, Preschools, Montessori Schools, Cinema"
-black_list_venue_types = black_list_venue_types.split(', ')
-# convert to lower case
-black_list_venue_types = [x.lower() for x in black_list_venue_types]
+def read_black_list_venue_types():
+    """
+    Reads the black list venue types from a file.
+    """
+    try:
+        venue_types = []
+
+        self_path = os.path.dirname(os.path.abspath(__file__))
+        bl_venue_path = os.path.join(self_path, 'black_list_venue_types.txt')
+
+        with open(bl_venue_path, 'r') as file:
+            for line in file.readlines():
+                # Remove leading/trailing whitespace and newline characters
+                line = line.strip()
+                if line:
+                    venue_types.append(line.lower())  # Convert to lower case
+            
+    except FileNotFoundError:
+        print("Black list venue types file not found.")
+        return []
+
+    return venue_types
+
+black_list_venue_types = read_black_list_venue_types()
 
 must_not_include_venue_types = [
     'musician',
@@ -146,7 +169,11 @@ venue_black_list = [
     'Bowlero Chula Vista',
     'Sammy’s Restaurant & Bar',
     'red roof inn',
-    'best buy'
+    'best buy',
+    'Dunkin’', 
+    'Krispy Kreme',
+    'McDonald’s', 
+    'Zaxbys'
 ]
 llm = ChatOpenAI(
     model_name="gpt-3.5-turbo-0125",
@@ -170,6 +197,10 @@ def is_blacklisted_venue(venue_name):
 # Also make it easy to add more “rejected types” later if we need to. 
 # Also reject for “DJ” also have the db look at “venue” and reject if “dj” is in the venue name. 
 # (meaning crawler doesn’t scrape it, and moves on to next work)
+# & for “Venues & Event Spaces”, and “Wine Tours” - REMOVE ONLY IF IT’S NOT combined with other keywords (“Venues & Event Spaces” - counts as a single keyword) (for example “Venues & Event Spaces, Beer Gardens” would be OK)
+# For the single keyword “Colleges & Universities” REMOVE ONLY if it IS combined with other keywords UNLESS ONE OF THEM ARE “Music Venues” (ex: Colleges & Universities, Police Departments - REJECT)…so to summarize the single keyword “Colleges & Universities” SHOULD ONLY ACCEPT IT IF IT’S STANDALONE (Unless it also has “music venue” tied to it - keep it)
+# BAD EMAILS (Reject JUST the email address)
+
 def is_blackeslisted_venue_type(venue_types):
     
     for venue_type in venue_types:
@@ -181,7 +212,16 @@ def is_blackeslisted_venue_type(venue_types):
     for venue_type in venue_types:
         if venue_type.strip().lower() in black_list_venue_types and not "music venue" in low_cases_venue_types and not "music venues" in low_cases_venue_types:
             return True
-    
+        
+        if venue_type.strip().lower() == "venues & event spaces" and len(venue_types) == 1:
+            return True
+        
+        if "wine tours" in low_cases_venue_types and len(venue_types) == 1:
+            return True
+        
+        if "colleges & universities" in low_cases_venue_types and len(venue_types) > 1:
+            return True 
+
     return False
     
 

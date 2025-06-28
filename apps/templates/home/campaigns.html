@@ -21,6 +21,9 @@
             <div class="card col shadow-lg border-0 rounded-lg">
                 <div class="card-header"><h3 class="text-center font-weight-light my-4">My Campaign</h3></div>
                 <div class="card-body">
+                <div class="d-flex justify-content-end mt-3 mb-3">
+                    <a class="btn bg-gradient-info btn-sm" href="/archived_campaigns_view" >Switch to Archived View &#8594;</a>
+                </div>
                 <table style="width:100%" id="filtersTable" class="table table-striped table-bordered nowrap">
                     <thead>
                     <tr>
@@ -38,7 +41,6 @@
             </div>
         </div>
 
-        {% include "includes/footer.html" %}
         <div class="col-md-6 col-xl-6">
             <!-- Modal -->
             <div class="modal fade" id="creatCampaignModalMessage" data-bs-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="importTemplateModalMessageTitle" aria-hidden="true">
@@ -77,6 +79,20 @@
                                     <!-- Error notification when user put over max emails per day -->
                                     <p class="mb-4 mx-auto text-danger" role="alert" id="error-notification" style="display: none;">
                                     </p>
+                                    
+                                    <div class="form-check form-switch">
+                                        {% if current_user.is_auto_unsub %}
+                                        {% set checked = 'checked' %}
+                                        {% else %}
+                                        {% set checked = '' %}
+                                        {% endif %}
+                                        <strong class="text-dark">Unsubscribe contact upon reply</strong>
+                                        <input class="form-check-input" type="checkbox" id="auto-unsub" {{ checked }}>
+                                        <!-- tooltip -->
+                                        <span class="form-text text-secondary">
+                                        <i class="fas fa-question-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="DEFAULT = whatever the user has this setting as in the profile tab (it’s default = on there, but if they change it off…it should show it as off in pop up etc…)"></i>
+                                        </span>
+                                    </div>
 
                                 {% else %}
                                     <a href='{{ url_for("home_blueprint.nylas_auth") }}' class="btn btn-primary">Connect EMAIL</a>
@@ -97,22 +113,23 @@
             <div class="modal-dialog modal-dialog-centered" role="document">
               <div class="modal-content">
                 <div class="modal-header">
-                  <h5 class="modal-title" id="deleteCampaignModalLabel">Are you sure to delete this Campaign?</h5>
+                  <h5 class="modal-title" id="deleteCampaignModalLabel">Are you sure to archive this Campaign?</h5>
                   <button type="button" class="btn-close text-dark" id="close-deletejob-modal" data-bs-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                   </button>
                 </div>
-                <form action="/campaign/delete" style="display: contents" method="post"> 
+                <form action="/campaign/archive" style="display: contents" method="post"> 
                     <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="campaignid" id="delete-modal-campid"/>
                     <div class="modal-footer">
                         <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <input class="btn btn-danger" type="submit" tabindex="0" value="Delete">
+                        <input class="btn btn-danger" type="submit" tabindex="0" value="Archive">
                     </div>
                 </form>
               </div>
             </div>
         </div>
+        {% include "includes/footer.html" %}
     </div>
 
 {% endblock content %}
@@ -263,8 +280,8 @@
                             // Create action buttons HTML'
                             var campaignid = row.campaignid;
                             var buttons = '<a class="btn btn-success btn-sm" href="/campaign/view/' + campaignid + '">View</a> ' +
-                                '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" id="camp_' + id + '" data-bs-target="#deleteCampaignModal" type="submit">Delete</button>';
-                                
+                                '<button class="btn btn-secondary btn-sm" data-bs-toggle="modal" id="camp_' + id + '" data-bs-target="#deleteCampaignModal" type="submit">Archive</button>';
+
                             return buttons;
                         }
                     }
@@ -275,7 +292,7 @@
         
         $('#filtersTable').on('click', 'button', event => {
             // console.log(data)
-            if (event.target.innerText === "DELETE") {
+            if (event.target.innerText === "ARCHIVE") {
                 const id = event.target.id.split("_")[1];
                 document.getElementById("delete-modal-campid").value = id;
             } else {
@@ -352,7 +369,7 @@
             $('#close-deletejob-modal').click();
 
             Swal.fire({
-                title: 'Deleting Campaign...',
+                title: 'Archiving Campaign...',
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();
@@ -363,7 +380,7 @@
             formData.append('campid', campid);
             formData.append('csrf_token', document.getElementById("csrf_token").value);
 
-            fetch('/campaign/delete',{
+            fetch('/campaign/archive',{
                 method: 'POST',
                 body: formData
             })
@@ -473,6 +490,51 @@
                 document.getElementById("create-campaign-button").disabled = false;
             }
 
+        });
+
+        
+        // Unsubscribe contact upon reply, catch switch event and submit to server
+        $('#auto-unsub').on('change', function() {
+        const is_auto_unsub = this.checked ? 1 : 0;
+        const formData = new FormData();
+        formData.append('is_auto_unsub', is_auto_unsub);
+        formData.append('csrf_token', document.getElementById("csrf_token").value);
+
+        fetch('/update_auto_unsub',{
+            method: 'POST',
+            body: formData
+        })
+        .then((response) => {
+            if(!response.ok)
+                return response.text().then(text => { throw new Error(text) })
+            else
+                return response.json()
+        })
+        .then((data) => {
+            if (data.success) {
+                console.log(data);
+                Swal.fire({
+                    icon: 'success',
+                    title: data.message,
+                    showConfirmButton: false,
+                    timer: 2000,
+                    toast: true,
+                    position: 'top-end',
+                    // top right position
+
+                });
+            } else {
+                console.log(data.message);
+                Swal.fire({
+                    icon: "warning",
+                    title: "Something wrong in updating auto unsub!",
+                    text: data.message,
+                });
+            }
+        })
+        .catch((err) => {
+            console.log(err);
+        })
         });
 
 

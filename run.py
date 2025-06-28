@@ -191,16 +191,19 @@ def msg1():
                             venue = data['venue'] if isinstance(data, str) else data['venue'][0]
 
                             if first_name != "None" and first_name.lower() in venue.lower(): # Check if first name is in venue name
-                                first_name = "None"
+                                first_name = ""
                             
                             if "none" in first_name.lower():
-                                first_name = "None"
+                                first_name = ""
                             
                             if 'admin' in first_name.lower():
-                                first_name = "None"
+                                first_name = ""
                             
                             if 'info' in first_name.lower():
-                                first_name = "None"
+                                first_name = ""
+
+                            if first_name == "None" or first_name is None:
+                                first_name = ""
                                 
                             new_first_name = FirstName(
                                 email=email,
@@ -218,7 +221,7 @@ def msg1():
                         # eyebytes.com & also reject Name eyebytes along w it in the firstname field
 
                         if 'eben' in first_name.lower() or 'amkryukov' in first_name.lower():
-                            return "None"
+                            return ""
 
                         # add first names to service
                         setattr(new_service, f"first_name{idx+1}", first_name)

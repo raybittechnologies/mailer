@@ -232,8 +232,8 @@
                         render: function (id, type, row) {
                             // Create action buttons HTML'
                             var tid = row.tid;
-                            var buttons = '<button class="btn btn-facebook btn-sm" id="edit_' + id + '" template_name="' + row.template_name + '" template_desc="' + row.template_desc + '"   data-bs-toggle="modal" data-bs-target="#updataWorkflowModalMessage" >Edit</button> ' +
-                                '<a class="btn btn-success btn-sm" href="/workflow/view/' + tid + '">View</a> ' +
+                            var buttons = '<button class="btn btn-facebook btn-sm" id="edit_' + id + '" template_name="' + row.template_name + '" template_desc="' + row.template_desc + '"   data-bs-toggle="modal" data-bs-target="#updataWorkflowModalMessage" >Rename</button> ' +
+                                '<a class="btn btn-success btn-sm" href="/workflow/view/' + tid + '">Edit</a> ' +
                                 '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" id="del_' + id + '" data-bs-target="#deleteTemplateModal" >Delete</button>';
                                 
                             return buttons;
@@ -245,7 +245,7 @@
         );
         
         $('#filtersTable').on('click', 'button', event => {
-            if (event.target.innerText === "EDIT") {
+            if (event.target.innerText === "RENAME") {
                 const id = event.target.id.split("_")[1];               
                 document.getElementById("workflow-name").value = event.target.getAttribute('template_name');
                 document.getElementById("workflow-description").innerHTML = event.target.getAttribute('template_desc');

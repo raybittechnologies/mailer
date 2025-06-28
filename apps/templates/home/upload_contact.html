@@ -40,9 +40,12 @@
                             <button class="btn btn-success" type="submit">Upload</button>
                         </div>
                     </form>
-                    
-                    <div style="float: right;">
+                    <!-- move button to right far not use float -->
+                    <div class="d-flex justify-content-end mt-3 mb-3">
                         <a class="btn bg-gradient-info btn-sm" href="/masterview" >Switch to Master View &#8594;</a>
+                    </div>
+                    <div class="d-flex justify-content-end mt-3 mb-3">
+                        <a class="btn bg-gradient-info btn-sm" href="/archived_contacts_view" >View Archived Contacts &#8594;</a>
                     </div>
                     <table style="width:100%" id="filtersTable" class="table table-striped table-bordered nowrap">
                         <thead>
@@ -66,20 +69,20 @@
             <div class="modal-dialog modal-dialog-centered" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="deleteModalLabel">Delete Contact</h5>
+                        <h5 class="modal-title" id="deleteModalLabel">Archive Contact</h5>
                         <button type="button" class="btn-close text-dark" id="close-modal" data-bs-dismiss="modal" aria-label="Close">
                           <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
                     <div class="modal-body">
-                        Are you sure you want to delete this contact?
+                        Are you sure you want to archive this contact?
                     </div>
-                    <form action="/contact/delete" style="display: contents" method="post"> 
+                    <form style="display: contents" method="post"> 
                         <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="fileid" id="fileid"/>
                         <div class="modal-footer">
                             <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <input class="btn btn-danger" type="submit" value="Delete">
+                            <input class="btn btn-danger" type="submit" value="Archive">
                         </div>
                     </form>
                 </div>
@@ -129,7 +132,7 @@
                             filepath = row.filepath;
                             var buttons = 
                                 '<a class="btn bg-gradient-success btn-sm" href="contact/' + id + '">View</a> ' +
-                                '<button class="btn btn-danger btn-sm" id="' + id + '" data-bs-toggle="modal" data-bs-target="#deleteModal" >Delete</button>';
+                                '<button class="btn btn-secondary btn-sm" id="' + id + '" data-bs-toggle="modal" data-bs-target="#deleteModal" >Archive</button>';
                             return buttons;
                         }
                     }
@@ -194,15 +197,15 @@
         
         $('#filtersTable').on('click', 'button', event => {
             const id = event.target.id;
-            if (event.target.innerText === "DELETE") {
+            if (event.target.innerText === "ARCHIVE") {
                 document.getElementById("fileid").value = id;
             } else {
                 console.log(event.target.innerText)
             }
         });
 
-        // Delete contact
-        
+        // archive contact
+
         $('#deleteModal').on('submit', function(e) { //use on if jQuery 1.7+
             e.preventDefault();  //prevent form from submitting
             const fileid = document.getElementById("fileid").value;
@@ -210,7 +213,7 @@
             $('#close-modal').click();
 
             Swal.fire({
-                title: 'Deleting...',
+                title: 'Archiving...',
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();
@@ -221,7 +224,7 @@
             formData.append('fileid', fileid);
             formData.append('csrf_token', document.getElementById("csrf_token").value);
 
-            fetch('/contact/delete',{
+            fetch('/contact/archive',{
                 method: 'POST',
                 body: formData
             })

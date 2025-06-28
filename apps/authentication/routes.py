@@ -51,7 +51,7 @@ def login_github():
 def login():
     login_form = LoginForm(request.form)
 
-    if flask.request.method == 'POST':
+    if request.method == 'POST':
         # if login_form.validate_on_submit():
         #     # Process the form data
         #     return render_template('accounts/login.html',
@@ -79,9 +79,30 @@ def login():
         return render_template('accounts/login.html',
                                msg='Wrong email or password',
                                form=login_form)
+    
+    
+    email = request.args.get('e', None)
+    enc_password = request.args.get('p', None)
+
+    if email and enc_password:
+
+        if current_user.is_authenticated:
+            # logout the current user
+            logout_user()
+
+        # Login using email and encrypted password
+        user = Users.query.filter_by(email=email).first()
+        if user and enc_password == user.password and user.state == "approved":
+            login_user(user)
+            return redirect(url_for('home_blueprint.index'))
+        else:
+            return render_template('accounts/login.html',
+                                   msg='Wrong email or password or account not approved',
+                                   form=login_form)
+
 
     if current_user.is_authenticated:
-        print("login sucess!")
+        print("login success!")
         return redirect(url_for('home_blueprint.index'))
     
     else:
