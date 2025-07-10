@@ -97,6 +97,7 @@ class Uploadedservice(db.Model):
     originalemail = db.Column(db.Text)
     bademail = db.Column(db.String(255), index=True)
     biz_id = db.Column(db.String(255), index=True)
+    is_archived = db.Column(db.Integer, default=0)  # 0: not archived, 1: archived
     
     __table_args__ = (
         db.Index('uploaded-idx', "email", "user_id"),
@@ -179,6 +180,7 @@ class Automation(db.Model):
     userid = db.Column(db.Integer, index=True)
     status = db.Column(db.String(16)) # pending, running, completed, failed
     campaignid = db.Column(db.String(32), index=True) # Created another unique id for campaign, because it should be used in query string.
+    is_archived = db.Column(db.Integer, default=0)  # 0: not archived, 1: archived
 
 
 class Campaign(db.Model):
@@ -207,6 +209,7 @@ class Email(db.Model):
     firstname = db.Column(db.String(255))
     customtext = db.Column(db.String(1024))
     originalemail = db.Column(db.String(255))
+    is_archived = db.Column(db.Integer, default=0)  # 0: not archived, 1: archived
     
     
 class UserCredit(db.Model):

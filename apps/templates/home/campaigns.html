@@ -10,6 +10,14 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.3.2/css/fixedHeader.bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+
+    <!-- tooltip more wider -->
+    <style>
+        .tooltip-inner {
+            max-width: 500px; /* Set the maximum width of the tooltip */
+            white-space: pre-wrap; /* Allow text to wrap */
+        }
+    </style>
 {% endblock stylesheets %}
 
 {% block content %}
@@ -22,7 +30,7 @@
                 <div class="card-header"><h3 class="text-center font-weight-light my-4">My Campaign</h3></div>
                 <div class="card-body">
                 <div class="d-flex justify-content-end mt-3 mb-3">
-                    <a class="btn bg-gradient-info btn-sm" href="/archived_campaigns_view" >Switch to Archived View &#8594;</a>
+                    <a class="btn btn btn-outline-danger btn-sm" href="/archived_campaigns_view" >Switch to Archived View &#8594;</a>
                 </div>
                 <table style="width:100%" id="filtersTable" class="table table-striped table-bordered nowrap">
                     <thead>
@@ -90,7 +98,23 @@
                                         <input class="form-check-input" type="checkbox" id="auto-unsub" {{ checked }}>
                                         <!-- tooltip -->
                                         <span class="form-text text-secondary">
-                                        <i class="fas fa-question-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="DEFAULT = whatever the user has this setting as in the profile tab (it’s default = on there, but if they change it off…it should show it as off in pop up etc…)"></i>
+                                        <i class="fas fa-question-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="***IMPORTANT PLEASE READ CAREFULLY***
+PROFILE TAB > Unsubscribe Contact Upon Reply (DEFAULT=ON) – What It Does
+When this is ENABLED (Default!), anytime someone responds to your campaign (even if it's an auto-response), that email & all emails associated with that venue will be automatically unsubscribed from future follow-up emails in that sequence.
+........
+When it’s DISABLED, venues replying to your emails won’t get unsubscribed from the follow-up sequence — the contact will continue receiving the rest of the scheduled emails unless you manually unsubscribe them from the campaign
+
+**Why You Might Want to Leave It ON:
+If someone responds but you forget to manually unsubscribe them, it can get awkward — especially if they already said “not interested”, or worse, already considering booking you, but end up still getting ANOTHER follow-up email later.
+Be honest with yourself - if you’re busy and not always on top of checking every reply right away, and unsubscribing contacts - you want to leave this on (NO NEED TO CHANGE ANYTHING / DEFAULT = ON)
+The only downside is, all the people who are interested in booking you - you will have to keep following-up with them (if necessary) manually every time until you get booked (since they are unsubscribed from the auto-emailer robot, but you can always seamlessly subscribe them back by toggling the button SUBSCRIBED)
+NOTE: ANYTIME someone responds to an email a reminder will be created, so don't worry, your leads won't fall through the cracks
+
+**Why You Might Want to Turn It OFF:
+If you’re great at keeping track of replies and keeping up on unsubscribing people manually, this setting may not be necessary.
+It’s actually very helpful to switch it “off”. For example, if someone replies positively (e.g., “What’s your pricing?”). Then you reply immediately back, but if they don’t respond again, the automated follow-ups will still go out — which can help you close the deal without needing to then do all follow-ups manually forever, and ever.
+Basically, it keeps the conversation warm even if someone goes silent after their initial reply, prevents ghosting, or you getting bogged down by having to commit to tons of weekly follow-up emails manually (they add up!) since they are still subscribed in the auto-emailing robot
+"></i>
                                         </span>
                                     </div>
 
@@ -113,17 +137,17 @@
             <div class="modal-dialog modal-dialog-centered" role="document">
               <div class="modal-content">
                 <div class="modal-header">
-                  <h5 class="modal-title" id="deleteCampaignModalLabel">Are you sure to archive this Campaign?</h5>
+                  <h5 class="modal-title" id="deleteCampaignModalLabel">Are you sure to delete this Campaign?</h5>
                   <button type="button" class="btn-close text-dark" id="close-deletejob-modal" data-bs-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                   </button>
                 </div>
-                <form action="/campaign/archive" style="display: contents" method="post"> 
+                <form action="/campaign/delete" style="display: contents" method="post"> 
                     <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="campaignid" id="delete-modal-campid"/>
                     <div class="modal-footer">
                         <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <input class="btn btn-danger" type="submit" tabindex="0" value="Archive">
+                        <input class="btn btn-danger" type="submit" tabindex="0" value="Delete">
                     </div>
                 </form>
               </div>
@@ -280,7 +304,7 @@
                             // Create action buttons HTML'
                             var campaignid = row.campaignid;
                             var buttons = '<a class="btn btn-success btn-sm" href="/campaign/view/' + campaignid + '">View</a> ' +
-                                '<button class="btn btn-secondary btn-sm" data-bs-toggle="modal" id="camp_' + id + '" data-bs-target="#deleteCampaignModal" type="submit">Archive</button>';
+                                '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" id="camp_' + id + '" data-bs-target="#deleteCampaignModal" type="submit">Delete</button>';
 
                             return buttons;
                         }
@@ -292,7 +316,7 @@
         
         $('#filtersTable').on('click', 'button', event => {
             // console.log(data)
-            if (event.target.innerText === "ARCHIVE") {
+            if (event.target.innerText === "DELETE") {
                 const id = event.target.id.split("_")[1];
                 document.getElementById("delete-modal-campid").value = id;
             } else {
@@ -369,7 +393,7 @@
             $('#close-deletejob-modal').click();
 
             Swal.fire({
-                title: 'Archiving Campaign...',
+                title: 'Deleting Campaign...',
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();
@@ -380,7 +404,7 @@
             formData.append('campid', campid);
             formData.append('csrf_token', document.getElementById("csrf_token").value);
 
-            fetch('/campaign/archive',{
+            fetch('/campaign/delete',{
                 method: 'POST',
                 body: formData
             })

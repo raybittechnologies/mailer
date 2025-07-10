@@ -223,17 +223,17 @@ def export_all_data():
             'type': service.venue_type,
             'website': service.website,
             'email1' : service.email1 if service.email1 else "",
-            'firstname1' : service.first_name1 if service.first_name1 else "",
+            'firstname1' : service.first_name1 if service.first_name1 and service.first_name1 != "None" else "",
             'email2' : service.email2 if service.email2 else "",
-            'firstname2' : service.first_name2 if service.first_name2 else "",
+            'firstname2' : service.first_name2 if service.first_name2 and service.first_name2 != "None" else "",
             'email3' : service.email3 if service.email3 else "",
-            'firstname3' : service.first_name3 if service.first_name3 else "",
+            'firstname3' : service.first_name3 if service.first_name3 and service.first_name3 != "None" else "",
             'email4' : service.email4 if service.email4 else "",
-            'firstname4' : service.first_name4 if service.first_name4 else "",
+            'firstname4' : service.first_name4 if service.first_name4 and service.first_name4 != "None" else "",
             'facebookemail1' : service.fbemail1 if service.fbemail1 else "",
-            'firstname5' : service.first_name5 if service.first_name5 else "",
+            'firstname5' : service.first_name5 if service.first_name5 and service.first_name5 != "None" else "",
             'facebookemail2' : service.fbemail2 if service.fbemail2 else "",
-            'firstname6' : service.first_name6 if service.first_name6 else "",
+            'firstname6' : service.first_name6 if service.first_name6 and service.first_name6 != "None" else "",
             'facebook' : service.facebook if service.facebook else "",
             'customtext' : "",
             'notes' : "",
@@ -291,7 +291,9 @@ def url_history():
             'id': url_entry.id,
             'name': url_entry.name,
             'state' : url_entry.state,
-            'updated_datetime' : url_entry.create_datetime
+            'updated_datetime' : url_entry.create_datetime,
+            'latitude': url_entry.latitude,
+            'longitude': url_entry.longitude
         }
         url_list.append(url_data)
 
@@ -846,17 +848,18 @@ def upload_contact():
                 db.session.commit()
 
         return {"success": True, "message": "File uploaded successfully."}
-        
-        
-@blueprint.route('/contact/archive', methods=['POST'])
+
+
+@blueprint.route('/contact/delete', methods=['POST'])
 @login_required
 @user_approved_required
-def contact_archive():
+def contact_delete():
     file_id = int(request.form[ 'fileid'])
     file = Uploadedcontactfile.query.get(file_id)
     try:
         if file:
-            file.is_archived = True
+            # file.is_archived = True
+            Uploadedservice.query.filter_by(file_id=file_id).delete()
             # for service in Uploadedservice.query.filter_by(file_id=file_id).all():
             #     #  delete reminder
             #     for reminder  in Reminder.query.filter_by(userid=current_user.id, email=service.email).all():
@@ -866,14 +869,15 @@ def contact_archive():
             #         db.session.delete(reminder)
             #         db.session.commit()
             #     db.session.delete(service)
-            # db.session.delete(file)
+
+            db.session.delete(file)
             db.session.commit()
 
-            return {"success": True, 'message': "File archived successfully."}
+            return {"success": True, 'message': "File deleted successfully."}
         else:
             return {"success": False, 'message': "File not found."}
     except Exception as e:
-        return {"success": False, 'message': "Failed to archive file."}
+        return {"success": False, 'message': "Failed to delete file."}
 
  
 @blueprint.route('/contact/<int:id>', methods=['GET'])
@@ -885,7 +889,8 @@ def view_contact(id):
 
     if uploaded_file:
         file_desc = uploaded_file.description
-        return render_template('home/view_contact.html', fileid=id, file_desc=file_desc)
+        is_archived = uploaded_file.is_archived
+        return render_template('home/view_contact.html', fileid=id, file_desc=file_desc, is_archived=is_archived, segment='upload_contact')
         
     else:
         return render_template('home/page-404.html')
@@ -900,7 +905,7 @@ def view_all_contact():
 @login_required
 @user_approved_required
 def view_archived_contact():
-    return render_template('home/upload_contact_archive_view.html')
+    return render_template('home/view_archived_contact.html')
 
 
 # archived_campaigns_view
@@ -908,7 +913,7 @@ def view_archived_contact():
 @login_required
 @user_approved_required
 def view_archived_campaign():
-    return render_template('home/campaigns_archived_view.html')
+    return render_template('home/view_archived_automation.html')
 
 
 @csrf.exempt        
@@ -917,13 +922,16 @@ def view_archived_campaign():
 @user_approved_required
 def contacts_list(id):
     if request.method == 'GET':
-        services = Uploadedservice.query.filter_by(user_id=current_user.id, file_id=id).order_by(Uploadedservice.create_datetime.desc()).all()
+        services = Uploadedservice.query.filter(\
+            Uploadedservice.user_id==current_user.id, \
+            Uploadedservice.file_id==id, \
+            or_(Uploadedservice.is_archived == 0, Uploadedservice.is_archived == None)).order_by(Uploadedservice.create_datetime.desc()).all()
         all_services = []
 
         for service in services:
             city, state = extract_address(service.address)
             data = {
-                'id': service.id,
+                'id': service.id,   
                 'name': service.name,
                 'venue_type': service.venue_type,
                 'email': service.email,
@@ -973,7 +981,7 @@ def get_service(id):
         'phone': service.phone,
         'address': service.address,
         'facebook': service.facebook,
-        'firstname': service.firstname,
+        'firstname': service.firstname if service.firstname and service.firstname != "None" else "",
         'customtext': service.customtext,
         'originalemail': service.originalemail,
         'city': city,
@@ -1010,7 +1018,7 @@ def service_edit():
 @login_required
 @user_approved_required
 def contacts_all_list():
-    services = Uploadedservice.query.filter_by(user_id=current_user.id).order_by(Uploadedservice.create_datetime.desc()).all()
+    services = Uploadedservice.query.filter(Uploadedservice.user_id==current_user.id, or_(Uploadedservice.is_archived == False, Uploadedservice.is_archived == None)).order_by(Uploadedservice.create_datetime.desc()).all()
     all_services = []
 
     for service in services:
@@ -1029,7 +1037,7 @@ def contacts_all_list():
             'phone': service.phone,
             'address': service.address,
             'facebook': service.facebook,
-            'firstname': service.firstname,
+            'firstname': service.firstname if service.firstname and service.firstname != "None" else "",
             'customtext': service.customtext,
             'originalemail': service.originalemail,
             'city': city,
@@ -1040,6 +1048,43 @@ def contacts_all_list():
         all_services.append(data)
 
     return jsonify(all_services)
+
+
+@blueprint.route('/contacts/archived', methods=['GET'])
+@login_required
+@user_approved_required
+def contacts_archived_list():
+    services = Uploadedservice.query.filter_by(user_id=current_user.id, is_archived=True).order_by(Uploadedservice.create_datetime.desc()).all()
+    all_services = []
+
+    for service in services:
+        city, state = extract_address(service.address)
+        biz_id = service.biz_id
+        data = {
+            'id': service.id,
+            'name': service.name,
+            'venue_type': service.venue_type,
+            'email': service.email,
+            'is_bad' : service.is_bad,
+            'create_datetime' : service.create_datetime,
+            'is_unsubscribed' : service.is_unsubscribed,
+            'unsubscribe_token' : service.unsubscribe_token,
+            'website': service.website,
+            'phone': service.phone,
+            'address': service.address,
+            'facebook': service.facebook,
+            'firstname': service.firstname if service.firstname and service.firstname != "None" else "",
+            'customtext': service.customtext,
+            'originalemail': service.originalemail,
+            'city': city,
+            'state': state,
+            'bademail': service.bademail,
+            'biz_id': service.biz_id
+        }
+        all_services.append(data)
+
+    return jsonify(all_services)
+
 
      
 @blueprint.route('/service/delete', methods=['POST'])
@@ -1065,10 +1110,39 @@ def service_delete():
                 scheduler.remove_job(reminder.job_id)
 
             db.session.delete(reminder)
-            db.session.commit()
-        
-    db.session.commit()
+        db.session.commit()
+
     return {"success": True, 'message': "Service deleted successfully."}
+
+
+# archive service
+@blueprint.route('/service/archive', methods=['POST'])
+@login_required
+@user_approved_required
+def service_archive():
+    serviceid = request.form['serviceid']
+    service = Uploadedservice.query.get(serviceid)
+
+    if service:
+        service.is_archived = True
+        unsubscribe_token = service.unsubscribe_token
+        Email.query.filter_by(unsubscribe_token=unsubscribe_token).update({'is_archived': True})
+        db.session.commit()
+
+        email = service.email
+        user_id = current_user.id
+        #  delete reminder
+        reminder = Reminder.query.filter_by(userid=user_id, email=email).first()
+        if reminder:
+            if scheduler.get_job(reminder.job_id):
+                scheduler.remove_job(reminder.job_id)
+
+            db.session.delete(reminder)
+            db.session.commit()
+
+        return {"success": True, 'message': "Service archived successfully."}
+
+    return {"success": False, 'message': "Service not found."}
 
 
 @blueprint.route('/url/view/<int:id>', methods=['GET', 'POST'])
@@ -2549,13 +2623,13 @@ def get_archived_campaigns():
 def get_automations(campaignid):
     userid = current_user.id
     # print('get_automations', campaignid)
-    automations = Automation.query.filter_by(userid=userid, campaignid=campaignid).all()
+    automations = Automation.query.filter(Automation.userid==userid, Automation.campaignid==campaignid, or_(Automation.is_archived == False , Automation.is_archived == None)).all()
     temp_list = []
 
     for temp in automations:
         temp_data = {
             'id': temp.id,
-            'action_nanme': temp.action_name,
+            'action_name': temp.action_name,
             'group_number': temp.group_number,
             'group_count': temp.group_count,
             'action_datetime' : temp.action_datetime,
@@ -2564,6 +2638,30 @@ def get_automations(campaignid):
         }
         temp_list.append(temp_data)
         
+    return jsonify(temp_list)
+
+
+# get archived automations
+@blueprint.route('/get_archived_automations', methods=['GET']) 
+@login_required
+@user_approved_required
+def get_archived_automations():
+    userid = current_user.id
+    automations = Automation.query.filter(Automation.userid==userid, Automation.is_archived == True).all()
+    temp_list = []
+
+    for temp in automations:
+        temp_data = {
+            'id': temp.id,
+            'action_name': temp.action_name,
+            'group_number': temp.group_number,
+            'group_count': temp.group_count,
+            'action_datetime' : temp.action_datetime,
+            'job_id' : temp.job_id,
+            'status' : temp.status
+        }
+        temp_list.append(temp_data)
+
     return jsonify(temp_list)
 
 
@@ -2641,6 +2739,29 @@ def job_delete():
         
     db.session.commit()
     return {"success": True, 'message': "Job deleted successfully."}
+
+
+@csrf.exempt
+@blueprint.route('/automation/archive', methods=['POST'])
+@login_required 
+@user_approved_required
+def job_archive():
+    jobid = request.json['jobid']
+    job = Automation.query.filter_by(job_id=jobid).first()
+    
+    if job:
+        job.is_archived = True
+        db.session.commit()
+    
+    Email.query.filter_by(job_id=jobid).update({"is_archived": True})
+    
+    if scheduler.get_job(jobid):
+        scheduler.remove_job(jobid)
+        
+    db.session.commit()
+    return {"success": True, 'message': "Job deleted successfully."}
+
+
 
 @csrf.exempt
 @blueprint.route('/automation/retry', methods=['POST'])
@@ -2731,7 +2852,7 @@ def automation_view(jobid):
 @blueprint.route('/emails/<jobid>', methods=['GET'])
 @login_required
 def get_emails(jobid):
-    emails = Email.query.filter_by(job_id=jobid).all()
+    emails = Email.query.filter(Email.job_id==jobid, or_(Email.is_archived == False , Email.is_archived == None)).all()
     temp_list = []
 
     for email in emails:
@@ -2749,6 +2870,39 @@ def get_emails(jobid):
             'mail_id' : email.mail_id,
         }
         temp_list.append(temp_data)
+        
+    return jsonify(temp_list)
+
+# /emails/archived'
+@blueprint.route('/emails/archived', methods=['GET'])
+@login_required
+def get_archived_emails():
+
+    user_id = current_user.id
+    jobs = Automation.query.filter(Automation.userid == user_id).all()
+
+    temp_list = []
+    for job in jobs:
+        job_id = job.job_id
+        job_name = job.action_name
+        emails = Email.query.filter(Email.is_archived == True).all()
+
+        for email in emails:
+            temp_data = {
+                'id': email.id,
+                'email': email.email,
+                'is_sent': email.is_sent,
+                'is_opened': email.is_opened,
+                'is_unsubscribed' : email.is_unsubscribed,
+                'is_replied' : email.is_replied,
+                'is_bounced' : email.is_bounced,
+                'updated_datetime' : email.updated_datetime,
+                'unsubscribe_token' : email.unsubscribe_token,
+                'mail_id' : email.mail_id,
+                'job_id' : job_id,
+                'job_name' : job_name,
+            }
+            temp_list.append(temp_data)
         
     return jsonify(temp_list)
 
@@ -2923,15 +3077,29 @@ def subscribe(token):
     
     for email in emails:
         email.is_unsubscribed = 0
+        db.session.commit()
     
     if service:
         service.is_unsubscribed = 0
 
-    serviceid = service.id
-    WEB_HOST_IP = os.getenv("WEB_HOST_IP")
-    creat_reminder_page_url =  f"{WEB_HOST_IP}/reminders?serviceid={serviceid}"
+        serviceid = service.id
+        WEB_HOST_IP = os.getenv("WEB_HOST_IP")
+        creat_reminder_page_url =  f"{WEB_HOST_IP}/reminders?serviceid={serviceid}"
+        db.session.commit()
+        return "You have been subscribed successfully. <a href='" + creat_reminder_page_url + "'>Create Reminder</a>"
+    
+    return "You have been subscribed successfully."
+
+# archive emails
+@blueprint.route('/archive/<token>', methods=['GET'])
+@login_required
+@user_approved_required
+def archive_email(token):
+    print("archive_email", token)
+    Email.query.filter_by(unsubscribe_token=token).update({"is_archived": 1})
     db.session.commit()
-    return "You have been subscribed successfully. <a href='" + creat_reminder_page_url + "'>Create Reminder</a>"
+    return "Email archived successfully."
+
 
 @blueprint.route('/passwordreset', methods=['GET', 'POST'])
 def passwordreset():

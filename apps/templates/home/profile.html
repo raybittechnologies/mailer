@@ -3,7 +3,15 @@
 {% block title %} Profile {% endblock title %}
 
 <!-- Specific CSS goes HERE -->
-{% block stylesheets %}{% endblock stylesheets %}
+{% block stylesheets %}
+    <!-- tooltip more wider -->
+    <style>
+        .tooltip-inner {
+            max-width: 500px; /* Set the maximum width of the tooltip */
+            white-space: pre-wrap; /* Allow text to wrap */
+        }
+    </style>
+{% endblock stylesheets %}
 
 {% block content %}
 
@@ -150,7 +158,23 @@
                     <input class="form-check-input" type="checkbox" id="auto-unsub" {{ checked }}>
                     <!-- tooltip -->
                     <span class="form-text text-secondary">
-                      <i class="fas fa-question-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="DEFAULT = whatever the user has this setting as in the profile tab (it’s default = on there, but if they change it off…it should show it as off in pop up etc…)"></i>
+                      <i class="fas fa-question-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="***IMPORTANT PLEASE READ CAREFULLY***
+PROFILE TAB > Unsubscribe Contact Upon Reply > (DEFAULT=ON) – What It Does
+When this is ENABLED (Default!), anytime someone responds to your campaign (even if it's an auto-response), that email & all emails associated with that venue will be automatically unsubscribed from future follow-up emails in that sequence.
+........
+When it’s DISABLED, venues replying to your emails won’t get unsubscribed from the follow-up sequence — the contact will continue receiving the rest of the scheduled emails unless you manually unsubscribe them from the campaign
+
+**Why You Might Want to Leave It ON:
+If someone responds but you forget to manually unsubscribe them, it can get awkward — especially if they already said “not interested”, or worse, already considering booking you, but end up still getting ANOTHER follow-up email later.
+Be honest with yourself - if you’re busy and not always on top of checking every reply right away, and unsubscribing contacts - you want to leave this on (NO NEED TO CHANGE ANYTHING / DEFAULT = ON)
+The only downside is, all the people who are interested in booking you - you will have to keep following-up with them (if necessary) manually every time until you get booked (since they are unsubscribed from the auto-emailer robot, but you can always seamlessly subscribe them back by toggling the button SUBSCRIBED)
+NOTE: ANYTIME someone responds to an email a reminder will be created, so don't worry, your leads won't fall through the cracks
+
+**Why You Might Want to Turn It OFF:
+If you’re great at keeping track of replies and keeping up on unsubscribing people manually, this setting may not be necessary.
+It’s actually very helpful to switch it “off”. For example, if someone replies positively (e.g., “What’s your pricing?”). Then you reply immediately back, but if they don’t respond again, the automated follow-ups will still go out — which can help you close the deal without needing to then do all follow-ups manually forever, and ever.
+Basically, it keeps the conversation warm even if someone goes silent after their initial reply, prevents ghosting, or you getting bogged down by having to commit to tons of weekly follow-up emails manually (they add up!) since they are still subscribed in the auto-emailing robot
+"></i>
                     </span>
                   </div>
                 </li>

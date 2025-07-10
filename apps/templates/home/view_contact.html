@@ -46,22 +46,22 @@
             </div>
         </div>
         {% include "includes/footer.html" %}
-        
-        <div class="modal fade" id="deleteServiceModal" tabindex="-1" role="dialog" aria-labelledby="deleteServiceModalLabel" aria-hidden="true">
+
+        <div class="modal fade" id="archiveServiceModal" tabindex="-1" role="dialog" aria-labelledby="archiveServiceModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered" role="document">
               <div class="modal-content">
                 <div class="modal-header">
-                  <h5 class="modal-title" id="deleteServiceModalLabel">Are you sure to delete this service?</h5>
-                  <button type="button" class="btn-close text-dark" id="close-deletejob-modal" data-bs-dismiss="modal" aria-label="Close">
+                  <h5 class="modal-title" id="archiveServiceModalLabel">Are you sure to archive this service?</h5>
+                  <button type="button" class="btn-close text-dark" id="close-archivejob-modal" data-bs-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                   </button>
                 </div>
-                <form action="/service/delete" style="display: contents" method="post"> 
+                <form action="/service/archive" style="display: contents" method="post"> 
                     <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="jobid" id="delete-modal-serviceid"/>
+                    <input type="hidden" name="jobid" id="archive-modal-serviceid"/>
                     <div class="modal-footer">
                         <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <input class="btn btn-danger" type="submit" value="Delete">
+                        <input class="btn btn-danger" type="submit" value="Archive">
                     </div>
                 </form>
               </div>
@@ -219,7 +219,7 @@
                         render: function (id, type, row) {
                             // Create action buttons HTML
                             var buttons = '<button class="btn btn-primary btn-sm" id="' + id + '" data-bs-toggle="modal" data-bs-target="#editServiceModal" >Edit</button> ' +
-                                '<button class="btn btn-danger btn-sm" id="' + id + '" data-bs-toggle="modal" data-bs-target="#deleteServiceModal" >Delete</button> ' +
+                                '<button class="btn btn-secondary btn-sm" id="' + id + '" data-bs-toggle="modal" data-bs-target="#archiveServiceModal" >Archive</button> ' +
                                 '<a class="btn btn-info btn-sm" href="/reminders?serviceid=' + id + '" target="_blank">Create Reminder</a>';
                             return buttons;
                         }
@@ -232,8 +232,8 @@
 
         $('#filtersTable').on('click', 'button', event => {
             const id = event.target.id;
-            if (event.target.innerText === "DELETE") {
-                document.getElementById("delete-modal-serviceid").value = id;
+            if (event.target.innerText === "ARCHIVE") {
+                document.getElementById("archive-modal-serviceid").value = id;
             } else if (event.target.innerText === "EDIT") {
                 fetch('/service/' + id, {
                     method: 'GET',
@@ -295,14 +295,14 @@
 
         });
 
-        $('#deleteServiceModal').on('submit', function(e) { //use on if jQuery 1.7+
+        $('#archiveServiceModal').on('submit', function(e) { //use on if jQuery 1.7+
             e.preventDefault();  //prevent form from submitting
-            const serviceid = document.getElementById("delete-modal-serviceid").value;
+            const serviceid = document.getElementById("archive-modal-serviceid").value;
 
-            $('#close-deletejob-modal').click();
+            $('#close-archivejob-modal').click();
 
             Swal.fire({
-                title: 'Deleting...',
+                title: 'Archiving...',
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();
@@ -313,7 +313,7 @@
             formData.append('serviceid', serviceid);
             formData.append('csrf_token', document.getElementById("csrf_token").value);
 
-            fetch('/service/delete',{
+            fetch('/service/archive',{
                 method: 'POST',
                 body: formData,
             })

@@ -454,7 +454,10 @@
                 .then((data) => {
                     if (data.success) {
                         // console.log(data);
-                        dataTable.ajax.reload();
+                        // dataTable.ajax.reload();
+                        // instead of reloading the table, we will remove the row from the table
+                        dataTable.row($('#filtersTable').find('button[reminder_id="' + reminder_id + '"]').closest('tr')).remove().draw();
+                        // show success message
                         Swal.fire({
                             icon: 'success',
                             title: data.message,
@@ -688,7 +691,6 @@
                         if (data.success) {
                             // console.log(data);
                             dataTable.ajax.reload();
-                            // Sweet alert like toast message on top right
                             Swal.fire({
                                 icon: 'success',
                                 title: data.message,
@@ -838,8 +840,10 @@
             const unsubscribe_token = event.target.getAttribute("unsub_token");
             if (event.target.innerText === "UNSUBSCRIBE") { 
                 url = "/unsubscribe/" + unsubscribe_token;
-            } else {
+            } else if (event.target.innerText === "SUBSCRIBE") {
                 url = "/subscribe/" + unsubscribe_token;
+            } else {
+                return; // if not unsubscribe or subscribe, return
             }
             fetch(url ,{
                     method: 'GET',
@@ -852,7 +856,20 @@
                 })
                 .then((data) => {
                     // console.log(data);
-                    dataTable.ajax.reload();
+                    // dataTable.ajax.reload();
+
+                    // update button text
+                    if (event.target.innerText === "UNSUBSCRIBE") {
+                        event.target.innerText = "SUBSCRIBE";
+                        // change button class to bg-gradient-success
+                        event.target.classList.remove("bg-gradient-danger");
+                        event.target.classList.add("bg-gradient-success");
+                    } else {
+                        event.target.innerText = "UNSUBSCRIBE";
+                        // change button class to bg-gradient-danger
+                        event.target.classList.remove("bg-gradient-success");
+                        event.target.classList.add("bg-gradient-danger");
+                    }
 
                     // Sweet alert like toast message on top right
                     Swal.fire({

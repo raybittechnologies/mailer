@@ -43,11 +43,11 @@
                 </table>
                 </div>
         </div>
-
-        {% include "includes/footer.html" %}
-
     </div>
-
+    
+    <div id="map" style="height: 400px; width: 100%; padding-top: 20px;"></div>
+    
+{% include "includes/footer.html" %}
 {% endblock content %}
 
 <!-- Specific JS goes HERE -->
@@ -58,8 +58,99 @@
     <script src="https://cdn.datatables.net/fixedheader/3.3.2/js/dataTables.fixedHeader.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.4.1/js/responsive.bootstrap.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA1gJVpuNrhHJXNYmm_zikTZgmADxo1mDY&loading=async&libraries=places,maps,marker&v=beta"></script>
 
     <script>
+        let map;
+        const mapContainer = document.getElementById('map');
+        async function initmap() {
+            // Create a map centered at a default location, center of usa
+            const center_lat =  37.0902;
+            const center_lng = -95.7129;
+
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 3,
+                center: {lat: center_lat, lng: center_lng},
+                mapId: "dawefaef2342342",
+            });
+            
+            // Prevent page scroll when interacting with the map
+            map.getDiv().addEventListener('wheel', function(event) {
+                event.stopPropagation();
+                event.preventDefault();
+            }, { passive: false });
+        };
+        
+        async function updatemap() {
+            // Create a map centered at the first location
+            const { Map, InfoWindow } = await google.maps.importLibrary("maps");
+            const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary(
+                "marker",
+            );
+            
+            const infoWindow = new InfoWindow();
+            
+            //Get table data
+            var table = $('#filtersTable').DataTable();
+            var locations = table.rows().data();
+
+            // Add markers to the map
+            locations.each(function (location, index) {
+                
+                const pin = new PinElement({
+                    glyph: `${index + 1}`,
+                    // scale: 1.5,
+                });
+                // console.log(location);
+                // if location is missing latitude or longitude, skip it or location.latitude is "" or location.longitude is ""
+                if (!location.latitude || !location.longitude || location.latitude == "" || location.longitude == "") {
+                    return;
+                }
+
+                const marker = new google.maps.marker.AdvancedMarkerElement({
+                    map,
+                    position: {lat: parseFloat(location.latitude), lng: parseFloat(location.longitude)},
+                    title: location.venue,
+                    content: pin.element,
+                    gmpClickable: true,
+                });
+
+                marker.addListener("click", ({ domEvent, latLng }) => {
+                    const { target } = domEvent;
+                    infoWindow.close();
+                    // create html with thumbnail and title
+
+                    var product_url = location.product_url;
+                    var text = '';
+                    let business = '';
+                    for (let i = 0; i < product_url.split(',').length; i++) {
+                        var url = product_url.split(',')[i].split("?")[1];
+                        var urlsearchparam = new URLSearchParams(url)
+                        business = urlsearchparam.get('find_desc');
+                        loc = urlsearchparam.get('find_loc');
+
+                        if (business === null || loc === null) {
+                            continue;
+                        }
+                        // console.log(urlsearchparam); 
+                        // for (const param of urlsearchparam) {
+                        //     console.log(param);
+                        // }
+
+                        // text += '<a href="' + product_url.split(',')[i] + '" target="_blank" >' + 
+                        text += business + " in " + loc + ' </a>' + "<br>";
+                    }
+                    const content = '<p>' + text + '</p>';
+                    infoWindow.setContent(content);
+                    // size of info window
+                    infoWindow.setOptions({ maxWidth: 500, maxHeight: 200 });
+                    // set scrollable
+                    infoWindow.setOptions({ scrollable: true });
+                    infoWindow.open(marker.map, marker);
+                });
+            });
+
+        };
         $(document).ready(function () {
             // Initialize DataTable
             $('#filtersTable').DataTable({
@@ -139,6 +230,16 @@
                     ]
                 },
             );
+
+            
+            $('#filtersTable').on('draw.dt', function () {
+                updatemap();
+            });
+
+            window.onload = function () {
+                initmap();
+            };
+            
         });
     </script>
 {% endblock javascripts %}
