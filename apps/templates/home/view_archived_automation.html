@@ -1,0 +1,224 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}  {% endblock title %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.3.2/css/fixedHeader.bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
+{% endblock stylesheets %}
+
+{% block content %}
+
+    <div class="container-fluid py-4">
+        
+        <div class="container mt-5">
+            <div class="card col shadow-lg border-0 rounded-lg">
+                <div class="card-header"><h3 class="text-center font-weight-light my-4">Archived Automations</h3></div>
+                <div class="card-body">
+                <table style="width:100%" id="filtersTable" class="table table-striped table-bordered nowrap">
+                    <thead>
+                    <tr>
+                        <th>ActionName</th>
+                        <th>Drip</th>
+                        <th>Status</th>
+                        <th>Run on</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <!-- Rows will be added dynamically using JavaScript -->
+                    </tbody>
+                </table>
+                </div>
+            </div>
+        </div>
+
+        {% include "includes/footer.html" %}
+        <div class="modal fade" id="deleteJobModal" tabindex="-1" role="dialog" aria-labelledby="deleteJobModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="deleteJobModalLabel">Are you sure to delete this automation?</h5>
+                  <button type="button" class="btn-close text-dark" id="close-deletejob-modal" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <form action="/automation/delete" style="display: contents" method="post"> 
+                    <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="jobid" id="delete-modal-jobid"/>
+                    <div class="modal-footer">
+                        <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <input class="btn btn-danger" type="submit" tabindex="0" value="Delete">
+                    </div>
+                </form>
+              </div>
+            </div>
+        </div>
+        
+    </div>
+
+{% endblock content %}
+
+<!-- Specific JS goes HERE -->
+{% block javascripts %}
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap.min.js"></script>
+<script src="https://cdn.datatables.net/fixedheader/3.3.2/js/dataTables.fixedHeader.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.4.1/js/responsive.bootstrap.min.js"></script>
+<script>
+    var templates = null;
+
+    $(document).ready(function () {
+
+        // Initialize DataTable
+        var dataTable = $('#filtersTable').DataTable({
+                responsive: true,
+                pageLength: 50,
+                columnDefs: [
+                {
+                    target: 3,
+                    render: DataTable.render.datetime()
+                }],
+                order : [],
+                ajax: {
+                    url: '/get_archived_automations',
+                    dataSrc: ''
+                },
+                columns: [
+                    {data: 'action_name'},
+                    {
+                        data: 'group_number',
+                        render : function (group_number, type, row) {
+                            var num = group_number + 1;
+                            var group_count = row.group_count;
+                            label = '<span class="badge badge-pill badge-lg bg-gradient-info">' + num + ' / ' + group_count + '</span>';
+                            return label
+                        }
+                    },
+                    {
+                        data: 'status',
+                        render : function (status, type, row) {
+                            var  label = ""
+                            if (status === "completed") {
+                                label = '<span class="badge bg-gradient-success">Completed</span>'
+                            } else if (status === "pending") {
+                                label = '<span class="badge bg-gradient-primary">Pending</span>'
+                            } else if (status === "running") {
+                                label = '<span class="badge bg-gradient-warning">Running</span>'
+                            } else if (status === "failed") {
+                                label = '<span class="badge bg-gradient-secondary">Failed</span>'
+                            } else {
+                                label = '<span class="badge bg-gradient-secondary">Unknown</span>'
+                            }
+                            return label
+                        }
+                    },
+                    {data: 'action_datetime'},
+                    {
+                        data: 'id', // Assuming the id property is present in your data
+                        render: function (id, type, row) {
+                            // Create action buttons HTML'
+                            var job_id = row.job_id;
+                            var buttons = '<a class="btn btn-success btn-sm" href="/automation/view/' + job_id + '">View</a> ' +
+                                '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" job_id="' + job_id +'" data-bs-target="#deleteJobModal" >Delete</button>';
+                            //if (row.status == "failed") {
+                            //    buttons += ' <button class="btn btn-facebook btn-sm" data-bs-toggle="modal" job_id="' + job_id +'" data-bs-target="#retryJobModal" >Retry</button>';
+                            //}
+                            // if job is running, then show stop button
+                            // if (row.status == "running") {
+                            //     buttons += ' <button class="btn btn-danger btn-sm" data-bs-toggle="modal" job_id="' + job_id +'" data-bs-target="#deleteJobModal" >Stop</button>';
+                            // }
+                            // // if job is stopped, then show resume button
+                            // if (row.status == "stopped") {
+                            //     buttons += ' <a class="btn btn-success btn-sm" href="/automation/resume/' + job_id + '">Resume</a>';
+                            // }
+                            return buttons;
+                        }
+                    }
+                    
+                ]
+            },
+        );
+        
+        $('#filtersTable').on('click', 'button', event => {
+            if (event.target.innerText === "DELETE") {
+                const jobid = event.target.getAttribute("job_id");
+                document.getElementById("delete-modal-jobid").value = jobid;
+            } else if (event.target.innerText === "RETRY") {
+                const jobid = event.target.getAttribute("job_id");
+                document.getElementById("retry-modal-jobid").value = jobid;
+            } else {
+                console.log(event.target.innerText)
+            }
+        });
+
+        $('#deleteJobModal').on('submit', function(e) { //use on if jQuery 1.7+
+            e.preventDefault();  //prevent form from submitting
+            const jobid = document.getElementById("delete-modal-jobid").value;
+
+            $('#close-deletejob-modal').click();
+
+            Swal.fire({
+                title: 'Deleting...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
+
+            fetch('/automation/delete',{
+                method: 'POST',
+                headers : { 'Content-Type': 'application/json' },
+                body: JSON.stringify({"jobid" : jobid}),
+            })
+            .then((response) => {
+                if(!response.ok)
+                    return response.text().then(text => { throw new Error(text) })
+                else
+                    return response.json()
+            })
+            .then((data) => {
+                if (data.success) {
+                    // console.log(data);
+                    dataTable.ajax.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: data.message,
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                } else {
+                    console.log(data.message);
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Oops...",
+                        text: data.message,
+                    });
+                }
+            })
+            .catch((err) => {
+                console.log(err);
+                Swal.fire({
+                    icon: "warning",
+                    title: "Oops...",
+                    text: data.message,
+                });
+            })
+        });
+
+
+        // var interval = setInterval(function () {
+        //     dataTable.ajax.reload();
+        // }, 30000);
+
+    });
+</script>
+{% endblock javascripts %}
