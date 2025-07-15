@@ -81,7 +81,7 @@
             }, { passive: false });
         };
         
-        async function updatemap() {
+        async function updatemap(locations) {
             // Create a map centered at the first location
             const { Map, InfoWindow } = await google.maps.importLibrary("maps");
             const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary(
@@ -91,12 +91,12 @@
             const infoWindow = new InfoWindow();
             
             //Get table data
-            var table = $('#filtersTable').DataTable();
-            var locations = table.rows().data();
+            // var table = $('#filtersTable').DataTable();
+            // var locations = table.rows().data();
 
             // Add markers to the map
-            locations.each(function (location, index) {
-                
+            locations.forEach(function (location, index) {
+
                 const pin = new PinElement({
                     glyph: `${index + 1}`,
                     // scale: 1.5,
@@ -119,39 +119,34 @@
                     const { target } = domEvent;
                     infoWindow.close();
                     // create html with thumbnail and title
-
-                    var product_url = location.product_url;
-                    var text = '';
-                    let business = '';
-                    for (let i = 0; i < product_url.split(',').length; i++) {
-                        var url = product_url.split(',')[i].split("?")[1];
-                        var urlsearchparam = new URLSearchParams(url)
-                        business = urlsearchparam.get('find_desc');
-                        loc = urlsearchparam.get('find_loc');
-
-                        if (business === null || loc === null) {
-                            continue;
-                        }
-                        // console.log(urlsearchparam); 
-                        // for (const param of urlsearchparam) {
-                        //     console.log(param);
-                        // }
-
-                        // text += '<a href="' + product_url.split(',')[i] + '" target="_blank" >' + 
-                        text += business + " in " + loc + ' </a>' + "<br>";
-                    }
-                    const content = '<p>' + text + '</p>';
+                    const content = '<img src="' + location.thumnailurl + '" style="width:150px;height:150px;"><br>' + '<p>' + location.venue + '</p>';
                     infoWindow.setContent(content);
                     // size of info window
-                    infoWindow.setOptions({ maxWidth: 500, maxHeight: 200 });
-                    // set scrollable
-                    infoWindow.setOptions({ scrollable: true });
+                    infoWindow.setOptions({ maxWidth: 200 });
                     infoWindow.open(marker.map, marker);
                 });
             });
 
         };
         $(document).ready(function () {
+            // all services list
+            var all_services = [];
+            // get all services for user /get_all_services
+            $.ajax({
+                url: '/get_all_services',
+                type: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    all_services = data;
+                    updatemap(all_services);
+                    console.log('All services:', all_services);
+                },
+                error: function (error) {
+                    console.error('Error fetching services:', error);
+                }
+            });
+
+
             // Initialize DataTable
             $('#filtersTable').DataTable({
                     responsive: true,
@@ -232,13 +227,14 @@
             );
 
             
-            $('#filtersTable').on('draw.dt', function () {
-                updatemap();
-            });
+            // $('#filtersTable').on('draw.dt', function () {
+            //     updatemap(all_services)
+            // });
 
             window.onload = function () {
                 initmap();
             };
+
             
         });
     </script>

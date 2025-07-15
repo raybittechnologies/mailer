@@ -57,7 +57,7 @@ def send_cancel_membership_email(user_email):
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
                 <style> p {{
                         line-height: 1.5;
-                        margin-bottom: -14px;
+                        margin-bottom: -20px;
                         font-size: 16px;
                     }}
                 </style>
@@ -96,7 +96,7 @@ def send_test_email(subject, fromname, body, receiver, sender):
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
                 <style> p {{
                         line-height: 1.5;
-                        margin-bottom: -14px;
+                        margin-bottom: -20px;
                         font-size: 16px;
                     }}
                 </style>
@@ -132,7 +132,7 @@ def send_email_via_mailtrap(subject, fromname, body, receiver):
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
                 <style> p {{
                         line-height: 1.5;
-                        margin-bottom: -14px;
+                        margin-bottom: -20px;
                         font-size: 16px;
                     }}
                 </style>
@@ -187,7 +187,7 @@ def send_reconnect_email_via_mailtrap(subject, fromname, receiver):
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
                 <style> p {{
                         line-height: 1.5;
-                        margin-bottom: -14px;
+                        margin-bottom: -20px;
                         font-size: 16px;
                     }}
                 </style>
@@ -216,7 +216,7 @@ def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, rece
             <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
             <style> p {{
                     line-height: 1.5;
-                    margin-bottom: -14px;
+                    margin-bottom: -20px;
                     font-size: 16px;
                 }}
             </style>
@@ -261,7 +261,7 @@ def send_password_reset_email(email, reset_link):
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
                 <style> p {{
                         line-height: 1.5;
-                        margin-bottom: -14px;
+                        margin-bottom: -20px;
                         font-size: 16px;
                     }}
                 </style>

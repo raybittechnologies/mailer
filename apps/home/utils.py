@@ -173,7 +173,12 @@ venue_black_list = [
     'Dunkin’', 
     'Krispy Kreme',
     'McDonald’s', 
-    'Zaxbys'
+    'Zaxbys',
+    'Aldi',
+    'Meijer',
+    'Wendy’s',
+    'Horse Racing',
+    'Horse Boarding'
 ]
 llm = ChatOpenAI(
     model_name="gpt-3.5-turbo-0125",
@@ -212,8 +217,8 @@ def is_blackeslisted_venue_type(venue_types):
     for venue_type in venue_types:
         if venue_type.strip().lower() in black_list_venue_types and not "music venue" in low_cases_venue_types and not "music venues" in low_cases_venue_types:
             return True
-        
-        if venue_type.strip().lower() == "venues & event spaces" and len(venue_types) == 1:
+
+        if "venues & event spaces" in venue_type.strip().lower() and len(venue_types) == 1:
             return True
         
         if "wine tours" in low_cases_venue_types and len(venue_types) == 1:

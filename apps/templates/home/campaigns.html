@@ -14,8 +14,11 @@
     <!-- tooltip more wider -->
     <style>
         .tooltip-inner {
-            max-width: 500px; /* Set the maximum width of the tooltip */
+            max-width: 800px; /* Set the maximum width of the tooltip */
             white-space: pre-wrap; /* Allow text to wrap */
+            word-break: break-word;
+            overflow-y: auto !important;
+            z-index: 9999000 !important; /* Ensure tooltip is above other elements */
         }
     </style>
 {% endblock stylesheets %}
@@ -99,7 +102,7 @@
                                         <!-- tooltip -->
                                         <span class="form-text text-secondary">
                                         <i class="fas fa-question-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="***IMPORTANT PLEASE READ CAREFULLY***
-PROFILE TAB > Unsubscribe Contact Upon Reply (DEFAULT=ON) – What It Does
+PROFILE TAB > Unsubscribe Contact Upon Reply > (DEFAULT=ON) – What It Does
 When this is ENABLED (Default!), anytime someone responds to your campaign (even if it's an auto-response), that email & all emails associated with that venue will be automatically unsubscribed from future follow-up emails in that sequence.
 ........
 When it’s DISABLED, venues replying to your emails won’t get unsubscribed from the follow-up sequence — the contact will continue receiving the rest of the scheduled emails unless you manually unsubscribe them from the campaign

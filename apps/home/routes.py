@@ -300,6 +300,18 @@ def url_history():
     return jsonify(url_list)
 
 
+# get all services for user
+@blueprint.route('/get_all_services', methods=['GET'])
+@login_required
+@user_approved_required
+def get_all_services():
+    user_services = Service.query.filter(Service.user_id==current_user.id, and_(Service.latitude != '', Service.longitude != '')).limit(6000).all()
+    # convert to list of dicts
+    service_list = [service.to_dict() for service in user_services]
+
+    return jsonify(service_list)
+
+
 @blueprint.route('/view_url_history/<int:url_id>')
 @login_required
 @user_approved_required
@@ -2114,6 +2126,8 @@ def cancel_membership():
 @login_required 
 @user_approved_required
 def action_test():
+
+    print("Action test called")
     
     actionid = request.json['id']
     action = Action.query.filter_by(id=actionid).first()

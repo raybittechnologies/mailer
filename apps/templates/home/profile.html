@@ -7,9 +7,13 @@
     <!-- tooltip more wider -->
     <style>
         .tooltip-inner {
-            max-width: 500px; /* Set the maximum width of the tooltip */
+            max-width: 800px; /* Set the maximum width of the tooltip */
             white-space: pre-wrap; /* Allow text to wrap */
+            word-break: break-word;
+            overflow-y: auto !important;
+            z-index: 9999000 !important; /* Ensure tooltip is above other elements */
         }
+
     </style>
 {% endblock stylesheets %}
 
