@@ -13,7 +13,7 @@ import cloudscraper
 from threading import Thread
 import queue
 import os
-from apps.home.utils import check_blacklisted, is_blacklisted_venue, is_blackeslisted_venue_type
+from apps.home.utils import check_blacklisted, is_blacklisted_venue, is_blackeslisted_venue_type, extract_city_state
 from uuid import uuid4
 
 
@@ -201,8 +201,8 @@ def yelp_scraper_run(url, id, user_info):
             for business in response_json['legacyProps']['searchAppProps']['searchPageProps']['mainContentComponentsListProps']:
                 if "bizId" in business:
                     bizId = business['bizId']
-                    venue_name = business['searchResultBusiness']['name']
-                    venue_types = [i['title'] for i in business['searchResultBusiness']['categories']]
+                    venue_name = business['searchResultBusiness']['name'].replace("&amp;", "&")
+                    venue_types = [i['title'].replace("&amp;", "&") for i in business['searchResultBusiness']['categories']]
                     phone = business['searchResultBusiness']['phone']
                     
                     if is_scraper_completed(id):
@@ -211,7 +211,7 @@ def yelp_scraper_run(url, id, user_info):
                     if is_opt_musicians :
                         if is_blacklisted_venue(venue_name):
                             continue
-                        
+
                         if is_blackeslisted_venue_type(venue_types):
                             continue
                         
@@ -222,9 +222,8 @@ def yelp_scraper_run(url, id, user_info):
                     if "temp. closed" in venue_name.lower() or "closed" in venue_name.lower():
                         continue
 
-
                     venue_type = ", ".join(venue_types)
-                    
+
                     if business['searchResultBusiness']['website']:
                         website = business['searchResultBusiness']['website']['href']
                         if "http" != website[:4]:
@@ -249,13 +248,13 @@ def yelp_scraper_run(url, id, user_info):
                     service = service_data.get('service', {})
 
                     full_address = service.get('address', '')
-                    city = service.get('city', '')
-                    state = service.get('state', '')
-                    zip = service.get('zip', '')
-                    country = service.get('country', '')
-                    latitude = service.get('latitude', '')
-                    longitude = service.get('longitude', '')
-                        
+                    city = service.get('city') if service.get('city') else ''
+                    state = service.get('state') if service.get('state') else ''
+                    zip = service.get('zip') if service.get('zip') else ''
+                    country = service.get('country') if service.get('country') else ''
+                    latitude = service.get('latitude') if service.get('latitude') else ''
+                    longitude = service.get('longitude') if service.get('longitude') else ''
+
                     if full_address == "":
                         try:
                             addresses = get_addresses(session, businessUrl)
@@ -281,13 +280,16 @@ def yelp_scraper_run(url, id, user_info):
                         if location:
                             latitude = location['lat']
                             longitude = location['lng']
-                        
+
+                    if  full_address and (city == "" or state == ""):
+                        city, state = extract_city_state(full_address)
+
                     print("<Venue>", venue_name, "<Address>", full_address)
                     
                     data = dict()
-                    data['url'] = url,
-                    data['venue'] = venue_name,
-                    data['venuetype'] = venue_type,
+                    data['url'] = url
+                    data['venue'] = venue_name
+                    data['venuetype'] = venue_type
                     data['website'] = website
                     data['Phone'] = phone
                     data['address'] = full_address

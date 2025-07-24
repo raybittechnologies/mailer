@@ -6,12 +6,12 @@
 {% block stylesheets %}
     <!-- tooltip more wider -->
     <style>
-        .tooltip-inner {
-            max-width: 800px; /* Set the maximum width of the tooltip */
-            white-space: pre-wrap; /* Allow text to wrap */
-            word-break: break-word;
-            overflow-y: auto !important;
-            z-index: 9999000 !important; /* Ensure tooltip is above other elements */
+        #tooltipIcon:hover {
+            cursor: pointer;
+        }
+
+        #tooltipModal {
+            z-index: 10000;
         }
 
     </style>
@@ -162,23 +162,7 @@
                     <input class="form-check-input" type="checkbox" id="auto-unsub" {{ checked }}>
                     <!-- tooltip -->
                     <span class="form-text text-secondary">
-                      <i class="fas fa-question-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="***IMPORTANT PLEASE READ CAREFULLY***
-PROFILE TAB > Unsubscribe Contact Upon Reply > (DEFAULT=ON) – What It Does
-When this is ENABLED (Default!), anytime someone responds to your campaign (even if it's an auto-response), that email & all emails associated with that venue will be automatically unsubscribed from future follow-up emails in that sequence.
-........
-When it’s DISABLED, venues replying to your emails won’t get unsubscribed from the follow-up sequence — the contact will continue receiving the rest of the scheduled emails unless you manually unsubscribe them from the campaign
-
-**Why You Might Want to Leave It ON:
-If someone responds but you forget to manually unsubscribe them, it can get awkward — especially if they already said “not interested”, or worse, already considering booking you, but end up still getting ANOTHER follow-up email later.
-Be honest with yourself - if you’re busy and not always on top of checking every reply right away, and unsubscribing contacts - you want to leave this on (NO NEED TO CHANGE ANYTHING / DEFAULT = ON)
-The only downside is, all the people who are interested in booking you - you will have to keep following-up with them (if necessary) manually every time until you get booked (since they are unsubscribed from the auto-emailer robot, but you can always seamlessly subscribe them back by toggling the button SUBSCRIBED)
-NOTE: ANYTIME someone responds to an email a reminder will be created, so don't worry, your leads won't fall through the cracks
-
-**Why You Might Want to Turn It OFF:
-If you’re great at keeping track of replies and keeping up on unsubscribing people manually, this setting may not be necessary.
-It’s actually very helpful to switch it “off”. For example, if someone replies positively (e.g., “What’s your pricing?”). Then you reply immediately back, but if they don’t respond again, the automated follow-ups will still go out — which can help you close the deal without needing to then do all follow-ups manually forever, and ever.
-Basically, it keeps the conversation warm even if someone goes silent after their initial reply, prevents ghosting, or you getting bogged down by having to commit to tons of weekly follow-up emails manually (they add up!) since they are still subscribed in the auto-emailing robot
-"></i>
+                      <i class="fas fa-question-circle" data-bs-toggle="modal" data-bs-target="#tooltipModal" id="tooltipIcon"></i>
                     </span>
                   </div>
                 </li>
@@ -258,6 +242,57 @@ Basically, it keeps the conversation warm even if someone goes silent after thei
           </div>
         </div>
       </div>
+
+      <!-- tooltip modal   -->
+      <div class="modal fade" id="tooltipModal" tabindex="-1" role="dialog" aria-labelledby="tooltipModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="tooltipModalLabel">Unsubscribe contact upon reply</h5>
+              <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+                  <h4 style="color: red;">***IMPORTANT PLEASE READ CAREFULLY***</h4>
+
+                  <p><strong>PROFILE TAB &gt; Unsubscribe Contact Upon Reply &gt; (DEFAULT = ON)</strong></p>
+
+                  <p><strong>What It Does:</strong><br>
+                  When this is <strong>ENABLED (Default!)</strong>, anytime someone responds to your campaign (even if it's an auto-response), 
+                  that email & all emails associated with that venue will be <strong>automatically unsubscribed</strong> from future follow-up emails in that sequence.</p>
+
+                  <p>When it’s <strong>DISABLED</strong>, venues replying to your emails <strong>won’t</strong> get unsubscribed from the follow-up sequence — 
+                  the contact will continue receiving the rest of the scheduled emails unless you manually unsubscribe them from the campaign.</p>
+
+                  <h5>Why You Might Want to Leave It ON:</h5>
+                  <ul>
+                    <li>If someone responds but you forget to manually unsubscribe them, it can get awkward — especially if they already said “not interested”, 
+                    or worse, are already considering booking you, but end up still getting ANOTHER follow-up email later.</li>
+                    <li>Be honest with yourself — if you’re busy and not always on top of checking every reply right away and unsubscribing contacts — 
+                    you want to leave this on (<strong>NO NEED TO CHANGE ANYTHING / DEFAULT = ON</strong>).</li>
+                    <li>The only downside is, all the people who are interested in booking you — you will have to keep following up with them (if necessary) 
+                    <strong>manually</strong> every time until you get booked.</li>
+                    <li>You can always seamlessly subscribe them back by toggling the <strong>SUBSCRIBED</strong> button.</li>
+                  </ul>
+
+                  <p><strong>NOTE:</strong> ANYTIME someone responds to an email a reminder will be created, so don't worry — your leads won't fall through the cracks.</p>
+
+                  <h5>Why You Might Want to Turn It OFF:</h5>
+                  <ul>
+                    <li>If you’re great at keeping track of replies and unsubscribing people manually, this setting may not be necessary.</li>
+                    <li>It’s helpful to switch it “off” in cases where someone replies positively (e.g., “What’s your pricing?”).</li>
+                    <li>Then you reply back, but if they don’t respond again, the automated follow-ups will still go out — which can help you close the deal.</li>
+                    <li>This prevents ghosting or you getting bogged down by committing to weekly follow-up emails manually, since they are still subscribed to the auto-emailing system.</li>
+                  </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
       {% include "includes/footer.html" %}
 
     </div>

@@ -40,21 +40,21 @@
         </div>
 
         {% include "includes/footer.html" %}
-        <div class="modal fade" id="archiveJobModal" tabindex="-1" role="dialog" aria-labelledby="archiveJobModalLabel" aria-hidden="true">
+        <div class="modal fade" id="deleteJobModal" tabindex="-1" role="dialog" aria-labelledby="deleteJobModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered" role="document">
               <div class="modal-content">
                 <div class="modal-header">
-                  <h5 class="modal-title" id="archiveJobModalLabel">Are you sure to archive this automation?</h5>
-                  <button type="button" class="btn-close text-dark" id="close-archivejob-modal" data-bs-dismiss="modal" aria-label="Close">
+                  <h5 class="modal-title" id="deleteJobModalLabel">Are you sure to delete this automation?</h5>
+                  <button type="button" class="btn-close text-dark" id="close-deletejob-modal" data-bs-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                   </button>
                 </div>
-                <form action="/automation/archive" style="display: contents" method="post">
+                <form action="/automation/delete" style="display: contents" method="post">
                     <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="jobid" id="archive-modal-jobid"/>
+                    <input type="hidden" name="jobid" id="delete-modal-jobid"/>
                     <div class="modal-footer">
                         <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <input class="btn btn-danger" type="submit" tabindex="0" value="Archive">
+                        <input class="btn btn-danger" type="submit" tabindex="0" value="Delete">
                     </div>
                 </form>
               </div>
@@ -155,7 +155,7 @@
                             // Create action buttons HTML'
                             var job_id = row.job_id;
                             var buttons = '<a class="btn btn-success btn-sm" href="/automation/view/' + job_id + '">View</a> ' +
-                                '<button class="btn btn-secondary btn-sm" data-bs-toggle="modal" job_id="' + job_id +'" data-bs-target="#archiveJobModal" >Archive</button>';
+                                '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" job_id="' + job_id +'" data-bs-target="#deleteJobModal" >Delete</button>';
                             //if (row.status == "failed") {
                             //    buttons += ' <button class="btn btn-facebook btn-sm" data-bs-toggle="modal" job_id="' + job_id +'" data-bs-target="#retryJobModal" >Retry</button>';
                             //}
@@ -176,9 +176,9 @@
         );
         
         $('#filtersTable').on('click', 'button', event => {
-            if (event.target.innerText === "ARCHIVE") {
+            if (event.target.innerText === "DELETE") {
                 const jobid = event.target.getAttribute("job_id");
-                document.getElementById("archive-modal-jobid").value = jobid;
+                document.getElementById("delete-modal-jobid").value = jobid;
             } else if (event.target.innerText === "RETRY") {
                 const jobid = event.target.getAttribute("job_id");
                 document.getElementById("retry-modal-jobid").value = jobid;
@@ -187,21 +187,21 @@
             }
         });
 
-        $('#archiveJobModal').on('submit', function(e) { //use on if jQuery 1.7+
+        $('#deleteJobModal').on('submit', function(e) { //use on if jQuery 1.7+
             e.preventDefault();  //prevent form from submitting
-            const jobid = document.getElementById("archive-modal-jobid").value;
+            const jobid = document.getElementById("delete-modal-jobid").value;
 
-            $('#close-archivejob-modal').click();
+            $('#close-deletejob-modal').click();
 
             Swal.fire({
-                title: 'Archiving...',
+                title: 'Deleting...',
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();
                 },
             });
 
-            fetch('/automation/archive',{
+            fetch('/automation/delete',{
                 method: 'POST',
                 headers : { 'Content-Type': 'application/json' },
                 body: JSON.stringify({"jobid" : jobid}),

@@ -98,6 +98,8 @@ class Uploadedservice(db.Model):
     bademail = db.Column(db.String(255), index=True)
     biz_id = db.Column(db.String(255), index=True)
     is_archived = db.Column(db.Integer, default=0)  # 0: not archived, 1: archived
+    city = db.Column(db.String(255))
+    state = db.Column(db.String(255))
     
     __table_args__ = (
         db.Index('uploaded-idx', "email", "user_id"),

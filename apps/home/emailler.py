@@ -56,9 +56,9 @@ def send_cancel_membership_email(user_email):
             <head>
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
                 <style> p {{
-                        line-height: 1.5;
-                        margin-bottom: -20px;
-                        font-size: 16px;
+                    font-size: 14px;
+                    margin: 5px 0;
+                    line-height: 1.5;
                     }}
                 </style>
             </head>
@@ -95,9 +95,9 @@ def send_test_email(subject, fromname, body, receiver, sender):
             <head>
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
                 <style> p {{
-                        line-height: 1.5;
-                        margin-bottom: -20px;
-                        font-size: 16px;
+                    font-size: 14px;
+                    margin: 5px 0;
+                    line-height: 1.5;
                     }}
                 </style>
             </head>
@@ -131,9 +131,9 @@ def send_email_via_mailtrap(subject, fromname, body, receiver):
             <head>
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
                 <style> p {{
-                        line-height: 1.5;
-                        margin-bottom: -20px;
-                        font-size: 16px;
+                    font-size: 14px;
+                    margin: 5px 0;
+                    line-height: 1.5;
                     }}
                 </style>
             </head>
@@ -186,9 +186,9 @@ def send_reconnect_email_via_mailtrap(subject, fromname, receiver):
             <head>
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
                 <style> p {{
-                        line-height: 1.5;
-                        margin-bottom: -20px;
-                        font-size: 16px;
+                    font-size: 14px;
+                    margin: 5px 0;
+                    line-height: 1.5;
                     }}
                 </style>
             </head>
@@ -215,9 +215,9 @@ def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, rece
         <head>
             <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
             <style> p {{
+                    font-size: 14px;
+                    margin: 5px 0;
                     line-height: 1.5;
-                    margin-bottom: -20px;
-                    font-size: 16px;
                 }}
             </style>
         </head>
@@ -226,6 +226,10 @@ def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, rece
             </body>
         </html>
     """
+    # save email to file
+    with open('email.html', 'w') as f:
+        f.write(html)
+
     message = nylas.messages.send(
         grant_id,
         request_body={
@@ -260,9 +264,9 @@ def send_password_reset_email(email, reset_link):
             <head>
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
                 <style> p {{
-                        line-height: 1.5;
-                        margin-bottom: -20px;
-                        font-size: 16px;
+                    font-size: 14px;
+                    margin: 5px 0;
+                    line-height: 1.5;
                     }}
                 </style>
             </head>

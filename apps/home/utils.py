@@ -105,7 +105,8 @@ email_blacklist = [
                 'amkryukov@gmail.com',
                 '@doe.com',
                 '@xxx.com',
-                '@web.com'
+                '@web.com',
+                'calendar.google.com',
              ]
 
 def read_black_list_venue_types():
@@ -132,6 +133,8 @@ def read_black_list_venue_types():
     return venue_types
 
 black_list_venue_types = read_black_list_venue_types()
+
+# print(black_list_venue_types)
 
 must_not_include_venue_types = [
     'musician',
@@ -181,7 +184,7 @@ venue_black_list = [
     'Horse Boarding'
 ]
 llm = ChatOpenAI(
-    model_name="gpt-3.5-turbo-0125",
+    model_name='gpt-4',
     temperature=0,
     openai_api_key=openai_api_key
 )
@@ -268,9 +271,9 @@ def extract_first_name(email):
     '''
     Use the LLM to extract the first name from the given text.
     '''
-    template = """Extract the first name from the given text. The text is: {email}.
-                  Do not add any attributes, Do NOT add any additional words. 
-                  Just First Name of Person only. If there is no first name of person then return 'None'."""
+    template = """Extract the most likely first name of the person from the given text: {email}.
+    Do not include any titles, attributes, or additional words.
+    If no first name is present or identifiable, return nothing — completely empty (not even quotes, not even a period)."""
     
     prompt = PromptTemplate(template=template, input_variables=["email"])
 
@@ -279,53 +282,33 @@ def extract_first_name(email):
     output = llm_chain.invoke(input=email)
     return output['text']
 
+def extract_city_state(address):
+    '''
+    Use the LLM to extract the city and state from the given address.
+    '''
+    if address is None or address.strip() == "":
+        return '', ''
+    
+    template = """Extract the city and state from the given address. The address is: {address}.
+                  Do not add any attributes, Do NOT add any additional words. 
+                  Just City and State only in json format like this:
+                  {{"city": "City Name", "state": "State Name"}}. If there is no state return region ."""
+    
+    prompt = PromptTemplate(template=template, input_variables=["address"])
 
-def extract_address(address):
-    address_parser  = pyap.parse(address, country='US')
+    llm_chain = LLMChain(prompt=prompt, llm=llm)
+
+    
+    output = llm_chain.invoke(input=address)
     try:
-        parsed_address = address_parser[0]
-        city = parsed_address.city
-        state = parsed_address.region1
-    except IndexError as e:
-        # print(address, 'not parsed', str(e))
-        try:
-            city = address.split(',')[0].strip().split()[-1]
-        except Exception as e:
-            city = ""
-            state = ""
-            return city, state
-            
-        try:
-            state = address.split(',')[1].strip().split()[0]
-        except Exception as e:
-            state = ""
+        text = json.loads(output['text'])
+        city = text.get('city', '')
+        state = text.get('state', '')
+        return city, state
+    except json.JSONDecodeError:
+        print("Error decoding JSON:", output['text'])
+        return '', ''
 
-    except Exception as e:
-        city = ""
-        state = ""
-
-    if city == "York":
-        city = "New York"
-    if city == "Angeles":
-        city = "Los Angeles"
-    if city == "Vegas":
-        city = "Las Vegas"
-    if city == "Francisco":
-        city = "San Francisco"
-    if city == "Diego":
-        city = "San Diego"
-    if city == "Jose":
-        city = "San Jose"
-    if city == "Antonio":
-        city = "San Antonio"
-    if city == "Orleans":
-        city = "New Orleans"
-    if city == "Beach":
-        city = "Miami Beach"
-    if city == "Clemente":
-        city = "San Clemente"
-
-    return city, state
 
 # class Person(BaseModel):
 #     name: Optional[str] = Field(
@@ -494,6 +477,6 @@ def extract_address(address):
 if __name__ == '__main__':
     # print(check_blacklisted(''))
     
-    print(is_blackeslisted_venue_type(['symphony', 'Music Venue']))
+    print(is_blackeslisted_venue_type(['Middle Schools & High Schools']))
 
 

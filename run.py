@@ -142,7 +142,7 @@ def msg1():
         s="completed"
     else:
         try:
-            print("=========", data['venue'] if type(data) == 'str' else data['venue'][0],  "=========")
+            print("=========", data['venue'], "=========")
             existing_url = Service.query.filter_by(url_id=data['url_id'], user_id=data['user_id'], biz_id=data['bizId']).first()
 
             if existing_url is None:
@@ -154,8 +154,8 @@ def msg1():
                 emails = list(set(filter(None, emails)))
                 
                 new_service = Service(
-                    name= data['venue'] if isinstance(data, str) else data['venue'][0],
-                    venue_type= data['venuetype'] if type(data) == 'str' else data['venuetype'][0],
+                    name= data['venue'],
+                    venue_type= data['venuetype'],
                     website=data['website'],
                     phone=data['Phone'],
                     address=data['address'],
@@ -180,7 +180,7 @@ def msg1():
                     thumnailurl=data['thumnailurl']
                 )
 
-                for idx, email in enumerate([data['Email1'], data['Email2'], data['Email3'], data['Email4'], data['FacebookEmail1'], data['FacebookEmail2']]):
+                for idx, email in enumerate(emails[:4]):  # Limit to first 4 emails
                     email = str(email).strip()
                     if email:
                         fn = db.session.query(FirstName).filter_by(email=email).first()
@@ -188,7 +188,7 @@ def msg1():
                             email_str = email.split('@')[0]
                             first_name = extract_first_name(email_str)
                             
-                            venue = data['venue'] if isinstance(data, str) else data['venue'][0]
+                            venue = data['venue']
 
                             if first_name != "None" and first_name.lower() in venue.lower(): # Check if first name is in venue name
                                 first_name = ""
@@ -225,6 +225,36 @@ def msg1():
 
                         # add first names to service
                         setattr(new_service, f"first_name{idx+1}", first_name)
+
+                if data['FacebookEmail1']:
+                    fn1 = db.session.query(FirstName).filter_by(email=data['FacebookEmail1']).first()
+                    if fn1 is None:
+                        email_str = data['FacebookEmail1'].split('@')[0]
+                        first_name = extract_first_name(email_str)
+                        new_first_name = FirstName(
+                            email=data['FacebookEmail1'],
+                            first_name=first_name
+                        )
+                        db.session.add(new_first_name)
+                        db.session.commit()
+                    else:
+                        first_name = fn1.first_name
+                    new_service.first_name5 = first_name
+                
+                if data['FacebookEmail2']:
+                    fn2 = db.session.query(FirstName).filter_by(email=data['FacebookEmail2']).first()
+                    if fn2 is None:
+                        email_str = data['FacebookEmail2'].split('@')[0]
+                        first_name = extract_first_name(email_str)
+                        new_first_name = FirstName(
+                            email=data['FacebookEmail2'],
+                            first_name=first_name
+                        )
+                        db.session.add(new_first_name)
+                        db.session.commit()
+                    else:
+                        first_name = fn2.first_name
+                    new_service.first_name6 = first_name
                 
                 db.session.add(new_service)
                 db.session.commit()

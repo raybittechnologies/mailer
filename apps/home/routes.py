@@ -40,7 +40,7 @@ import urllib.parse
 
 from pywebpush import webpush, WebPushException
 
-from apps.home.utils import check_blacklisted, extract_address, send_push_notification, is_music_venue, get_sub_batches
+from apps.home.utils import check_blacklisted, extract_city_state, send_push_notification, is_music_venue, get_sub_batches
 
 NYLAS_API_KEY = os.getenv('NYLAS_API_KEY')
 NYLAS_API_URI = os.getenv('NYLAS_API_URI')
@@ -211,9 +211,6 @@ def export_all_data():
         city = service.city
         state = service.state
 
-        if city is None or state is None:
-            city, state = extract_address(address)
-
         data = {
             'venue' : service.name,
             'phone': service.phone,
@@ -320,12 +317,7 @@ def view_url_history(url_id):
     user_urls = Service.query.filter_by(url_id=url_id, user_id=current_user.id).all()
     url_list = []
     for url_entry in user_urls:
-        city = url_entry.city
-        state = url_entry.state
         
-        if city is None or state is None:
-            city, state = extract_address(url_entry.address)
-
         url_data = {
             "id": url_entry.id,
             "venue_type": url_entry.venue_type,
@@ -334,8 +326,8 @@ def view_url_history(url_id):
             "address": url_entry.address,
             "url_id": url_entry.url_id,
             "user_id": url_entry.user_id,
-            "city": city,
-            "state": state,
+            "city": url_entry.city,
+            "state": url_entry.state,
             "zip": url_entry.zip,
             "country": url_entry.country,
             "latitude": url_entry.latitude,
@@ -711,6 +703,8 @@ def upload_contact():
                 service['bademail'] = item['bademail']
                 
                 service['biz_id'] = item['venueid']
+                service['city'] = item.get('city', "")
+                service['state'] = item.get('state', "")
                 
 
                 if email and check_blacklisted(email):
@@ -729,6 +723,8 @@ def upload_contact():
                 facebookemail2 = item['facebookemail2'].strip() if item.get('facebookemail2') else ""
                 
                 biz_id = item['venueid']
+                city = item.get('city', "")
+                state = item.get('state', "")
 
                 is_all_empty = email1 == "" and email2 == "" and email3 == "" and email4 == "" and facebookemail1 == "" and facebookemail2 == ""
 
@@ -754,6 +750,8 @@ def upload_contact():
                     service['firstname'] = item['firstname1']
                     service['bademail'] = item['bademail']
                     service['biz_id'] = biz_id
+                    service['city'] = city
+                    service['state'] = state
                     total_services.append(service)
 
                 else:
@@ -773,6 +771,8 @@ def upload_contact():
                         service['bademail'] = item['bademail']
                         # creeat random biz_id
                         service['biz_id'] = biz_id
+                        service['city'] = city
+                        service['state'] = state
 
 
                         if email and check_blacklisted(email):
@@ -854,6 +854,8 @@ def upload_contact():
                     uservice.firstname = service['firstname']
                     uservice.bademail = service['bademail']
                     uservice.biz_id = service['biz_id']
+                    uservice.city = service['city']
+                    uservice.state = service['state']
                     services.append(uservice)
 
                 db.session.bulk_save_objects(services)
@@ -925,7 +927,7 @@ def view_archived_contact():
 @login_required
 @user_approved_required
 def view_archived_campaign():
-    return render_template('home/view_archived_automation.html')
+    return render_template('home/campaigns_archived_view.html')
 
 
 @csrf.exempt        
@@ -941,7 +943,6 @@ def contacts_list(id):
         all_services = []
 
         for service in services:
-            city, state = extract_address(service.address)
             data = {
                 'id': service.id,   
                 'name': service.name,
@@ -958,8 +959,8 @@ def contacts_list(id):
                 'firstname': service.firstname,
                 'customtext': service.customtext,
                 'originalemail': service.originalemail,
-                'city': city,
-                'state': state,
+                'city': service.city,
+                'state': service.state,
                 'bademail': service.bademail,
                 'biz_id': service.biz_id
             }
@@ -979,7 +980,6 @@ def get_service(id):
     if service is None:
         return {"success": False, 'message': "Service not found."}, 404
     
-    city, state = extract_address(service.address)
     data = {
         'id': service.id,
         'name': service.name,
@@ -996,8 +996,8 @@ def get_service(id):
         'firstname': service.firstname if service.firstname and service.firstname != "None" else "",
         'customtext': service.customtext,
         'originalemail': service.originalemail,
-        'city': city,
-        'state': state,
+        'city': service.city,
+        'state': service.state,
         'bademail': service.bademail,
         'biz_id': service.biz_id
     }
@@ -1034,7 +1034,6 @@ def contacts_all_list():
     all_services = []
 
     for service in services:
-        city, state = extract_address(service.address)
         biz_id = service.biz_id
         data = {
             'id': service.id,
@@ -1052,8 +1051,8 @@ def contacts_all_list():
             'firstname': service.firstname if service.firstname and service.firstname != "None" else "",
             'customtext': service.customtext,
             'originalemail': service.originalemail,
-            'city': city,
-            'state': state,
+            'city': service.city,
+            'state': service.state,
             'bademail': service.bademail,
             'biz_id': service.biz_id
         }
@@ -1070,7 +1069,6 @@ def contacts_archived_list():
     all_services = []
 
     for service in services:
-        city, state = extract_address(service.address)
         biz_id = service.biz_id
         data = {
             'id': service.id,
@@ -1088,8 +1086,8 @@ def contacts_archived_list():
             'firstname': service.firstname if service.firstname and service.firstname != "None" else "",
             'customtext': service.customtext,
             'originalemail': service.originalemail,
-            'city': city,
-            'state': state,
+            'city': service.city,
+            'state': service.state,
             'bademail': service.bademail,
             'biz_id': service.biz_id
         }

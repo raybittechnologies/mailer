@@ -36,6 +36,26 @@
                 </div>
             </div>
         </div>
+        <div class="modal fade" id="deleteCampaignModal" tabindex="-1" role="dialog" aria-labelledby="deleteCampaignModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="deleteCampaignModalLabel">Are you sure to delete this Campaign?</h5>
+                  <button type="button" class="btn-close text-dark" id="close-deletejob-modal" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <form action="/campaign/delete" style="display: contents" method="post"> 
+                    <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="campaignid" id="delete-modal-campid"/>
+                    <div class="modal-footer">
+                        <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <input class="btn btn-danger" type="submit" tabindex="0" value="Delete">
+                    </div>
+                </form>
+              </div>
+            </div>
+        </div>
 
         {% include "includes/footer.html" %}
     </div>
@@ -90,8 +110,8 @@
                         render: function (id, type, row) {
                             // Create action buttons HTML'
                             var campaignid = row.campaignid;
-                            var buttons = '<a class="btn btn-success btn-sm" href="/campaign/view/' + campaignid + '">View</a> ';
-                                // '<button class="btn btn-secondary btn-sm" data-bs-toggle="modal" id="camp_' + id + '" data-bs-target="#deleteCampaignModal" type="submit">Archive</button>';
+                            var buttons = '<a class="btn btn-success btn-sm" href="/campaign/view/' + campaignid + '">View</a> ' +
+                                '<button class="btn btn-danger btn-sm" data-bs-toggle="modal" id="camp_' + id + '" data-bs-target="#deleteCampaignModal" type="submit">Delete</button>';
 
                             return buttons;
                         }
@@ -100,6 +120,75 @@
                 ]
             },
         );
+
+        
+        $('#filtersTable').on('click', 'button', event => {
+            // console.log(data)
+            if (event.target.innerText === "DELETE") {
+                const id = event.target.id.split("_")[1];
+                document.getElementById("delete-modal-campid").value = id;
+            } else {
+                console.log(event.target.innerText)
+            }
+        });
+
+
+        $('#deleteCampaignModal').on('submit', function(e) { //use on if jQuery 1.7+
+            e.preventDefault();  //prevent form from submitting
+            const campid = document.getElementById("delete-modal-campid").value;
+
+            $('#close-deletejob-modal').click();
+
+            Swal.fire({
+                title: 'Deleting Campaign...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
+
+            const formData = new FormData();
+            formData.append('campid', campid);
+            formData.append('csrf_token', document.getElementById("csrf_token").value);
+
+            fetch('/campaign/delete',{
+                method: 'POST',
+                body: formData
+            })
+            .then((response) => {
+                if(!response.ok)
+                    return response.text().then(text => { throw new Error(text) })
+                else
+                    return response.json()
+            })
+            .then((data) => {
+                if (data.success) {
+                    // console.log(data);
+                    dataTable.ajax.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: data.message,
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                } else {
+                    console.log(data.message);
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Oops...",
+                        text: data.message,
+                    });
+                }
+            })
+            .catch((err) => {
+                console.log(err);
+                Swal.fire({
+                    icon: "warning",
+                    title: "Oops...",
+                    text: data.message,
+                });
+            })
+        });
         
 
         // var interval = setInterval(function () {
