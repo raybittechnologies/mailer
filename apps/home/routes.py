@@ -3577,8 +3577,6 @@ def get_reminders():
         }
         reminder_list.append(reminder_data)
 
-    print("reminder_list", reminder_list[0])
-
     return jsonify(reminder_list)
 
 # get_reminder
@@ -3593,7 +3591,7 @@ def get_reminder():
     else:
         reminder_data = {
             'reminder_id': reminder.id,
-            'title': reminder.title,
+            'title': reminder.title,    
             'note': reminder.note,
             'name': reminder.name,
             'email': reminder.email,
