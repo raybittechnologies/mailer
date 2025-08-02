@@ -201,7 +201,13 @@ def yelp_scraper_run(url, id, user_info):
             for business in response_json['legacyProps']['searchAppProps']['searchPageProps']['mainContentComponentsListProps']:
                 if "bizId" in business:
                     bizId = business['bizId']
-                    venue_name = business['searchResultBusiness']['name'].replace("&amp;", "&")
+                    try:
+                        venue_name = business['searchResultBusiness']['name'].replace("&amp;", "&")
+                    except Exception as e:
+                        print("Failed to get venue name", str(e))
+                        print("Business data:", business)
+                        continue
+                    
                     venue_types = [i['title'].replace("&amp;", "&") for i in business['searchResultBusiness']['categories']]
                     phone = business['searchResultBusiness']['phone']
                     

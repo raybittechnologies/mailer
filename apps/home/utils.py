@@ -107,6 +107,8 @@ email_blacklist = [
                 '@xxx.com',
                 '@web.com',
                 'calendar.google.com',
+                '@n-.os',
+                '@9j.wn'
              ]
 
 def read_black_list_venue_types():
@@ -229,6 +231,7 @@ def is_blackeslisted_venue_type(venue_types):
         
         if "colleges & universities" in low_cases_venue_types and len(venue_types) > 1:
             return True 
+        
 
     return False
     
@@ -271,9 +274,9 @@ def extract_first_name(email):
     '''
     Use the LLM to extract the first name from the given text.
     '''
-    template = """Extract the most likely first name of the person from the given text: {email}.
-    Do not include any titles, attributes, or additional words.
-    If no first name is present or identifiable, return nothing — completely empty (not even quotes, not even a period)."""
+    template = """Extract the most likely first name of the person from the given text: {email}
+    Return only the first name. No titles, no attributes, no explanations, no extra words.
+    If no first name is clearly present, return nothing at all — just a completely empty string. Do NOT return quotes, periods, or messages like 'no name found'. Only return the name or leave it blank."""
     
     prompt = PromptTemplate(template=template, input_variables=["email"])
 

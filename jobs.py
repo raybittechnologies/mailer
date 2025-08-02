@@ -92,7 +92,7 @@ def email_automation_job(nylas_client, actionid, jobid, useremail):
 
             print("Sending to", reciver_email)
             
-            unsubscribe_link = WEB_HOST_IP + "/unsubscribe/choose?token=" + str(unsubscribe_token) + "&_id=" + str(action.userid)
+            unsubscribe_link = WEB_HOST_IP + "/us/choose?token=" + str(unsubscribe_token) + "&_id=" + str(action.userid)
             # serv = Uploadedservice.query.filter_by(unsubscribe_token=email.unsubscribe_token).first()
             
             # if serv is None:

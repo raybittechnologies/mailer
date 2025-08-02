@@ -2919,7 +2919,7 @@ def get_archived_emails():
     return jsonify(temp_list)
 
 
-@blueprint.route('/unsubscribe/choose', methods=['GET'])
+@blueprint.route('/us/choose', methods=['GET'])
 def unsubscribe_choose():
     id = request.args.get('_id')
     token = request.args.get('token')
@@ -2927,7 +2927,7 @@ def unsubscribe_choose():
     return render_template('home/unsubscribe_choose.html', token=token, domain=WEB_HOST_IP, id=id)
 
 
-@blueprint.route('/unsubscribe/all', methods=['GET'])
+@blueprint.route('/us/all', methods=['GET'])
 def unsubscribe_all():
 
     token = request.args.get('token')
@@ -3055,7 +3055,7 @@ def unsubscribe_all():
     
     return "You have been unsubscribed successfully."
 
-@blueprint.route('/unsubscribe/<token>', methods=['GET'])
+@blueprint.route('/us/<token>', methods=['GET'])
 def unsubscribe(token):
     emails = Email.query.filter_by(unsubscribe_token=token).all()
     service = Uploadedservice.query.filter_by(unsubscribe_token=token).first()
