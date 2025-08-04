@@ -226,10 +226,6 @@ def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, rece
             </body>
         </html>
     """
-    # save email to file
-    with open('email.html', 'w') as f:
-        f.write(html)
-
     message = nylas.messages.send(
         grant_id,
         request_body={

@@ -2926,6 +2926,20 @@ def unsubscribe_choose():
     WEB_HOST_IP = os.getenv("WEB_HOST_IP")
     return render_template('home/unsubscribe_choose.html', token=token, domain=WEB_HOST_IP, id=id)
 
+@blueprint.route('/unsubscribe/choose', methods=['GET'])
+def unsub_choose():
+    # redirect to unsubscribe_choose
+    token = request.args.get('token')
+    id = request.args.get('_id')
+    return redirect(url_for('home_blueprint.unsubscribe_choose', token=token, _id=id))
+
+
+@blueprint.route('/unsubscribe/all', methods=['GET'])
+def unsub_all():
+    # redirect to unsubscribe_all
+    token = request.args.get('token')
+    id = request.args.get('_id')
+    return redirect(url_for('home_blueprint.unsubscribe_all', token=token, _id=id))
 
 @blueprint.route('/us/all', methods=['GET'])
 def unsubscribe_all():
@@ -3054,6 +3068,12 @@ def unsubscribe_all():
         return "Something went wrong. Please try again."
     
     return "You have been unsubscribed successfully."
+
+
+@blueprint.route('/unsubscribe/<token>', methods=['GET'])
+def unsub(token):
+    # redirect to unsubscribe
+    return redirect(url_for('home_blueprint.unsubscribe', token=token))
 
 @blueprint.route('/us/<token>', methods=['GET'])
 def unsubscribe(token):
