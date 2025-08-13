@@ -2482,7 +2482,8 @@ def campaigns():
         db.session.commit()
         return redirect(url_for('home_blueprint.add_template'))
     else:
-        return render_template('home/campaigns.html', segment="campaigns")
+        mailings=Mailing.query.filter_by(user_id=current_user.id).first()
+        return render_template('home/campaigns.html', segment="campaigns",mailings=mailings)
     
 @csrf.exempt
 @blueprint.route('/create/campaign', methods=['POST'])

@@ -244,6 +244,40 @@ def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, rece
     # print(message.data)
     return message
 
+def send_email_via_unimail(mailings, subject, toname, fromemail, fromname, body, receiver, grant_id):
+        
+    html=f"""
+        <!doctype html>
+        <html>
+        <head>
+            <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+            <style> p {{
+                    line-height: 1.5;
+                    margin-bottom: -14px;
+                    font-size: 16px;
+                }}
+            </style>
+        </head>
+            <body style="font-family: sans-serif;">
+            {body}
+            </body>
+        </html>
+    """
+    url = "https://beunimail.raybitprojects.com/send-email"
+    payload = {
+        "id": mailings.user_id,
+        "to": receiver,
+        "subject": subject,
+        "message": html
+    }
+
+    try:
+        response = requests.post(url, json=payload)
+        response.raise_for_status()  # Raise an error for bad responses (4xx or 5xx)
+        return response.json()  # or `True` if you just want to check success
+    except requests.exceptions.RequestException as e:
+        print(f"Failed to send email: {e}")
+        return None
 
 def send_password_reset_email(email, reset_link):
     

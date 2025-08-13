@@ -1,6 +1,6 @@
 import time
 from apps import scheduler, db
-from apps.models import Email, Automation, Action, Template, Uploadedservice, UserCredit, Service, PushNotificationInfo, Reminder
+from apps.models import Email, Automation, Action,Mailing, Template, Uploadedservice, UserCredit, Service, PushNotificationInfo, Reminder
 from apps.authentication.models import Users
 from apps.home.emailler import send_email_via_nylas, send_reconnect_email_via_mailtrap, send_email_via_mailtrap
 from nylas import Client
@@ -13,7 +13,9 @@ from flask import current_app, jsonify
 from sqlalchemy import func
 
 
-def email_automation_job(nylas_client, actionid, jobid, useremail):
+def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
+    print("🔥 email_automation_job STARTED:", jobid)
+    print("Automation job started")
     with scheduler.app.app_context():
         print("Automation job started", jobid)
         
@@ -92,7 +94,7 @@ def email_automation_job(nylas_client, actionid, jobid, useremail):
 
             print("Sending to", reciver_email)
             
-            unsubscribe_link = WEB_HOST_IP + "/us/choose?token=" + str(unsubscribe_token) + "&_id=" + str(action.userid)
+            unsubscribe_link = WEB_HOST_IP + "/unsubscribe/choose?token=" + str(unsubscribe_token) + "&_id=" + str(action.userid)
             # serv = Uploadedservice.query.filter_by(unsubscribe_token=email.unsubscribe_token).first()
             
             # if serv is None:
@@ -123,7 +125,7 @@ def email_automation_job(nylas_client, actionid, jobid, useremail):
             
             is_sent = False
 
-            grant_id = user.nylas_access_token
+            grant_id = 'user.nylas_access_token'
 
             print("Grant ID:", grant_id)
 
@@ -139,8 +141,17 @@ def email_automation_job(nylas_client, actionid, jobid, useremail):
 
             while True:
                 try:
-                    response = send_email_via_nylas(nylas_client, subject, venue, useremail, fromname, mail_body, reciver_email, grant_id)
-                    is_sent = True
+                    mailings=Mailing.query.filter_by(user_id=userId).first()
+                    if mailings:
+                        print("Unimail---")
+                        response = send_email_via_unimail(mailings, subject, venue, useremail, fromname, mail_body, reciver_email, grant_id)
+                    else:
+                        print("Nylas---")
+                        response = send_email_via_nylas(nylas_client, subject, venue, useremail, fromname, mail_body, reciver_email, grant_id)
+                    if response:
+                        is_sent = True
+                    else:
+                        is_sent = False
                     break
                 except Exception as e:
                     print("Failed", str(e))

@@ -279,3 +279,25 @@ class GlobalSetting(db.Model):
     name = db.Column(db.String(255), index=True, unique=True)
     value = db.Column(db.String(1024))
 
+
+class Mailing(db.Model):
+    __tablename__ = 'mailings'
+
+    id = db.Column(db.Integer, primary_key=True)
+    oauth_id = db.Column(db.String(255))
+    oauth_provider = db.Column(db.String(255))
+    email = db.Column(db.String(255))
+    oauth_access_token = db.Column(db.Text)
+    oauth_refresh_token = db.Column(db.Text)
+    appPassword = db.Column(db.String(255))
+    smtp_host = db.Column(db.String(255))
+    smtp_port = db.Column(db.String(10))
+    smtp_username = db.Column(db.String(255))
+    smtp_password = db.Column(db.String(255))
+    smtp_secure = db.Column(db.String(10))  # e.g., 'ssl' or 'tls'
+    smtp_require_tls = db.Column(db.Boolean)
+    user_id = db.Column(db.Integer, index=True)
+    createdAt = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    updatedAt = db.Column(db.DateTime, onupdate=datetime.datetime.utcnow, default=datetime.datetime.utcnow)
+
+

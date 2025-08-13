@@ -67,7 +67,7 @@
                         <form id="create-campaign-form" action="/create/campaign" method="post">
                             <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                             <div class="modal-body">
-                                {% if current_user.nylas_access_token %}
+                                {% if current_user.nylas_access_token or mailings %}
                                     <div class="form-group" >
                                         <label for="select-contacts" class="col-form-label">Select Contacts:</label>
                                         <select class="form-control form-select" id="select-contacts" name="select-contacts">
@@ -91,26 +91,37 @@
                                     <!-- Error notification when user put over max emails per day -->
                                     <p class="mb-4 mx-auto text-danger" role="alert" id="error-notification" style="display: none;">
                                     </p>
-                                    
-                                    <div class="form-check form-switch">
-                                        {% if current_user.is_auto_unsub %}
-                                        {% set checked = 'checked' %}
-                                        {% else %}
-                                        {% set checked = '' %}
-                                        {% endif %}
-                                        <strong class="text-dark">Unsubscribe contact upon reply</strong>
-                                        <input class="form-check-input" type="checkbox" id="auto-unsub" {{ checked }}>
-                                        <!-- tooltip -->
-                                        <span class="form-text text-secondary">
-                                        <i class="fas fa-question-circle" data-bs-toggle="modal" data-bs-target="#tooltipModal" id="tooltipIcon"></i>
-                                        </span>
-                                    </div>
 
+                                {% elif current_user.hasCustom %}
+                                    <div class="form-group" >
+                                        <label for="select-contacts" class="col-form-label">Select Contacts:</label>
+                                        <select class="form-control form-select" id="select-contacts" name="select-contacts">
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="select-workflow" class="col-form-label">Select Workflow:</label>
+                                        <select class="form-control form-select" id="select-workflow" name="select-workflow">
+                                        </select>
+                                    </div>
+                                    <!-- <div class="form-group">
+                                        <label for="workflow-description" class="col-form-label">Description:</label>
+                                        <textarea type="text" class="form-control" id="workflow-description" name="workflow-description" readonly></textarea>
+                                    </div> -->
+                                    <div class="form-group">
+                                        <label for="max-emails-per-day" class="col-form-label">Max Emails Per Day:</label>
+                                        <input type="number" class="form-control" id="max-emails-per-day" min="1" max="" name="max-emails-per-day" required></input>
+                                        <input type="hidden" id="emails-daily-limit" name="emails-daily-limit" >
+                                    </div>
+                                    <p class="mb-4 mx-auto text-info" id="user-notification"></p>
+                                    <!-- Error notification when user put over max emails per day -->
+                                    <p class="mb-4 mx-auto text-danger" role="alert" id="error-notification" style="display: none;">
+                                    </p>
                                 {% else %}
                                     <a href='{{ url_for("home_blueprint.nylas_auth") }}' class="btn btn-primary">Connect EMAIL</a>
+                                    <a href='https://unimail.raybitprojects.com/?userId={{current_user.id}}&redirectUrl={{ request.url }}' class="btn btn-primary">Connect EMAIL via Unimail</a>
                                 {% endif %}
                             </div>
-                            {% if current_user.nylas_access_token %}
+                            {% if current_user.nylas_access_token or mailings%}
                                 <div class="modal-footer form-group">
                                     <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Close</button>
                                     <button type="submit" class="btn bg-gradient-primary" id="create-campaign-button" >Create</button>
