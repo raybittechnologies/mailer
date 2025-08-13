@@ -40,7 +40,7 @@ import urllib.parse
 
 from pywebpush import webpush, WebPushException
 
-from apps.home.utils import check_blacklisted, extract_city_state, send_push_notification, is_music_venue, get_sub_batches
+from apps.home.utils import check_blacklisted, extract_city_state, send_push_notification, is_music_venue, get_sub_batches, check_emailable
 
 NYLAS_API_KEY = os.getenv('NYLAS_API_KEY')
 NYLAS_API_URI = os.getenv('NYLAS_API_URI')
@@ -652,6 +652,7 @@ def upload_contact():
         #  Batch operation 2021-09-07
         auto_batch = request.form.get('auto-batch', True)
         batch_out_music_venue = request.form.get('batch-out-music-venue', True)
+        verify_email = request.form.get('verify-email', True)
 
         # print("auto_batch: ", auto_batch)
         # print("batch_out_music_venue: ", batch_out_music_venue)
@@ -842,7 +843,10 @@ def upload_contact():
                 db.session.add(batch_file)
                 db.session.flush()
                 file_id = batch_file.id
+
+                emailables = []
                 for service in sub_batch:
+
                     uservice = Uploadedservice(name=service['venue'], venue_type=service['venue_type'], email=service['email'], user_id = current_user.id, file_id=file_id)
                     uservice.website = service['website']
                     uservice.phone = service['phone']
@@ -856,9 +860,41 @@ def upload_contact():
                     uservice.biz_id = service['biz_id']
                     uservice.city = service['city']
                     uservice.state = service['state']
+
+                    if verify_email and service['email']: # if verify_email is ON
+                        emailable_email = Emailables.query.filter_by(email=service['email']).first()
+                        if emailable_email:
+                            score = emailable_email.score
+                            if emailable_email.state.lower() != 'unknown' and score <= 50:
+                                uservice.email = ''
+                                uservice.is_unsubscribed = True
+                                uservice.bademail = service['email']
+                        else:
+                            emailable_email = check_emailable(service['email'])
+                            if emailable_email.status_code == 200:
+                                emailable = Emailables()
+                                emailable.email = service['email']
+                                score = emailable_email.score
+                                emailable.score = score
+                                emailable.state = emailable_email.state
+                                emailable.accept_all = 1 if emailable_email.accept_all else 0
+                                emailables.append(emailable)
+
+                                print("Emailable email: ", emailable_email.email, " Score: ", emailable_email.score, " State: ", emailable_email.state)
+
+                                if emailable_email.state.lower() != 'unknown' and score <= 50:
+                                    uservice.email = ''
+                                    uservice.is_unsubscribed = 1
+                                    uservice.bademail = service['email']
+
                     services.append(uservice)
 
-                db.session.bulk_save_objects(services)
+                if services:
+                    db.session.bulk_save_objects(services)
+
+                if emailables:
+                    db.session.bulk_save_objects(emailables)
+
                 db.session.commit()
 
         return {"success": True, "message": "File uploaded successfully."}

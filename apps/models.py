@@ -87,7 +87,7 @@ class Uploadedservice(db.Model):
     file_id = db.Column(db.String(255))
     create_datetime = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
     unsubscribe_token = db.Column(db.String(128), nullable=False, default=generate_unsubscribe_token, index=True)
-    is_unsubscribed = db.Column(db.Integer, default=0)
+    is_unsubscribed = db.Column(db.Integer, default=0) # 0: not unsubscribed, 1: unsubscribed
     website = db.Column(db.String(1024))
     phone = db.Column(db.String(32), index=True)
     address = db.Column(db.String(191), index=True)
@@ -279,3 +279,11 @@ class GlobalSetting(db.Model):
     name = db.Column(db.String(255), index=True, unique=True)
     value = db.Column(db.String(1024))
 
+
+
+class Emailables(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), index=True, unique=True)
+    score = db.Column(db.Integer, default=0)
+    state = db.Column(db.String(50))
+    accept_all = db.Column(db.Integer, default=0)  # 1: accept all, 0: not accept all

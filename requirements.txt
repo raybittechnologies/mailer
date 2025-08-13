@@ -30,3 +30,4 @@ pyap
 pywebpush
 tzlocal
 zenrows
+emailable

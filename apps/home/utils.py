@@ -4,6 +4,8 @@ from langchain_openai import ChatOpenAI
 import pyap
 from pywebpush import webpush, WebPushException
 import json
+
+import emailable
 from dotenv import load_dotenv
 load_dotenv()
 # from langchain_community.callbacks import get_openai_callback
@@ -45,6 +47,9 @@ openai_api_key=os.getenv("OPENAI_API_KEY")
 # @pixelspread.com
 # Emails with more than 1 period after the @ sign (ex.materialdesigniconsfont@4.5.95.min.css)
 # Emails ending in .webp (not even necessarily directly after the @ sign too!)
+
+
+emailable_client = emailable.Client(api_key=os.getenv("EMAILABLE_API_KEY"))
 
 
 email_blacklist = [
@@ -477,9 +482,15 @@ def extract_city_state(address):
 #             email_name_pairs.append({'Email': email, 'First_Name': name})
 #     return email_name_pairs
 
+def check_emailable(email):
+    response = emailable_client.verify(email)
+    return response
+    
 if __name__ == '__main__':
     # print(check_blacklisted(''))
     
-    print(is_blackeslisted_venue_type(['Middle Schools & High Schools']))
+    # print(is_blackeslisted_venue_type(['Middle Schools & High Schools']))
 
-
+    response  = check_emailable('test@example.com')
+    print(response.status_code)
+    print(response.accept_all)
