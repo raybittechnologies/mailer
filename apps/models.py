@@ -287,3 +287,5 @@ class Emailables(db.Model):
     score = db.Column(db.Integer, default=0)
     state = db.Column(db.String(50))
     accept_all = db.Column(db.Integer, default=0)  # 1: accept all, 0: not accept all
+    created_at = db.Column(db.DateTime(), default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime(), onupdate=datetime.datetime.utcnow, default=datetime.datetime.utcnow)

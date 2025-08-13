@@ -862,27 +862,35 @@ def upload_contact():
                     uservice.state = service['state']
 
                     if verify_email and service['email']: # if verify_email is ON
-                        emailable_email = Emailables.query.filter_by(email=service['email']).first()
-                        if emailable_email:
-                            score = emailable_email.score
-                            if emailable_email.state.lower() != 'unknown' and score <= 50:
+                        emailable = Emailables.query.filter_by(email=service['email']).first()
+                        current_datetime = datetime.datetime.utcnow()
+                        # time diff is less than 6 month
+                        time_diff = current_datetime - emailable.updated_at if emailable else datetime.timedelta(days=181)
+                        
+                        if emailable and time_diff < datetime.timedelta(days=180):
+                            score = emailable.score
+                            if emailable.state.lower() != 'unknown' and score <= 50:
                                 uservice.email = ''
                                 uservice.is_unsubscribed = True
                                 uservice.bademail = service['email']
                         else:
-                            emailable_email = check_emailable(service['email'])
-                            if emailable_email.status_code == 200:
-                                emailable = Emailables()
+                            emailable_email_check = check_emailable(service['email'])
+                            if emailable_email_check.status_code == 200:
+
+                                if emailable is None:
+                                    emailable = Emailables()
+
                                 emailable.email = service['email']
-                                score = emailable_email.score
+                                score = emailable_email_check.score
                                 emailable.score = score
-                                emailable.state = emailable_email.state
-                                emailable.accept_all = 1 if emailable_email.accept_all else 0
+                                emailable.state = emailable_email_check.state
+
+                                emailable.accept_all = 1 if emailable_email_check.accept_all else 0
                                 emailables.append(emailable)
 
-                                print("Emailable email: ", emailable_email.email, " Score: ", emailable_email.score, " State: ", emailable_email.state)
+                                print("Emailable email: ", emailable.email, " Score: ", emailable.score, " State: ", emailable.state)
 
-                                if emailable_email.state.lower() != 'unknown' and score <= 50:
+                                if emailable_email_check.state.lower() != 'unknown' and score <= 50:
                                     uservice.email = ''
                                     uservice.is_unsubscribed = 1
                                     uservice.bademail = service['email']
