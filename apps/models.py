@@ -283,7 +283,7 @@ class GlobalSetting(db.Model):
 class Mailing(db.Model):
     __tablename__ = 'mailings'
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.String(255), primary_key=True)
     oauth_id = db.Column(db.String(255))
     oauth_provider = db.Column(db.String(255))
     email = db.Column(db.String(255))

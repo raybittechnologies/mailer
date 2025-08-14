@@ -2,7 +2,7 @@ import time
 from apps import scheduler, db
 from apps.models import Email, Automation, Action,Mailing, Template, Uploadedservice, UserCredit, Service, PushNotificationInfo, Reminder
 from apps.authentication.models import Users
-from apps.home.emailler import send_email_via_nylas, send_reconnect_email_via_mailtrap, send_email_via_mailtrap
+from apps.home.emailler import send_email_via_nylas,send_email_via_unimail, send_reconnect_email_via_mailtrap, send_email_via_mailtrap
 from nylas import Client
 from jinja2 import Template as JT
 import os

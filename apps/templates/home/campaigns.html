@@ -29,7 +29,7 @@
     <div class="container-fluid py-4">
         
         <div class="container mt-5">
-            <button class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#creatCampaignModalMessage" {% if current_user.nylas_access_token %} onclick="createCampaign()"{% endif %}  >Create campaign</button>
+            <button class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#creatCampaignModalMessage" {% if current_user.nylas_access_token or mailings  %} onclick="createCampaign()"{% endif %}  >Create campaign</button>
             <div class="card col shadow-lg border-0 rounded-lg">
                 <div class="card-header"><h3 class="text-center font-weight-light my-4">My Campaign</h3></div>
                 <div class="card-body">
@@ -232,7 +232,7 @@
         })
         .then((res) => {
             var options = "";
-            // console.log(res);
+            console.log(res);
             templates = res.templates;
             contacts = res.contacts;
             emails_daily_limit = res.emails_daily_limit;
@@ -242,7 +242,7 @@
                 
             } else {
                 for (let i = 0; i < templates.length; i++) {
-                    // console.log(res[i])
+                     console.log(res[i])
                     options += '<option ' +  ' value="' + templates[i].id +'">' + templates[i].template_name + "</option>" ;
                 }
                 document.getElementById("select-workflow").innerHTML = options;

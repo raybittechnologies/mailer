@@ -2121,43 +2121,42 @@ def cancel_membership():
     
 @csrf.exempt
 @blueprint.route('/action/test', methods=['POST'])
-@login_required 
-@user_approved_required
+# @login_required 
+# @user_approved_required
 def action_test():
 
-    print("Action test called")
+    # actionid = request.json['id']
+    # action = Action.query.filter_by(id=actionid).first()
     
-    actionid = request.json['id']
-    action = Action.query.filter_by(id=actionid).first()
+    # test_service = {
+    #     "venue" : "Servcie Name",
+    #     "unsubscribe_link" : "unsubscribe_link",
+    #     "firstname" : "firstname",
+    #     "customtext" : "customtext",
+    #     "originalemail" : "originalemail"
+    # }
     
-    test_service = {
-        "venue" : "Servcie Name",
-        "unsubscribe_link" : "unsubscribe_link",
-        "firstname" : "firstname",
-        "customtext" : "customtext",
-        "originalemail" : "originalemail"
-    }
-    
-    receiver = current_user.email
+    # receiver = current_user.email
     
     try:
-        jinja_temp = JT(action.message)
-        mail_body = jinja_temp.render(test_service)
+        # jinja_temp = JT(action.message)
+        # mail_body = jinja_temp.render(test_service)
         
-        grant_id = current_user.nylas_access_token
-
-        if not grant_id:
-            WEB_HOST_IP = os.getenv("WEB_HOST_IP")
-            subject = "Failed to test email"
-            body = f'''<p> Please click the link below to connect your email.</p>
-                        <a href="{WEB_HOST_IP}/connect_email" style="color: #1a73e8; text-decoration: none;">Connect Email</a>
-                    </p>'''
-            send_email_via_mailtrap(subject , "Robotic Booking Agent", body,  current_user.email)
+        # grant_id = current_user.nylas_access_token
+        mailings=Mailing.query.filter_by(user_id='512').first()
+        response= send_email_via_unimail(mailings, 'subject', 'venue', 'aamirbashir.ahangar@gmail.com', 'fromname', "Test email Body", 'aamirdev10@gmail.com', 'grant_id')
+        # if not grant_id:
+        #     WEB_HOST_IP = os.getenv("WEB_HOST_IP")
+        #     subject = "Failed to test email"
+        #     body = f'''<p> Please click the link below to connect your email.</p>
+        #                 <a href="{WEB_HOST_IP}/connect_email" style="color: #1a73e8; text-decoration: none;">Connect Email</a>
+        #             </p>'''
+        #     send_email_via_mailtrap(subject , "Robotic Booking Agent", body,  current_user.email)
             
-            return {"success": False, "message": body}
+        #     return {"success": False, "message": body}
         
-        send_email_via_nylas(nylas, action.subject , "Servcie Name",  current_user.email, action.fromname,  mail_body, receiver, grant_id)
-        return {"success": True}
+        # send_email_via_unimail(nylas, action.subject , "Servcie Name",  current_user.email, action.fromname,  mail_body, receiver, grant_id)
+        return {"success": response}
         
     except Exception as e:
         print(repr(e))
@@ -2553,7 +2552,7 @@ def create_campaign():
                 'trigger' : 'date',
                 "run_date" : job_starttime.strftime("%Y-%m-%d %H:%M:%S"),
                 "func" : "jobs:email_automation_job",
-                "args" : (nylas, action.id, group.job_id, current_user.email)
+                "args" : (nylas, action.id, group.job_id, current_user.email,current_user.id)
             }
             try:
                 scheduler.add_job(**job) # TODO: Uncomment this line
