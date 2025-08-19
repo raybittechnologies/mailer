@@ -33,6 +33,8 @@ from nylas import Client
 from nylas.models.auth import URLForAuthenticationConfig
 from nylas.models.auth import CodeExchangeRequest
 import pyap
+from flask import Response
+import base64
 from sqlalchemy import or_ , and_
 
 import pandas as pd
@@ -2143,8 +2145,8 @@ def action_test():
         # mail_body = jinja_temp.render(test_service)
         
         # grant_id = current_user.nylas_access_token
-        mailings=Mailing.query.filter_by(user_id='512').first()
-        response= send_email_via_unimail(mailings, 'subject', 'venue', 'aamirbashir.ahangar@gmail.com', 'fromname', "Test email Body", 'aamirdev10@gmail.com', 'grant_id')
+        # mailings=Mailing.query.filter_by(user_id='512').first()
+        # response= send_email_via_unimail(mailings, 'subject', 'venue', 'aamirbashir.ahangar@gmail.com', 'fromname', "Test email Body", 'aamirdev10@gmail.com', 'grant_id')
         # if not grant_id:
         #     WEB_HOST_IP = os.getenv("WEB_HOST_IP")
         #     subject = "Failed to test email"
@@ -2156,7 +2158,54 @@ def action_test():
         #     return {"success": False, "message": body}
         
         # send_email_via_unimail(nylas, action.subject , "Servcie Name",  current_user.email, action.fromname,  mail_body, receiver, grant_id)
-        return {"success": response}
+        html=f"""
+            <html>
+  <body>
+    <p>Hi John,</p>
+
+    <p>
+      Thanks for signing up! Please check the details below.
+    </p>
+
+    <p>
+      <a href="https://6746496e4ff8.ngrok-free.app/click/12345?redirect=https://6746496e4ff8.ngrok-free.app/welcome">
+        Click here to view your dashboard
+      </a>
+    </p>
+
+    <!-- Tracking Pixel -->
+    <img src="https://beunimail.raybitprojects.com/open/1988c41613029dfa.png" 
+         width="100" height="100" 
+         style="" 
+         alt="" />
+  </body>
+</html>
+        """
+        url = "https://beunimail.raybitprojects.com/send-email"
+        payload = {
+            "id": '512',
+            "to": 'huzuhuzair@gmail.com',
+            "subject": "Test",
+            "message": html,
+            "message_id":'1212'
+        }
+
+        try:
+            response = requests.post(url, json=payload)
+            response.raise_for_status()
+            json_data = response.json()
+
+            # Wrap into objects for dot notation
+            # data_obj = SimpleNamespace(id='1212')
+            # response_obj = SimpleNamespace(
+            #     success=json_data.get("success", False),
+            #     message=json_data.get("message", ""),
+            #     data=data_obj
+            # )
+            return {"fail": json_data}
+        except requests.exceptions.RequestException as e:
+            print(f"Failed to send email: {e}")
+            return {"fail": e}
         
     except Exception as e:
         print(repr(e))
@@ -2191,7 +2240,17 @@ def get_action():
 
     return jsonify(action_data)
 
-    
+@blueprint.route("/track.gif/<string:message_id>", methods=["GET"])
+def track_email_open(message_id):
+    email = Email.query.filter_by(mail_id=message_id).first()
+    if email and email.is_opened == 0:
+        email.is_opened = 1
+        db.session.commit()
+
+    # Return a 1x1 transparent GIF
+    gif = b'R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
+    return Response(base64.b64decode(gif), mimetype='image/gif')
+   
 @csrf.exempt
 @blueprint.route('/webhooks', methods=['POST', "GET"])
 def webhook():
