@@ -650,9 +650,13 @@ def upload_contact():
         description = request.form['description']
         # print(request.form)
         #  Batch operation 2021-09-07
-        auto_batch = request.form.get('auto-batch', True)
-        batch_out_music_venue = request.form.get('batch-out-music-venue', True)
-        verify_email = request.form.get('verify-email', True)
+        auto_batch = request.form.get('auto-batch', "false")
+        batch_out_music_venue = request.form.get('batch-out-music-venue', 'false')
+        verify_email = request.form.get('verify-email', 'false')
+
+        print("verify_email: ", verify_email)
+        print("batch_out_music_venue: ", batch_out_music_venue)
+        print("auto_batch: ", auto_batch)
 
         # print("auto_batch: ", auto_batch)
         # print("batch_out_music_venue: ", batch_out_music_venue)
@@ -862,7 +866,7 @@ def upload_contact():
                     uservice.state = service['state']
 
                     try:
-                        if verify_email and service['email']: # if verify_email is ON
+                        if verify_email == 'true' and service['email']: # if verify_email is ON
                             emailable = Emailables.query.filter_by(email=service['email']).first()
                             current_datetime = datetime.datetime.utcnow()
                             # time diff is less than 6 month
