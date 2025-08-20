@@ -871,13 +871,15 @@ def upload_contact():
                             current_datetime = datetime.datetime.utcnow()
                             # time diff is less than 6 month
                             time_diff = current_datetime - emailable.updated_at if emailable else datetime.timedelta(days=181)
-                            
+
                             if emailable and time_diff < datetime.timedelta(days=180):
-                                score = emailable.score
+                                score = emailable.score 
+
                                 if emailable.state.lower() != 'unknown' and score <= 50:
                                     uservice.email = ''
-                                    uservice.is_unsubscribed = True
+                                    uservice.is_unsubscribed = 1
                                     uservice.bademail = service['email']
+                                    # print("uservice: ", uservice.email, " is_unsubscribed: ", uservice.is_unsubscribed, " bademail: ", uservice.bademail)
                             else:
                                 emailable_email_check = check_emailable(service['email'])
                                 if emailable_email_check.status_code == 200:
@@ -893,12 +895,15 @@ def upload_contact():
                                     emailable.accept_all = 1 if emailable_email_check.accept_all else 0
                                     emailables.append(emailable)
 
-                                    print("Emailable email: ", emailable.email, " Score: ", emailable.score, " State: ", emailable.state)
+                                    # print("Emailable email: ", emailable.email, " Score: ", emailable.score, " State: ", emailable.state)
 
                                     if emailable_email_check.state.lower() != 'unknown' and score <= 50:
                                         uservice.email = ''
                                         uservice.is_unsubscribed = 1
                                         uservice.bademail = service['email']
+
+                                else:
+                                    print("Emailable email check failed: ", emailable_email_check.status_code)
 
                     except Exception as e:
                         print("When uploading , verify email", repr(e))

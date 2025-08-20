@@ -29,7 +29,7 @@
     <div class="container-fluid py-4">
         
         <div class="container mt-5">
-            <button class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#creatCampaignModalMessage" {% if current_user.nylas_access_token %} onclick="createCampaign()"{% endif %}  >Create campaign</button>
+            <button class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#creatCampaignModalMessage" >Create campaign</button>
             <div class="card col shadow-lg border-0 rounded-lg">
                 <div class="card-header"><h3 class="text-center font-weight-light my-4">My Campaign</h3></div>
                 <div class="card-body">
@@ -209,7 +209,7 @@
 <script>
     var templates = null;
 
-    function createCampaign() {
+    function get_workflows() {
         fetch('/get_workflows',{
             method: 'POST',
         })
@@ -318,6 +318,10 @@
         //     }
 
         // });
+
+
+        // Get workflows
+        get_workflows();
 
         // Initialize DataTable
         var dataTable = $('#filtersTable').DataTable({

@@ -81,7 +81,7 @@ class Uploadedservice(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128))
     venue_type = db.Column(db.String(255))
-    email =  db.Column(db.String(255), index=True)
+    email =  db.Column(db.String(128), index=True)
     is_bad =  db.Column(db.Integer, default=0)
     user_id = db.Column(db.String(32))
     file_id = db.Column(db.String(255))
@@ -95,7 +95,7 @@ class Uploadedservice(db.Model):
     firstname = db.Column(db.String(255))
     customtext = db.Column(db.String(1024))
     originalemail = db.Column(db.Text)
-    bademail = db.Column(db.String(255), index=True)
+    bademail = db.Column(db.String(128), index=True)
     biz_id = db.Column(db.String(255), index=True)
     is_archived = db.Column(db.Integer, default=0)  # 0: not archived, 1: archived
     city = db.Column(db.String(255))
@@ -107,7 +107,7 @@ class Uploadedservice(db.Model):
         # index for user_id, biz_id, file_id
         db.Index('uploaded-service-idx', "user_id", "biz_id"),
         # unique constraint for name, email, user_id, type, phone, address
-        db.UniqueConstraint('name', 'email', 'user_id', 'phone', 'address', name='uploaded_service_name_email_user_id_uc'),
+        db.UniqueConstraint('name', 'email', 'user_id', 'phone', 'address', 'bademail', name='uploaded_service_name_email_user_id_uc'),
     )
     
 class Uploadedcontactfile(db.Model):
