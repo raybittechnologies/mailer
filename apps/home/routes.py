@@ -2145,8 +2145,8 @@ def action_test():
         # mail_body = jinja_temp.render(test_service)
         
         # grant_id = current_user.nylas_access_token
-        # mailings=Mailing.query.filter_by(user_id='512').first()
-        # response= send_email_via_unimail(mailings, 'subject', 'venue', 'aamirbashir.ahangar@gmail.com', 'fromname', "Test email Body", 'aamirdev10@gmail.com', 'grant_id')
+        # mailings=Mailing.query.filter_by(user_id='517').first()
+        # response1= send_email_via_unimail(mailings, 'subject', 'venue', 'aamirbashir.ahangar@gmail.com', 'fromname', "Test email Body", 'aamirdev10@gmail.com', 'grant_id')
         # if not grant_id:
         #     WEB_HOST_IP = os.getenv("WEB_HOST_IP")
         #     subject = "Failed to test email"
@@ -2183,7 +2183,7 @@ def action_test():
         """
         url = "https://beunimail.raybitprojects.com/send-email"
         payload = {
-            "id": '512',
+            "id": '517',
             "to": 'huzuhuzair@gmail.com',
             "subject": "Test",
             "message": html,
@@ -2192,6 +2192,7 @@ def action_test():
 
         try:
             response = requests.post(url, json=payload)
+            print(response.json())
             response.raise_for_status()
             json_data = response.json()
 
@@ -2202,7 +2203,7 @@ def action_test():
             #     message=json_data.get("message", ""),
             #     data=data_obj
             # )
-            return {"fail": json_data}
+            return {"success": json_data}
         except requests.exceptions.RequestException as e:
             print(f"Failed to send email: {e}")
             return {"fail": e}

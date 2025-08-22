@@ -282,13 +282,13 @@ def send_email_via_unimail(mailings, subject, toname, fromemail, fromname, body,
         json_data = response.json()
 
         # Wrap into objects for dot notation
-        data_obj = SimpleNamespace(id=message_id)
+        data_obj = SimpleNamespace(id=message_id,mailData=json_data.get("data", ""))
         response_obj = SimpleNamespace(
             success=json_data.get("success", False),
             message=json_data.get("message", ""),
             data=data_obj
         )
-
+        print (response_obj)
         return response_obj
     except requests.exceptions.RequestException as e:
         print(f"Failed to send email: {e}")

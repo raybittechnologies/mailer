@@ -300,4 +300,11 @@ class Mailing(db.Model):
     createdAt = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     updatedAt = db.Column(db.DateTime, onupdate=datetime.datetime.utcnow, default=datetime.datetime.utcnow)
 
+class EmailHistory(db.Model):
+    __tablename__ = 'email_history'
+
+    id = db.Column(db.Integer, primary_key=True)
+    mail_id = db.Column(db.String(255))
+    message_id = db.Column(db.String(255))
+
 
