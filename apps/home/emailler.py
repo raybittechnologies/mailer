@@ -4,6 +4,8 @@ import mailtrap as mt
 # from flask import current_app
 # from flask_login import current_user
 from nylas import Client
+from dotenv import load_dotenv
+load_dotenv()
 
 NYLAS_API_KEY = os.getenv('NYLAS_API_KEY')
 NYLAS_API_URI = os.getenv('NYLAS_API_URI')

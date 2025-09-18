@@ -7,6 +7,9 @@ import time
 import json
 import pytz
 import tzlocal
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from apps.authentication.models import Users
 from apps.authentication.util import verify_pass, hash_pass

@@ -13,6 +13,9 @@ import cloudscraper
 from threading import Thread
 import queue
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 from apps.home.utils import check_blacklisted, is_blacklisted
 from uuid import uuid4
 from zenrows import ZenRowsClient
