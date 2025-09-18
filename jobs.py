@@ -125,7 +125,7 @@ def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
             
             is_sent = False
 
-            grant_id = 'user.nylas_access_token'
+            grant_id = user.nylas_access_token
 
             print("Grant ID:", grant_id)
 
@@ -144,7 +144,7 @@ def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
                     mailings=Mailing.query.filter_by(user_id=userId).first()
                     if mailings:
                         print("Unimail---")
-                        response = send_email_via_unimail(mailings, subject, venue, useremail, fromname, mail_body, reciver_email, grant_id)
+                        response = send_email_via_unimail(mailings, subject, venue, useremail, fromname, mail_body, reciver_email, 'grant_id')
                     else:
                         print("Nylas---")
                         response = send_email_via_nylas(nylas_client, subject, venue, useremail, fromname, mail_body, reciver_email, grant_id)
