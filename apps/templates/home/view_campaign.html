@@ -21,6 +21,7 @@
                 <div class="card-header"><h3 class="text-center font-weight-light my-4">My Campaign</h3></div>
                 <div class="card-body">
                 <button  class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#retryJobModal" >Retry</button>
+                <button  class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#forceFailJobModal">Force Fail</button>
                 <table style="width:100%" id="filtersTable" class="table table-striped table-bordered nowrap">
                     <thead>
                     <tr>
@@ -77,6 +78,32 @@
                         <div class="modal-footer">
                             <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
                             <input class="btn btn-success" type="submit" tabindex="0" value="Retry">
+                        </div>
+                    </form>
+                {% else %}
+                    <div class="modal-footer">
+                        <a href='{{ url_for("home_blueprint.nylas_auth") }}' class="btn btn-primary">Connect EMAIL</a>
+                    </div>
+                {% endif %}
+              </div>
+            </div>
+        </div>
+        <div class="modal fade" id="forceFailJobModal" tabindex="-1" role="dialog" aria-labelledby="forceFailJobModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="forceFailJobModalLabel">Are you sure to force fail automations?</h5>
+                  <button type="button" class="btn-close text-dark" id="close-forcefailjob-modal" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                {% if current_user.nylas_access_token %}
+                    <form action="/automation/force-fail" style="display: contents" method="post"> 
+                        <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="campaignid" id="campaignid" value="{{ campaignid }}"/>
+                        <div class="modal-footer">
+                            <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <input class="btn btn-success" type="submit" tabindex="0" value="Force Fail">
                         </div>
                     </form>
                 {% else %}
@@ -182,6 +209,9 @@
             } else if (event.target.innerText === "RETRY") {
                 const jobid = event.target.getAttribute("job_id");
                 document.getElementById("retry-modal-jobid").value = jobid;
+            } else if (event.target.innerText === "FORCE FAIL") {
+                const jobid = event.target.getAttribute("job_id");
+                document.getElementById("force-fail-modal-jobid").value = jobid;
             } else {
                 console.log(event.target.innerText)
             }
@@ -292,6 +322,44 @@
                     title: "Oops...",
                     text: data.message,
                 });
+            })
+        });
+
+        $('#forceFailJobModal').on('submit', function(e) { //use on if jQuery 1.7+
+            e.preventDefault();  //prevent form from submitting
+            const campaignid = document.getElementById("campaignid").value;
+
+            $('#close-forcefailjob-modal').click();
+            
+            Swal.fire({
+                title: 'Force failing...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
+
+            fetch('/automation/force-fail',{
+                method: 'POST',
+                headers : { 'Content-Type': 'application/json' },
+                body: JSON.stringify({"campaignid" : campaignid}),
+            })
+            .then((response) => {
+                if(!response.ok)
+                    return response.text().then(text => { throw new Error(text) })
+                else
+                    return response.json()
+            })
+            .then((data) => {
+                if (data.success) {
+                    dataTable.ajax.reload();
+                    Swal.fire({
+                        icon: 'success',
+                        title: data.message,
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                }
             })
         });
 
