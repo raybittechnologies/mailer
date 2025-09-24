@@ -6,6 +6,9 @@ from apps.home.emailler import send_email_via_nylas, send_reconnect_email_via_ma
 from nylas import Client
 from jinja2 import Template as JT
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 from datetime import datetime, timedelta
 from apps.home.utils import send_push_notification
 import urllib.parse

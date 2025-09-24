@@ -6,6 +6,9 @@ Copyright (c) 2019 - present AppSeed.us
 import os, random, string
 from datetime import timedelta
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class Config(object):
     basedir = os.path.abspath(os.path.dirname(__file__))
