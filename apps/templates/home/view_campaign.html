@@ -352,6 +352,7 @@
             })
             .then((data) => {
                 if (data.success) {
+                    // console.log(data);
                     dataTable.ajax.reload();
                     Swal.fire({
                         icon: 'success',
@@ -359,7 +360,22 @@
                         showConfirmButton: false,
                         timer: 2000
                     });
+                } else {
+                    console.log(data.message);
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Oops...",
+                        text: data.message,
+                    });
                 }
+            })
+            .catch((err) => {
+                console.log(err);
+                Swal.fire({
+                    icon: "warning",
+                    title: "Oops...",
+                    text: data.message,
+                });
             })
         });
 
