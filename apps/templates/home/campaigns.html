@@ -269,7 +269,9 @@
                 document.getElementById("create-campaign-button").disabled = true;
             }
 
-            calculateMaxEmailsPerDay(contacts[0].service_count, emails_daily_limit);
+            if (contacts.length > 0) {
+                calculateMaxEmailsPerDay(contacts[0].service_count, emails_daily_limit);
+            }
 
         })
         .catch((err) => {
@@ -277,7 +279,7 @@
             Swal.fire({
                 icon: "warning",
                 title: "Oops...",
-                text: "Please connect your email to create a campaign.",
+                text: "Something went wrong!",
             });
         });
 
