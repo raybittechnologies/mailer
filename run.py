@@ -77,19 +77,44 @@ job = {
 if scheduler.get_job(job_id) is None:
     try:
         scheduler.add_job(**job) # TODO: Uncomment this line
-        print("Created Credit job ", "job_manage_credit")
+        print("Created Credit job ", job_id)
     except Exception as e:
         print("Failed to create job", str(e))
 
 else:
-    print("job_manage_credit already exists")
+    print("Credit job already exists")
     try:
         scheduler.remove_job(job_id)
         scheduler.add_job(**job) # TODO: Uncomment this line
-        print("Created Credit job ", "job_manage_credit")
+        print("Created Credit job ", job_id)
     except Exception as e:
         print("Failed to create job", str(e))
 
+# Automation status check job
+automation_job_id = 'job_check_automation_status'
+job = {
+    "id": automation_job_id,
+    'trigger': 'cron',
+    'minute': '*/30',  # Every 30 minutes
+    "func": "jobs:job_check_automation_status",
+    "args": ()
+}
+    
+    
+if scheduler.get_job(automation_job_id) is None:
+    try:
+        scheduler.add_job(**job) # TODO: Uncomment this line
+        print("Created Automation Status Check job ", automation_job_id)
+    except Exception as e:
+        print("Failed to create job", str(e))
+else:
+    print("Automation Status Check job already exists")
+    try:
+        scheduler.remove_job(automation_job_id)
+        scheduler.add_job(**job) # TODO: Uncomment this line
+        print("Created Automation Status Check job ", automation_job_id)
+    except Exception as e:
+        print("Failed to create job", str(e))
 
 #  Create a job to send email fro users which has past active reminders, start is eveny Monday, 2 pm in local time
 remind_job_id = 'job_send_reminder_email_past_due'
@@ -106,16 +131,16 @@ job = {
 if scheduler.get_job(remind_job_id) is None:
     try:
         scheduler.add_job(**job) # TODO: Uncomment this line
-        print("Created Credit job ", remind_job_id)
+        print("Created Reminder job ", remind_job_id)
     except Exception as e:
         print("Failed to create job", str(e))
 
 else:
-    print("job_send_reminder_email_past_due already exists")
+    print("Reminder job already exists")
     try:
         scheduler.remove_job(remind_job_id)
         scheduler.add_job(**job) # TODO: Uncomment this line
-        print("Created Credit job ", remind_job_id)
+        print("Created Reminder job ", remind_job_id)
     except Exception as e:
         print("Failed to create job", str(e))
 

@@ -7,13 +7,22 @@ from nylas import Client
 from jinja2 import Template as JT
 import os
 from dotenv import load_dotenv
-
-load_dotenv()
 from datetime import datetime, timedelta
 from apps.home.utils import send_push_notification
 import urllib.parse
 from flask import current_app, jsonify
 from sqlalchemy import func
+from sqlalchemy import or_ , and_
+
+load_dotenv()
+
+NYLAS_API_KEY = os.getenv('NYLAS_API_KEY')
+NYLAS_API_URI = os.getenv('NYLAS_API_URI')
+
+nylas = Client(
+    api_key = NYLAS_API_KEY,
+    api_uri = NYLAS_API_URI,
+)
 
 
 def email_automation_job(nylas_client, actionid, jobid, useremail):
@@ -295,6 +304,40 @@ def job_send_weekly_reminding_past_reminder_email():
             receiver = user_email
             response = send_email_via_mailtrap(subject, fromname, body, receiver)
 
+def job_check_automation_status():
+    with scheduler.app.app_context():
+        # Check and create a job for stucked ones which are not running, and join user data by userid
+        records = db.session.query(Automation, Users, Action).join(Users, Automation.userid == Users.id).join(Action, Automation.action_id == Action.id).filter(
+            or_(Automation.status == 'pending', Automation.status == 'running'),
+            or_(Automation.is_archived == False, Automation.is_archived == None),
+            Automation.action_datetime < datetime.utcnow()
+        ).all()
 
+        for record in records:
+            automation = record.Automation
+            action = record.Action
+            user = record.Users
 
+            # First Job start time is waitdays + 1 minutes
+            job_starttime = datetime.now() + timedelta(days=int(action.waitdays) + int(automation.group_number), minutes=30)
+            job_start_utctime = datetime.utcnow() + timedelta(days=int(action.waitdays) + int(automation.group_number), minutes=30)
+            automation.action_datetime = job_start_utctime
+            job = {
+                "id" : automation.job_id,
+                'trigger' : 'date',
+                "run_date" : job_starttime.strftime("%Y-%m-%d %H:%M:%S"),
+                "func" : "jobs:email_automation_job",
+                "args" : (nylas, action.id, automation.job_id, user.email)
+            }
+
+            if scheduler.get_job(automation.job_id) is None:
+                try:
+                    scheduler.add_job(**job) # TODO: Uncomment this line
+                    print("Created job ", automation.job_id)
+
+                    automation.status = "pending"
+                    automation.action_datetime = job_start_utctime
+                    db.session.commit()
+                except Exception as e:
+                    print("Failed to create job", str(e))
 

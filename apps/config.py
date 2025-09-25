@@ -97,8 +97,8 @@ class Config(object):
     SCHEDULER_JOBSTORES = {
         "default": SQLAlchemyJobStore(url=JobStore_DATABASE_URI)
     }
-    SCHEDULER_EXECUTORS = {"default": {"type": "threadpool", "max_workers": 5000}}
-    SCHEDULER_JOB_DEFAULTS = {"coalesce": False, "max_instances": 5000}
+    SCHEDULER_EXECUTORS = {"default": {"type": "threadpool", "max_workers": 7000}}
+    SCHEDULER_JOB_DEFAULTS = {"coalesce": False, "max_instances": 7000}
     SCHEDULER_API_ENABLED = True
 
     VAPID_PUBLIC_KEY = 'BJtD0PoxxpnXJe2RjT5sF2VUvrI9GMThCdEQgLi4vQit2u44pB19Y7LD8QzAzeC52L7gnaq3kl8T7ZjPczqnBqM'
