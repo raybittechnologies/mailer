@@ -124,21 +124,6 @@ def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
                 continue
             
             is_sent = False
-
-            grant_id = user.nylas_access_token
-
-            print("Grant ID:", grant_id)
-
-            if grant_id is None:
-                job.status = "failed"
-                subject = "Campaign Failed - Please re-connect Email EMAIL"
-                fromname = "Robotic Booking Agent"
-                send_reconnect_email_via_mailtrap(subject, fromname, useremail)
-
-                db.session.commit()
-
-                return
-
             while True:
                 try:
                     mailings=Mailing.query.filter_by(user_id=userId).first()
@@ -147,8 +132,17 @@ def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
                         response = send_email_via_unimail(mailings, subject, venue, useremail, fromname, mail_body, reciver_email, 'grant_id')
                     else:
                         print("Nylas---")
+                        grant_id = user.nylas_access_token
+                        print("Grant ID:", grant_id)
+                        if grant_id is None:
+                            job.status = "failed"
+                            subject = "Campaign Failed - Please re-connect Email EMAIL"
+                            fromname = "Robotic Booking Agent"
+                            send_reconnect_email_via_mailtrap(subject, fromname, useremail)
+                            db.session.commit()
+                            return
                         response = send_email_via_nylas(nylas_client, subject, venue, useremail, fromname, mail_body, reciver_email, grant_id)
-                    print(response)
+                        print(response)
                     if response:
                         is_sent = True
                     else:
