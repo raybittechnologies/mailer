@@ -67,7 +67,7 @@
                         <form id="create-campaign-form" action="/create/campaign" method="post">
                             <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                             <div class="modal-body">
-                                {% if current_user.nylas_access_token %}
+                                <div style="{% if current_user.nylas_access_token %} display: block; {% else %} display: none; {% endif %}">
                                     <div class="form-group" >
                                         <label for="select-contacts" class="col-form-label">Select Contacts:</label>
                                         <select class="form-control form-select" id="select-contacts" name="select-contacts">
@@ -105,17 +105,17 @@
                                         <i class="fas fa-question-circle" data-bs-toggle="modal" data-bs-target="#tooltipModal" id="tooltipIcon"></i>
                                         </span>
                                     </div>
-
-                                {% else %}
+                                </div>
+                                {% if not current_user.nylas_access_token %}
                                     <a href='{{ url_for("home_blueprint.nylas_auth") }}' class="btn btn-primary">Connect EMAIL</a>
                                 {% endif %}
                             </div>
-                            {% if current_user.nylas_access_token %}
+                            <div style="{% if current_user.nylas_access_token %} display: block; {% else %} display: none; {% endif %}">
                                 <div class="modal-footer form-group">
                                     <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Close</button>
                                     <button type="submit" class="btn bg-gradient-primary" id="create-campaign-button" >Create</button>
                                 </div>
-                            {% endif %}
+                            </div>
                         </form>
                     </div>
                 </div>
