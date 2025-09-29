@@ -33,20 +33,12 @@ class Config(object):
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # DB_ENGINE = os.getenv('DB_ENGINE', None)
-    # DB_USERNAME = os.getenv('DB_USERNAME', None)
-    # DB_PASS = os.getenv('DB_PASS', None)
-    # DB_HOST = os.getenv('DB_HOST', None)
-    # DB_PORT = os.getenv('DB_PORT', None)
-    # DB_NAME = os.getenv('DB_NAME', None)
-
-    DB_ENGINE='mysql+pymysql'
-    DB_HOST='db-mysql-nyc3-11639-do-user-14397341-0.c.db.ondigitalocean.com'
-    DB_NAME='roboticbookingagent'
-    DB_USERNAME='doadmin'
-    DB_PASS='AVNS_S3pYq2o2fp0kYBbEDbv'
-    DB_PORT=25060
-
+    DB_ENGINE = os.getenv('DB_ENGINE', None)
+    DB_USERNAME = os.getenv('DB_USERNAME', None)
+    DB_PASS = os.getenv('DB_PASS', None)
+    DB_HOST = os.getenv('DB_HOST', None)
+    DB_PORT = os.getenv('DB_PORT', None)
+    DB_NAME = os.getenv('DB_NAME', None)
 
     USE_SQLITE = True
     

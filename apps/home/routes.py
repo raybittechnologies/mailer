@@ -2943,7 +2943,7 @@ def job_retry():
                 'trigger' : 'date',
                 "run_date" : job_starttime.strftime("%Y-%m-%d %H:%M:%S"),
                 "func" : "jobs:email_automation_job",
-                "args" : (nylas, action_id, jobid, current_user.email)
+                "args" : (nylas, action_id, jobid, current_user.email, current_user.id)
             }
             try:
                 scheduler.add_job(**job) # TODO: Uncomment this line
