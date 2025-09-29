@@ -221,7 +221,7 @@
         })
         .then((res) => {
             var options = "";
-            console.log(res);
+            
             templates = res.templates;
             contacts = res.contacts;
             emails_daily_limit = res.emails_daily_limit;
@@ -231,7 +231,6 @@
                 
             } else {
                 for (let i = 0; i < templates.length; i++) {
-                     console.log(res[i])
                     options += '<option ' +  ' value="' + templates[i].id +'">' + templates[i].template_name + "</option>" ;
                 }
                 document.getElementById("select-workflow").innerHTML = options;
@@ -404,7 +403,6 @@
             })
             .then((data) => {
                 if (data.success) {
-                    console.log(data);
                     dataTable.ajax.reload();
                     Swal.fire({
                         icon: 'success',
@@ -413,7 +411,6 @@
                         timer: 2000
                     });
                 } else {
-                    console.log(data.message);
                     Swal.fire({
                         icon: "warning",
                         title: "Sorry but you can't create new campaign.",
@@ -470,7 +467,6 @@
                         timer: 2000
                     });
                 } else {
-                    console.log(data.message);
                     Swal.fire({
                         icon: "warning",
                         title: "Oops...",
@@ -581,7 +577,6 @@
         })
         .then((data) => {
             if (data.success) {
-                console.log(data);
                 Swal.fire({
                     icon: 'success',
                     title: data.message,
@@ -593,7 +588,6 @@
 
                 });
             } else {
-                console.log(data.message);
                 Swal.fire({
                     icon: "warning",
                     title: "Something wrong in updating auto unsub!",
