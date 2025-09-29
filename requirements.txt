@@ -31,3 +31,4 @@ pywebpush
 tzlocal
 zenrows
 emailable
+email_validator
