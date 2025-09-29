@@ -29,7 +29,7 @@
     <div class="container-fluid py-4">
         
         <div class="container mt-5">
-            <button class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#creatCampaignModalMessage" >Create campaign</button>
+            <button class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#creatCampaignModalMessage" {% if current_user.nylas_access_token or mailings  %} onclick="createCampaign()"{% endif %}  >Create campaign</button>
             <div class="card col shadow-lg border-0 rounded-lg">
                 <div class="card-header"><h3 class="text-center font-weight-light my-4">My Campaign</h3></div>
                 <div class="card-body">
@@ -91,7 +91,6 @@
                                     <!-- Error notification when user put over max emails per day -->
                                     <p class="mb-4 mx-auto text-danger" role="alert" id="error-notification" style="display: none;">
                                     </p>
-                                    
                                     <div class="form-check form-switch">
                                         {% if current_user.is_auto_unsub %}
                                         {% set checked = 'checked' %}
@@ -108,6 +107,7 @@
                                 </div>
                                 {% if not current_user.nylas_access_token %}
                                     <a href='{{ url_for("home_blueprint.nylas_auth") }}' class="btn btn-primary">Connect EMAIL</a>
+                                    <a href='https://unimailer.roboticbookingagent.com/?userId={{current_user.id}}&redirectUrl={{ request.url }}' class="btn btn-primary">Connect EMAIL via Unimail</a>
                                 {% endif %}
                             </div>
                             <div style="{% if current_user.nylas_access_token %} display: block; {% else %} display: none; {% endif %}">
@@ -221,7 +221,7 @@
         })
         .then((res) => {
             var options = "";
-            // console.log(res);
+            console.log(res);
             templates = res.templates;
             contacts = res.contacts;
             emails_daily_limit = res.emails_daily_limit;
@@ -231,7 +231,7 @@
                 
             } else {
                 for (let i = 0; i < templates.length; i++) {
-                    // console.log(res[i])
+                     console.log(res[i])
                     options += '<option ' +  ' value="' + templates[i].id +'">' + templates[i].template_name + "</option>" ;
                 }
                 document.getElementById("select-workflow").innerHTML = options;
