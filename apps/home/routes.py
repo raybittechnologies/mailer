@@ -2945,6 +2945,7 @@ def job_retry():
                 "func" : "jobs:email_automation_job",
                 "args" : (nylas, action_id, jobid, current_user.email, current_user.id)
             }
+            
             try:
                 scheduler.add_job(**job) # TODO: Uncomment this line
                 print("created job again", jobid)
