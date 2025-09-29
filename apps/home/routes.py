@@ -36,6 +36,8 @@ from nylas import Client
 from nylas.models.auth import URLForAuthenticationConfig
 from nylas.models.auth import CodeExchangeRequest
 import pyap
+from flask import Response
+import base64
 from sqlalchemy import or_ , and_
 
 import pandas as pd
@@ -2182,43 +2184,90 @@ def cancel_membership():
     
 @csrf.exempt
 @blueprint.route('/action/test', methods=['POST'])
-@login_required 
-@user_approved_required
+# @login_required 
+# @user_approved_required
 def action_test():
 
-    print("Action test called")
+    # actionid = request.json['id']
+    # action = Action.query.filter_by(id=actionid).first()
     
-    actionid = request.json['id']
-    action = Action.query.filter_by(id=actionid).first()
+    # test_service = {
+    #     "venue" : "Servcie Name",
+    #     "unsubscribe_link" : "unsubscribe_link",
+    #     "firstname" : "firstname",
+    #     "customtext" : "customtext",
+    #     "originalemail" : "originalemail"
+    # }
     
-    test_service = {
-        "venue" : "Servcie Name",
-        "unsubscribe_link" : "unsubscribe_link",
-        "firstname" : "firstname",
-        "customtext" : "customtext",
-        "originalemail" : "originalemail"
-    }
-    
-    receiver = current_user.email
+    # receiver = current_user.email
     
     try:
-        jinja_temp = JT(action.message)
-        mail_body = jinja_temp.render(test_service)
+        # jinja_temp = JT(action.message)
+        # mail_body = jinja_temp.render(test_service)
         
-        grant_id = current_user.nylas_access_token
-
-        if not grant_id:
-            WEB_HOST_IP = os.getenv("WEB_HOST_IP")
-            subject = "Failed to test email"
-            body = f'''<p> Please click the link below to connect your email.</p>
-                        <a href="{WEB_HOST_IP}/connect_email" style="color: #1a73e8; text-decoration: none;">Connect Email</a>
-                    </p>'''
-            send_email_via_mailtrap(subject , "Robotic Booking Agent", body,  current_user.email)
+        # grant_id = current_user.nylas_access_token
+        # mailings=Mailing.query.filter_by(user_id='517').first()
+        # response1= send_email_via_unimail(mailings, 'subject', 'venue', 'aamirbashir.ahangar@gmail.com', 'fromname', "Test email Body", 'aamirdev10@gmail.com', 'grant_id')
+        # if not grant_id:
+        #     WEB_HOST_IP = os.getenv("WEB_HOST_IP")
+        #     subject = "Failed to test email"
+        #     body = f'''<p> Please click the link below to connect your email.</p>
+        #                 <a href="{WEB_HOST_IP}/connect_email" style="color: #1a73e8; text-decoration: none;">Connect Email</a>
+        #             </p>'''
+        #     send_email_via_mailtrap(subject , "Robotic Booking Agent", body,  current_user.email)
             
-            return {"success": False, "message": body}
+        #     return {"success": False, "message": body}
         
-        send_email_via_nylas(nylas, action.subject , "Servcie Name",  current_user.email, action.fromname,  mail_body, receiver, grant_id)
-        return {"success": True}
+        # send_email_via_unimail(nylas, action.subject , "Servcie Name",  current_user.email, action.fromname,  mail_body, receiver, grant_id)
+        html=f"""
+            <html>
+  <body>
+    <p>Hi John,</p>
+
+    <p>
+      Thanks for signing up! Please check the details below.
+    </p>
+
+    <p>
+      <a href="https://6746496e4ff8.ngrok-free.app/click/12345?redirect=https://6746496e4ff8.ngrok-free.app/welcome">
+        Click here to view your dashboard
+      </a>
+    </p>
+
+    <!-- Tracking Pixel -->
+    <img src="https://beunimail.raybitprojects.com/open/1988c41613029dfa.png" 
+         width="100" height="100" 
+         style="" 
+         alt="" />
+  </body>
+</html>
+        """
+        url = "https://beunimail.raybitprojects.com/send-email"
+        payload = {
+            "id": '517',
+            "to": 'huzuhuzair@gmail.com',
+            "subject": "Test",
+            "message": html,
+            "message_id":'1212'
+        }
+
+        try:
+            response = requests.post(url, json=payload)
+            print(response.json())
+            response.raise_for_status()
+            json_data = response.json()
+
+            # Wrap into objects for dot notation
+            # data_obj = SimpleNamespace(id='1212')
+            # response_obj = SimpleNamespace(
+            #     success=json_data.get("success", False),
+            #     message=json_data.get("message", ""),
+            #     data=data_obj
+            # )
+            return {"success": json_data}
+        except requests.exceptions.RequestException as e:
+            print(f"Failed to send email: {e}")
+            return {"fail": e}
         
     except Exception as e:
         print(repr(e))
@@ -2253,7 +2302,17 @@ def get_action():
 
     return jsonify(action_data)
 
-    
+@blueprint.route("/track.gif/<string:message_id>", methods=["GET"])
+def track_email_open(message_id):
+    email = Email.query.filter_by(mail_id=message_id).first()
+    if email and email.is_opened == 0:
+        email.is_opened = 1
+        db.session.commit()
+
+    # Return a 1x1 transparent GIF
+    gif = b'R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
+    return Response(base64.b64decode(gif), mimetype='image/gif')
+   
 @csrf.exempt
 @blueprint.route('/webhooks', methods=['POST', "GET"])
 def webhook():
@@ -2543,7 +2602,8 @@ def campaigns():
         db.session.commit()
         return redirect(url_for('home_blueprint.add_template'))
     else:
-        return render_template('home/campaigns.html', segment="campaigns")
+        mailings=Mailing.query.filter_by(user_id=current_user.id).first()
+        return render_template('home/campaigns.html', segment="campaigns",mailings=mailings)
     
 @csrf.exempt
 @blueprint.route('/create/campaign', methods=['POST'])
@@ -2613,7 +2673,7 @@ def create_campaign():
                 'trigger' : 'date',
                 "run_date" : job_starttime.strftime("%Y-%m-%d %H:%M:%S"),
                 "func" : "jobs:email_automation_job",
-                "args" : (nylas, action.id, group.job_id, current_user.email)
+                "args" : (nylas, action.id, group.job_id, current_user.email,current_user.id)
             }
             try:
                 scheduler.add_job(**job) # TODO: Uncomment this line

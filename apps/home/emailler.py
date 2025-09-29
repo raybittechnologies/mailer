@@ -1,4 +1,5 @@
 import os
+from types import SimpleNamespace
 
 import mailtrap as mt
 # from flask import current_app
@@ -6,6 +7,9 @@ import mailtrap as mt
 from nylas import Client
 from dotenv import load_dotenv
 load_dotenv()
+import requests
+import uuid
+from flask import request
 
 NYLAS_API_KEY = os.getenv('NYLAS_API_KEY')
 NYLAS_API_URI = os.getenv('NYLAS_API_URI')
@@ -210,7 +214,6 @@ def send_reconnect_email_via_mailtrap(subject, fromname, receiver):
 
 
 def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, receiver, grant_id):
-        
     html=f"""
         <!doctype html>
         <html>
@@ -246,6 +249,52 @@ def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, rece
     # print(message.data)
     return message
 
+def send_email_via_unimail(mailings, subject, toname, fromemail, fromname, body, receiver, grant_id):
+    message_id = str(uuid.uuid4())
+    html=f"""
+        <!doctype html>
+        <html>
+        <head>
+            <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+            <style> p {{
+                    line-height: 1.5;
+                    margin-bottom: -14px;
+                    font-size: 16px;
+                }}
+            </style>
+        </head>
+            <body style="font-family: sans-serif;">
+            <img src="https://beunimail.raybitprojects.com/open/{message_id}" style="display:none;" width="1" height="1"/>
+            {body}
+            </body>
+        </html>
+    """
+    url = "https://beunimail.raybitprojects.com/send-email"
+    payload = {
+        "id": mailings.user_id,
+        "to": receiver,
+        "subject": subject,
+        "message": html,
+        "message_id":message_id
+    }
+
+    try:
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        json_data = response.json()
+
+        # Wrap into objects for dot notation
+        data_obj = SimpleNamespace(id=message_id,mailData=json_data.get("data", ""))
+        response_obj = SimpleNamespace(
+            success=json_data.get("success", False),
+            message=json_data.get("message", ""),
+            data=data_obj
+        )
+        print (response_obj)
+        return response_obj
+    except requests.exceptions.RequestException as e:
+        print(f"Failed to send email: {e}")
+        return None
 
 def send_password_reset_email(email, reset_link):
     
