@@ -2967,26 +2967,25 @@ def job_retry():
 @login_required 
 @user_approved_required
 def job_force_fail():
-    
-    # try:
-    campaignid = request.json['campaignid']
-    first_pending_job = Automation.query.filter_by(campaignid=campaignid, status="pending").order_by(Automation.action_datetime).first()
-    
-    if first_pending_job is None:
-        return {"success": False, "message": "No pending job found."}
-    
-    first_pending_job.status = "failed"
-    db.session.commit()
+    try:
+        campaignid = request.json['campaignid']
+        first_pending_job = Automation.query.filter_by(campaignid=campaignid, status="pending").order_by(Automation.id).first()
+        
+        if first_pending_job is None:
+            return {"success": False, "message": "No pending job found."}
+        
+        first_pending_job.status = "failed"
+        db.session.commit()
 
-    # delete job from scheduler if exist
-    jobid = first_pending_job.job_id
-    if scheduler.get_job(jobid):
-        scheduler.remove_job(jobid)
+        # delete job from scheduler if exist
+        jobid = first_pending_job.job_id
+        if scheduler.get_job(jobid):
+            scheduler.remove_job(jobid)
 
-    return {"success": True, 'message': "Job force failed successfully."}
-    # except Exception as e:
-    #     print(repr(e))
-    #     return {"success": False, "message": "Something went wrong. Please try again."}
+        return {"success": True, 'message': "Job force failed successfully."}
+    except Exception as e:
+        print(repr(e))
+        return {"success": False, "message": "Something went wrong. Please try again."}
 
 
 @blueprint.route('/campaign/view/<campaignid>', methods=['GET'])
