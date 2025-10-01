@@ -333,7 +333,7 @@ def job_check_automation_status():
                 'trigger' : 'date',
                 "run_date" : job_starttime.strftime("%Y-%m-%d %H:%M:%S"),
                 "func" : "jobs:email_automation_job",
-                "args" : (nylas, action.id, automation.job_id, user.email)
+                "args" : (nylas, action.id, automation.job_id, user.email, user.id)
             }
 
             if scheduler.get_job(automation.job_id) is None:
