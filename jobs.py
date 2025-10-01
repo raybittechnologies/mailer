@@ -325,15 +325,15 @@ def job_check_automation_status():
             user = record.Users
 
             # First Job start time is waitdays + 1 minutes
-            job_starttime = datetime.now() + timedelta(days=int(action.waitdays) + int(automation.group_number), minutes=30)
-            job_start_utctime = datetime.utcnow() + timedelta(days=int(action.waitdays) + int(automation.group_number), minutes=30)
+            job_starttime = datetime.now() + timedelta(days=int(action.waitdays) + int(automation.group_number), minutes=1)
+            job_start_utctime = datetime.utcnow() + timedelta(days=int(action.waitdays) + int(automation.group_number), minutes=1)
             automation.action_datetime = job_start_utctime
             job = {
                 "id" : automation.job_id,
                 'trigger' : 'date',
                 "run_date" : job_starttime.strftime("%Y-%m-%d %H:%M:%S"),
                 "func" : "jobs:email_automation_job",
-                "args" : (nylas, action.id, automation.job_id, user.email)
+                "args" : (nylas, action.id, automation.job_id, user.email, user.id)
             }
 
             if scheduler.get_job(automation.job_id) is None:
