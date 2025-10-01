@@ -325,8 +325,8 @@ def job_check_automation_status():
             user = record.Users
 
             # First Job start time is waitdays + 1 minutes
-            job_starttime = datetime.now() + timedelta(days=int(action.waitdays) + int(automation.group_number), minutes=30)
-            job_start_utctime = datetime.utcnow() + timedelta(days=int(action.waitdays) + int(automation.group_number), minutes=30)
+            job_starttime = datetime.now() + timedelta(days=int(action.waitdays) + int(automation.group_number), minutes=1)
+            job_start_utctime = datetime.utcnow() + timedelta(days=int(action.waitdays) + int(automation.group_number), minutes=1)
             automation.action_datetime = job_start_utctime
             job = {
                 "id" : automation.job_id,
