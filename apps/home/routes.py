@@ -2903,16 +2903,30 @@ def job_archive():
 def job_retry():
     try:
         campaignid = request.json['campaignid']
-        # get all failed automations
-        failed_job = Automation.query.filter_by(campaignid=campaignid, status="failed").order_by(Automation.action_datetime).first()
+        # get all failed automations, joining Action by action_id
+        failed_job = (
+            db.session.query(Automation, Action)
+            .join(Action, Automation.action_id == Action.id)
+            .filter(Automation.campaignid == campaignid, Automation.status == "failed")
+            .order_by(Automation.id)
+            .first()
+        )
 
         if failed_job is None:
             return {"success": False, "message": "No failed job found."}
 
-        first_failed_job_time = failed_job.action_datetime
-        pending_or_failed_automations = Automation.query.filter(Automation.campaignid==campaignid, Automation.action_datetime >= first_failed_job_time).all()
+        # first_failed_job_time = failed_job.action_datetime
+        first_failed_job_id = failed_job.Automation.id
+        pending_or_failed_automations = (
+            db.session.query(Automation, Action)
+            .join(Action, Automation.action_id == Action.id)
+            .filter(Automation.campaignid == campaignid, Automation.id >= first_failed_job_id)
+            .all()
+        )
 
-        for automation in pending_or_failed_automations:
+        for record in pending_or_failed_automations:
+            automation = record.Automation
+            action = record.Action
             # If job is completed or running, then skip
             if automation.status == "completed" or automation.status == "running":
                 continue
@@ -2920,7 +2934,8 @@ def job_retry():
             # print(automation.action_datetime)
 
             jobid = automation.job_id
-            days_diff = (automation.action_datetime - first_failed_job_time).days
+            # days_diff = (automation.action_datetime - first_failed_job_time).days
+            days_diff = automation.group_number + action.waitdays - failed_job.Automation.group_number - failed_job.Action.waitdays
 
             # print("days_diff", days_diff)   
 
