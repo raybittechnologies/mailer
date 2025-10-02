@@ -325,7 +325,6 @@ def job_check_automation_status():
             automation = record.Automation
             action = record.Action
             user = record.Users
-
             if automation.action_datetime > datetime.now(timezone.utc).replace(tzinfo=None):
                 job = {
                     "id" : automation.job_id,
@@ -364,4 +363,3 @@ def job_check_automation_status():
                         db.session.commit()
                     except Exception as e:
                         print("Failed to create job", str(e))
-
