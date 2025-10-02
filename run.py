@@ -95,7 +95,8 @@ automation_job_id = 'job_check_automation_status'
 job = {
     "id": automation_job_id,
     'trigger': 'cron',
-    'minute': '*/30',  # Every 30 minutes
+    'hour': 0,
+    'minute': 0,  # Once per day at midnight
     "func": "jobs:job_check_automation_status",
     "args": ()
 }

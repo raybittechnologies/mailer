@@ -7,7 +7,7 @@ from nylas import Client
 from jinja2 import Template as JT
 import os
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from apps.home.utils import send_push_notification
 import urllib.parse
 from flask import current_app, jsonify
@@ -316,34 +316,50 @@ def job_check_automation_status():
         records = db.session.query(Automation, Users, Action).join(Users, Automation.userid == Users.id).join(Action, Automation.action_id == Action.id).filter(
             or_(Automation.status == 'pending', Automation.status == 'running'),
             or_(Automation.is_archived == False, Automation.is_archived == None),
-            Automation.action_datetime < datetime.utcnow()
         ).all()
+
+        print("Records count", len(records))
+        print("Started at", datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f"))
 
         for record in records:
             automation = record.Automation
             action = record.Action
             user = record.Users
+            if automation.action_datetime > datetime.now(timezone.utc).replace(tzinfo=None):
+                job = {
+                    "id" : automation.job_id,
+                    'trigger' : 'date',
+                    "run_date" : automation.action_datetime.strftime("%Y-%m-%d %H:%M:%S"),
+                    "func" : "jobs:email_automation_job",
+                    "args" : (nylas, action.id, automation.job_id, user.email, user.id)
+                }
 
-            # First Job start time is waitdays + 1 minutes
-            job_starttime = datetime.now() + timedelta(days=int(action.waitdays) + int(automation.group_number), minutes=1)
-            job_start_utctime = datetime.utcnow() + timedelta(days=int(action.waitdays) + int(automation.group_number), minutes=1)
-            automation.action_datetime = job_start_utctime
-            job = {
-                "id" : automation.job_id,
-                'trigger' : 'date',
-                "run_date" : job_starttime.strftime("%Y-%m-%d %H:%M:%S"),
-                "func" : "jobs:email_automation_job",
-                "args" : (nylas, action.id, automation.job_id, user.email, user.id)
-            }
+                if scheduler.get_job(automation.job_id) is None:
+                    try:
+                        scheduler.add_job(**job) # TODO: Uncomment this line
+                        print("Created job ", automation.job_id)
+                    except Exception as e:
+                        print("Failed to create job", str(e))
+            else:
+                # First Job start time is waitdays + 1 minutes
+                job_starttime = datetime.now() + timedelta(days=int(action.waitdays) + int(automation.group_number), minutes=1)
+                job_start_utctime = datetime.now(timezone.utc) + timedelta(days=int(action.waitdays) + int(automation.group_number), minutes=1)
+                automation.action_datetime = job_start_utctime
+                job = {
+                    "id" : automation.job_id,
+                    'trigger' : 'date',
+                    "run_date" : job_starttime.strftime("%Y-%m-%d %H:%M:%S"),
+                    "func" : "jobs:email_automation_job",
+                    "args" : (nylas, action.id, automation.job_id, user.email, user.id)
+                }
 
-            if scheduler.get_job(automation.job_id) is None:
-                try:
-                    scheduler.add_job(**job) # TODO: Uncomment this line
-                    print("Created job ", automation.job_id)
+                if scheduler.get_job(automation.job_id) is None:
+                    try:
+                        scheduler.add_job(**job) # TODO: Uncomment this line
+                        print("Created job ", automation.job_id)
 
-                    automation.status = "pending"
-                    automation.action_datetime = job_start_utctime
-                    db.session.commit()
-                except Exception as e:
-                    print("Failed to create job", str(e))
-
+                        automation.status = "pending"
+                        automation.action_datetime = job_start_utctime
+                        db.session.commit()
+                    except Exception as e:
+                        print("Failed to create job", str(e))
