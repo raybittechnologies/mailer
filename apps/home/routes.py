@@ -2841,16 +2841,16 @@ def camp_archive():
     if campid is None:
         return {"success": False, 'message': "Campaign not found."}
         
-    # automations = Automation.query.filter_by(campaignid=campid).all()
+    automations = Automation.query.filter_by(campaignid=campid).all()
     
-    # for automation in automations:
-    #     jobid = automation.job_id
-    #     db.session.delete(automation)
-    #     Email.query.filter_by(job_id=jobid).delete()
-    #     db.session.commit()
+    for automation in automations:
+        jobid = automation.job_id
+        db.session.delete(automation)
+        Email.query.filter_by(job_id=jobid).delete()
+        db.session.commit()
         
-    #     if scheduler.get_job(jobid):
-    #         scheduler.remove_job(jobid)
+        if scheduler.get_job(jobid):
+            scheduler.remove_job(jobid)
 
     return {"success": True, 'message': "Campaign archived successfully."}
 
