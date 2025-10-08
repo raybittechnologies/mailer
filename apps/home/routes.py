@@ -2756,7 +2756,7 @@ def get_archived_campaigns():
 def get_automations(campaignid):
     userid = current_user.id
     # print('get_automations', campaignid)
-    automations = Automation.query.filter(Automation.userid==userid, Automation.campaignid==campaignid, or_(Automation.is_archived == False , Automation.is_archived == None)).all()
+    automations = Automation.query.filter(Automation.userid==userid, Automation.campaignid==campaignid).all()
     temp_list = []
 
     for temp in automations:
