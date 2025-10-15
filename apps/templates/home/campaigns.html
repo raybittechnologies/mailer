@@ -67,7 +67,7 @@
                         <form id="create-campaign-form" action="/create/campaign" method="post">
                             <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                             <div class="modal-body">
-                                <div style="{% if current_user.nylas_access_token %} display: block; {% else %} display: none; {% endif %}">
+                                <div style="{% if current_user.nylas_access_token or mailings %} display: block; {% else %} display: none; {% endif %}">
                                     <div class="form-group" >
                                         <label for="select-contacts" class="col-form-label">Select Contacts:</label>
                                         <select class="form-control form-select" id="select-contacts" name="select-contacts">
@@ -105,12 +105,12 @@
                                         </span>
                                     </div>
                                 </div>
-                                {% if not current_user.nylas_access_token %}
+                                {% if not current_user.nylas_access_token and not mailings %}
                                     <a href='{{ url_for("home_blueprint.nylas_auth") }}' class="btn btn-primary">Connect EMAIL</a>
                                     <a href='https://unimailer.roboticbookingagent.com/?userId={{current_user.id}}&redirectUrl={{ request.url }}' class="btn btn-primary">Connect EMAIL via Unimail</a>
                                 {% endif %}
                             </div>
-                            <div style="{% if current_user.nylas_access_token %} display: block; {% else %} display: none; {% endif %}">
+                            <div style="{% if current_user.nylas_access_token or mailings %} display: block; {% else %} display: none; {% endif %}">
                                 <div class="modal-footer form-group">
                                     <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Close</button>
                                     <button type="submit" class="btn bg-gradient-primary" id="create-campaign-button" >Create</button>
