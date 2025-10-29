@@ -8,6 +8,7 @@ import time
 import re
 import urllib.parse
 from bs4 import BeautifulSoup as BS
+from zenrows import ZenRowsClient
 import cloudscraper
 
 from threading import Thread
@@ -36,8 +37,17 @@ ZENROW_API_URL = "https://api.zenrows.com/v1/"
 
 def pass_data(item):
     WEB_HOST_IP = os.getenv("WEB_HOST_IP")
-    response = requests.post(f'{WEB_HOST_IP}/msg', json={'result': item})
-    print("Processes", response.text)
+    try:
+        response = requests.post(f'{WEB_HOST_IP}/msg', json={'result': item}, timeout=30)
+        print("Processes", response.text)
+    except requests.exceptions.RequestException as e:
+        print(f"Error sending data: {e}")
+        # Retry once
+        try:
+            response = requests.post(f'{WEB_HOST_IP}/msg', json={'result': item}, timeout=30)
+            print("Processes (retry)", response.text)
+        except requests.exceptions.RequestException as retry_e:
+            print(f"Retry failed: {retry_e}")
 
 
 def zyte_session(url, id):
@@ -146,7 +156,7 @@ def yelp_scraper_run(url, id, user_info):
     
     print("Start scraping", url)
     
-    session = create_session()
+    client = ZenRowsClient(ZENROW_API_KEY)
     
     start = 0
     page = 0
@@ -162,24 +172,29 @@ def yelp_scraper_run(url, id, user_info):
         #ZYTE API 
         base_url = f"https://www.yelp.com/search?find_desc={find_desc}&find_loc={find_loc}&start={start}"
         params = {
-            'url': base_url,
-            'apikey': ZENROW_API_KEY,
             'js_render': 'true',
             'premium_proxy': 'true',
         }
         
-        try:
-            response = session.get(ZENROW_API_URL, params=params)
-        except Exception as e:
-            print("Failed to get data", str(e))
-            break
+        while True:
+            try:
+                response = client.get(base_url, params=params)
+            except Exception as e:
+                time.sleep(1)
+                continue
+            
+            if response.status_code == 200:
+                if "We're sorry, the page of results you requested is unavailable." in response.text:
+                    time.sleep(1)
+                    continue
+                else:
+                    break
+            else:
+                time.sleep(1)
+                continue
         
         # "venue	city	phone	Venue Type	Website	email	email 2	Email (facebook)	Facebook Link"
         if response.status_code == 200:
-
-            if "We're sorry, the page of results you requested is unavailable." in response.text:
-                print("No more results found, stopping scraper")
-                break
 
             try:
                 contents_text = '{"locale"' + response.text.split('<!--{"locale"')[1].split("--></script>")[0] 
@@ -266,7 +281,7 @@ def yelp_scraper_run(url, id, user_info):
 
                     if full_address == "":
                         try:
-                            addresses = get_addresses(session, businessUrl)
+                            addresses = get_addresses(client, businessUrl)
                         except Exception as e:
                             print("Failed to get address", str(e), businessUrl)
                             addresses = {}
@@ -342,17 +357,15 @@ def yelp_scraper_run(url, id, user_info):
         page += 1
 
 
-def get_addresses(session, url):
+def get_addresses(client, url):
     
     while True:
         params = {
-            'url': url,
-            'apikey': ZENROW_API_KEY,
             'js_render': 'true',
             'premium_proxy': 'true',
         }
         try:
-            response = session.get(ZENROW_API_URL, params=params)
+            response = client.get(url, params=params)
         except Exception as e:
             print("Failed to Biz detail page", url, str(e))
             time.sleep(1)
@@ -603,6 +616,8 @@ def get_fb_page_2(url):
                 "browserHtml": True,
                 },
             )
+
+        
 
         if api_response.json()['statusCode'] == 200:
             browser_html: str = api_response.json()["browserHtml"]

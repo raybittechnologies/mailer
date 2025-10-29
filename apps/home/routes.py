@@ -25,6 +25,7 @@ from apps import db, scheduler, csrf
 import multiprocessing
 from apps.home.script import yelp_scraper_run
 from apps.models import *
+from apps.db_utils import db_session, db_transaction, bulk_save_with_retry, safe_db_operation, get_db_connection_info, cleanup_connections
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import Insert
 
@@ -57,8 +58,8 @@ nylas = Client(
     api_uri = NYLAS_API_URI,
 )
 
-# calculate the number of workers to use
-workers = (multiprocessing.cpu_count() * 2) + 1
+# calculate the number of workers to use - reduced to prevent DB connection overflow
+workers = min(20, multiprocessing.cpu_count() + 1)  # Cap at 20 workers
 print("Number of workers: ", workers)
 executor = ThreadPoolExecutor(max_workers=workers)
 
@@ -115,6 +116,45 @@ def index():
 def mysql_insert_ignore(insert, compiler, **kw):
     return compiler.visit_insert(insert.prefix_with("IGNORE"), **kw)
 
+@blueprint.route('/db_status', methods=['GET'])
+@login_required
+def db_status():
+    """Database connection pool status endpoint"""
+    try:
+        connection_info = get_db_connection_info()
+        if connection_info:
+            return jsonify({
+                "success": True,
+                "connection_pool": connection_info,
+                "message": "Database connection pool status retrieved successfully"
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": "Unable to retrieve database connection information"
+            }), 500
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": f"Error retrieving database status: {str(e)}"
+        }), 500
+
+@blueprint.route('/cleanup_connections', methods=['POST'])
+@login_required
+def cleanup_db_connections():
+    """Cleanup database connections endpoint"""
+    try:
+        cleanup_connections()
+        return jsonify({
+            "success": True,
+            "message": "Database connections cleaned up successfully"
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": f"Error cleaning up connections: {str(e)}"
+        }), 500
+
 @blueprint.route('/url', methods=['POST', 'GET'])
 @login_required
 @user_approved_required
@@ -155,10 +195,10 @@ def url():
             new_url = Yelpurl(product_url=product_url, userid=current_user.id, state="idle", name=business_name)
             new_url.latitude = latitude
             new_url.longitude = longitude
-            db.session.add(new_url)
-            db.session.flush()
-            url_id = new_url.id
-            db.session.commit()
+            with db_transaction() as session:
+                session.add(new_url)
+                session.flush()
+                url_id = new_url.id
             return {"success": True, "message": "Url added successfully.", "url_id": url_id, "redirect": "/fetch/" + str(url_id)}
             
         else:
@@ -482,33 +522,31 @@ def credit_service():
     serviceid = request.json['id']
     action = request.json['action']
 
-    user_credit = db.session.query(UserCredit).filter_by(userid = current_user.id).first()
+    with db_session() as session:
+        user_credit = session.query(UserCredit).filter_by(userid = current_user.id).first()
 
-    if user_credit is None:
-        message = "Could not find credit info!"
-        return {"success": False, 'message': message}
+        if user_credit is None:
+            message = "Could not find credit info!"
+            return {"success": False, 'message': message}
 
-    credited_services = Service.query.filter_by(user_id = current_user.id, is_credited = 1).count()
-    user_available_credit = user_credit.credit - credited_services
-    service = Service.query.get(serviceid)
+        credited_services = Service.query.filter_by(user_id = current_user.id, is_credited = 1).count()
+        user_available_credit = user_credit.credit - credited_services
+        service = Service.query.get(serviceid)
 
-    if action == 'plus':
-        if user_available_credit > 0:
-            service.is_credited = 1
-            message = f"Service '{service.name}' is credited successfully."
-            available_credit = user_available_credit - 1
-
-            db.session.commit()
-            return {"success": True, 'message': message, "available_credit" : available_credit, "user_credit" : user_credit.credit }
-        
+        if action == 'plus':
+            if user_available_credit > 0:
+                service.is_credited = 1
+                message = f"Service '{service.name}' is credited successfully."
+                available_credit = user_available_credit - 1
+                return {"success": True, 'message': message, "available_credit" : available_credit, "user_credit" : user_credit.credit }
+            
+            else:
+                return {"success": False, 'message': "You consumed all credit. You can not add more services."}
         else:
-            return {"success": False, 'message': "You consumed all credit. You can not add more services."}
-    else:
-        service.is_credited = 2
-        message = f"Service '{service.name}' is not credited."
-        available_credit = user_available_credit
-        db.session.commit()
-        return {"success": True, 'message': message, "available_credit" : available_credit, "user_credit" : user_credit.credit }
+            service.is_credited = 2
+            message = f"Service '{service.name}' is not credited."
+            available_credit = user_available_credit
+            return {"success": True, 'message': message, "available_credit" : available_credit, "user_credit" : user_credit.credit }
 
 
 @csrf.exempt
@@ -917,12 +955,10 @@ def upload_contact():
                     services.append(uservice)
 
                 if services:
-                    db.session.bulk_save_objects(services)
+                    bulk_save_with_retry(services, batch_size=500)
 
                 if emailables:
-                    db.session.bulk_save_objects(emailables)
-
-                db.session.commit()
+                    bulk_save_with_retry(emailables, batch_size=500)
 
         return {"success": True, "message": "File uploaded successfully."}
 
@@ -2116,8 +2152,7 @@ def import_users_workflow():
         action.userid = current_user.id
         new_actions.append(action)
     
-    db.session.bulk_save_objects(new_actions)
-    db.session.commit()
+    bulk_save_with_retry(new_actions, batch_size=100)
     return redirect(url_for('home_blueprint.my_workflow'))
 
 
@@ -2701,10 +2736,10 @@ def create_campaign():
     campaign.campaignid = campaignid
     campaign.userid = current_user.id
     
-    db.session.add(campaign)
-    db.session.bulk_save_objects(groups)
-    db.session.bulk_save_objects(emails)
-    db.session.commit()
+    with db_transaction() as session:
+        session.add(campaign)
+        bulk_save_with_retry(groups, batch_size=100)
+        bulk_save_with_retry(emails, batch_size=100)
     
     return {"success": True, "message": "Campaign created successfully. It will start on the scheduled time."}
 
