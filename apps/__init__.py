@@ -50,7 +50,17 @@ def configure_database(app):
 
     @app.teardown_request
     def shutdown_session(exception=None):
-        db.session.remove()
+        try:
+            db.session.remove()
+        except Exception as e:
+            print(f"Error during session cleanup: {e}")
+    
+    @app.teardown_appcontext
+    def shutdown_db_connections(exception=None):
+        try:
+            db.session.close()
+        except Exception as e:
+            print(f"Error during database connection cleanup: {e}")
 
 # from apps.authentication.oauth import github_blueprint, nylas_bp
 

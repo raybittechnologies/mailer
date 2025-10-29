@@ -33,6 +33,16 @@ class Config(object):
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    # Database connection pool configuration
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 20,  # Number of connections to maintain in the pool
+        'pool_recycle': 3600,  # Recycle connections after 1 hour
+        'pool_pre_ping': True,  # Verify connections before use
+        'max_overflow': 30,  # Additional connections beyond pool_size
+        'pool_timeout': 30,  # Timeout for getting connection from pool
+        'echo': False,  # Set to True for SQL query logging
+    }
+
     DB_ENGINE = os.getenv('DB_ENGINE', None)
     DB_USERNAME = os.getenv('DB_USERNAME', None)
     DB_PASS = os.getenv('DB_PASS', None)
@@ -89,8 +99,8 @@ class Config(object):
     SCHEDULER_JOBSTORES = {
         "default": SQLAlchemyJobStore(url=JobStore_DATABASE_URI)
     }
-    SCHEDULER_EXECUTORS = {"default": {"type": "threadpool", "max_workers": 7000}}
-    SCHEDULER_JOB_DEFAULTS = {"coalesce": False, "max_instances": 7000}
+    SCHEDULER_EXECUTORS = {"default": {"type": "threadpool", "max_workers": 50}}
+    SCHEDULER_JOB_DEFAULTS = {"coalesce": False, "max_instances": 50}
     SCHEDULER_API_ENABLED = True
 
     VAPID_PUBLIC_KEY = 'BJtD0PoxxpnXJe2RjT5sF2VUvrI9GMThCdEQgLi4vQit2u44pB19Y7LD8QzAzeC52L7gnaq3kl8T7ZjPczqnBqM'
