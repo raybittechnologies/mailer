@@ -216,6 +216,7 @@
                                     state_text = '<a class="btn btn-info btn-sm" href="/fetch/' + id + '">Start</a> '
                                 } else {
                                     state_text = '<a class="btn btn-facebook btn-sm" href="/url/view/' + id + '">View Data</a> ';
+                                    state_text += '<a class="btn btn-info btn-sm" href="/fetch/' + id + '">Rerun</a> ';
                                 }
                                 var buttons = state_text +
                                     '<form action="/url/delete" style="display: contents" method="post"> <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}"> <input type="hidden" name="urlid" value="' + id + '"/><input class="btn btn-danger btn-sm" type="submit" value="Delete"></form>';
