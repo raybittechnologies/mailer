@@ -140,6 +140,16 @@
                     <i class="fas fa-envelope text-primary text-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Update Email"> Update </i>
                   </a>
                 </li>
+                {% if mailings%}
+                <form action="/user/disconnect_unimail" style="display: contents" method="post"> 
+                            <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
+                              <input type="hidden" name="user_id" id="user_id" value="{{ mailings.user_id }}">
+                               <input type="hidden" name="url" id="url" value="/profile">
+                            <div class="modal-footer">
+                                <input class="btn btn-danger" type="submit" value="Disconnect Unimail">
+                            </div>
+                        </form>
+                {% endif%}
                 {% if current_user.role == "user" %}
                 <li class="list-group-item border-0 ps-0 text-sm"><strong class="text-dark">Current Plan:</strong> Normal </li>
                 {% elif current_user.role == "lite" %}
