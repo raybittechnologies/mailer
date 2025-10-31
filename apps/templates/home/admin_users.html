@@ -131,6 +131,9 @@
                                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                                             Reset Token
                                         </th>
+                                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                                            Reset Unimail
+                                        </th>
                                     </tr>
                                     </thead>
                                     <tbody>
@@ -190,6 +193,19 @@
                                             <td class="align-middle text-center text-sm">
                                                 {% if user.nylas_access_token %}
                                                     <button data-bs-toggle="modal" data-bs-target="#resetUserTokenModal" onclick="resetToken('{{ user.id }}')" class="btn btn-sm btn-danger">Reset</button>
+                                                {% endif %}
+                                            </td>
+                                             <td class="align-middle text-center text-sm">
+                                                {% if user.id in mailing_user_ids %}
+                        <form action="/user/disconnect_unimail" style="display: contents" method="post"> 
+                            <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
+                              <input type="hidden" name="user_id" id="user_id" value="{{ user.id }}">
+                              <input type="hidden" name="url" id="url" value="/admin/users">
+                            <div class="modal-footer">
+                                <input class="btn btn-danger" type="submit" value="Disconnect Unimail">
+                            </div>
+                        </form>
+                                                
                                                 {% endif %}
                                             </td>
                                         </tr>
