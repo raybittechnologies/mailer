@@ -28,11 +28,9 @@ def db_session():
         session.rollback()
         raise
     finally:
-        # Ensure session is properly closed
-        try:
-            session.close()
-        except Exception as e:
-            logger.error(f"Error closing session: {e}")
+        # Do not close the shared Flask-SQLAlchemy scoped session here.
+        # The extension manages lifecycle per-request; closing here can detach objects.
+        pass
 
 @contextmanager
 def db_transaction():
@@ -48,10 +46,8 @@ def db_transaction():
         session.rollback()
         raise
     finally:
-        try:
-            session.close()
-        except Exception as e:
-            logger.error(f"Error closing transaction session: {e}")
+        # Avoid closing the shared session inside request handlers.
+        pass
 
 def safe_db_operation(operation, *args, **kwargs):
     """
@@ -103,10 +99,8 @@ def bulk_save_with_retry(objects, batch_size=1000, max_retries=3):
                     session.rollback()
                     raise
     finally:
-        try:
-            session.close()
-        except Exception as e:
-            logger.error(f"Error closing session after batch save: {e}")
+        # Leave session management to Flask-SQLAlchemy.
+        pass
 
 def get_db_connection_info():
     """
