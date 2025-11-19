@@ -2138,7 +2138,55 @@ def get_users_workflow():
         }
         
         return jsonify(data)
+    
+@csrf.exempt
+@blueprint.route('/api/template/create', methods=['POST'])
+@login_required
+@user_approved_required
+def api_template_create():
+    new_workflow = Template()
+    new_workflow.template_name = "SHM AI Template"
+    new_workflow.template_desc = "AI generated template"
+    new_workflow.userid = current_user.id
+    new_workflow.status = "draft"
+    db.session.add(new_workflow)
+    db.session.commit()
 
+    data = {
+        'tempid': new_workflow.id
+    }
+    
+    return jsonify(data)
+
+@csrf.exempt
+@blueprint.route('/api/action/create', methods=['POST'])
+@login_required
+@user_approved_required
+def api_action_create():
+    action_name = request.json['action-name']
+    subject = request.json['subject']
+    fromname = request.json['fromname']
+    wait_days = request.json['wait-days']
+    message = request.json['message']
+    tempid = request.json['tempid']
+
+    action = Action()
+    action.action_name = action_name
+    action.subject = subject
+    action.fromname = fromname
+    action.message = message.replace('{{firstname}},', '{{firstname}}')
+    action.waitdays = wait_days
+    action.tempid = tempid
+    action.userid = current_user.id
+    db.session.add(action)
+        
+    db.session.commit()
+
+    data = {
+        'actionid': action.id
+    }
+    
+    return jsonify(data)
 
 @blueprint.route('/import/workflow', methods=['POST'])
 @login_required
@@ -2194,6 +2242,15 @@ def update_workflow():
         
     db.session.commit()
     return redirect(url_for('home_blueprint.my_workflow'))
+
+@blueprint.route('/api/check-auth')
+@login_required
+def check_auth():
+    """Endpoint for Node.js to check if user is authenticated"""
+    return jsonify({
+        'authenticated': True,
+        'user': current_user.email
+    })
     
 @csrf.exempt
 @blueprint.route('/admin/action/test', methods=['POST'])

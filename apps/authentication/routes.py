@@ -72,6 +72,9 @@ def login():
             
         if user and verify_pass(password, user.password) and user.state == "approved":
             login_user(user)
+            next_page = request.args.get('next')
+            if next_page and next_page.startswith('/ai/'):
+                return redirect(next_page)
             # return redirect(url_for('authentication_blueprint.route_default'))
             return redirect(url_for('home_blueprint.index'))
 
