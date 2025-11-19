@@ -18,6 +18,7 @@
         
         <div class="container mt-5">
             <button class="btn btn-success bg-gradient-success" data-bs-toggle="modal" data-bs-target="#importTemplateModalMessage" onclick=importWorkflow()>Import Workflow</button>
+            <button class="btn btn-success bg-gradient-success" onclick="aiWriting()">Write emails with SHM AI</button>
             <div class="card col shadow-lg border-0 rounded-lg">
                 <div class="card-header"><h3 class="text-center font-weight-light my-4">My Workflows</h3></div>
                 <div class="card-body">
@@ -177,7 +178,29 @@
 
     };
 
+    function aiWriting() {
+        Swal.fire({
+            title: 'Initializing...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            },
+        });
 
+        fetch('/api/template/create', {
+            method: 'POST',
+        })
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then((res) => {
+            localStorage.setItem('tempid', res['tempid']);
+            document.location.href = '/ai'
+        })
+    }
         
     $(document).ready(function () {
         const selectElement = document.getElementById("select-template");
