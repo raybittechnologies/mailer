@@ -276,15 +276,31 @@ def get_sub_batches(music_batch, batch_size):
     return sub_batches
 
 def extract_first_name(email):
-    '''
-    Use the LLM to extract the first name from the given text.
-    '''
-    template = """Extract the most likely first name of the person from the given text: {email}
-    Return only the first name. No titles, no attributes, no explanations, no extra words.
-    If no first name is clearly present, return nothing at all — just a completely empty string. Do NOT return quotes, periods, or messages like 'no name found'. Only return the name or leave it blank."""
+    if email.strip() == '':
+        return ''
+    
+    template = """Extract ONLY a valid human first name from email: "{email}"
+    
+CRITICAL RULES:
+- Return ONLY if it's a recognizable human first name (like John, Mary, David, Sarah, Michael, etc.)
+- REJECT generic terms: info, contact, admin, support, sales, help, service, webmaster, hello, test, user
+- REJECT company/department/role names
+- If unsure, return empty string
+- No explanations, just the name or empty string
+
+Valid examples: 
+john.doe@email.com → john
+jane_doe@company.org → jane
+michael-smith@gmail.com → michael
+
+Invalid examples:
+info@company.com → 
+admin@site.com → 
+support@help.com → 
+
+Output:"""
     
     prompt = PromptTemplate(template=template, input_variables=["email"])
-
     llm_chain = LLMChain(prompt=prompt, llm=llm)
         
     output = llm_chain.invoke(input=email)
