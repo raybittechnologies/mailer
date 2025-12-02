@@ -304,7 +304,8 @@ Output:"""
     llm_chain = LLMChain(prompt=prompt, llm=llm)
         
     output = llm_chain.invoke(input=email)
-    return output['text']
+    
+    return output['text'].capitalize()
 
 def extract_city_state(address):
     '''
