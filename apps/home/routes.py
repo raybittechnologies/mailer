@@ -2279,101 +2279,109 @@ def cancel_membership():
 # @login_required 
 # @user_approved_required
 def action_test():
-
-    # actionid = request.json['id']
-    # action = Action.query.filter_by(id=actionid).first()
+    actionid = request.json['id']
+    action = Action.query.filter_by(id=actionid).first()
     
-    # test_service = {
-    #     "venue" : "Servcie Name",
-    #     "unsubscribe_link" : "unsubscribe_link",
-    #     "firstname" : "firstname",
-    #     "customtext" : "customtext",
-    #     "originalemail" : "originalemail"
-    # }
+    test_service = {
+        "venue" : "Servcie Name",
+        "unsubscribe_link" : "unsubscribe_link_test",
+        "firstname" : "firstname",
+        "customtext" : "customtext",
+        "originalemail" : "originalemail"
+    }
     
-    # receiver = current_user.email
+    SENDER_MAIL = os.getenv('SENDER_MAIL')
     
-    try:
-        # jinja_temp = JT(action.message)
-        # mail_body = jinja_temp.render(test_service)
+    jinja_temp = JT(action.message)
+    mail_body = jinja_temp.render(test_service)
+    
+    if send_test_email(action.subject , action.fromname, mail_body, current_user.email, SENDER_MAIL):
+        return {"success": True}
+    
+    else:
+        return {"success": False}
+    
+#     try:
+#         # jinja_temp = JT(action.message)
+#         # mail_body = jinja_temp.render(test_service)
         
-        # grant_id = current_user.nylas_access_token
-        # mailings=Mailing.query.filter_by(user_id='517').first()
-        # response1= send_email_via_unimail(mailings, 'subject', 'venue', 'aamirbashir.ahangar@gmail.com', 'fromname', "Test email Body", 'aamirdev10@gmail.com', 'grant_id')
-        # if not grant_id:
-        #     WEB_HOST_IP = os.getenv("WEB_HOST_IP")
-        #     subject = "Failed to test email"
-        #     body = f'''<p> Please click the link below to connect your email.</p>
-        #                 <a href="{WEB_HOST_IP}/connect_email" style="color: #1a73e8; text-decoration: none;">Connect Email</a>
-        #             </p>'''
-        #     send_email_via_mailtrap(subject , "Robotic Booking Agent", body,  current_user.email)
+#         # grant_id = current_user.nylas_access_token
+#         # mailings=Mailing.query.filter_by(user_id='517').first()
+#         # response1= send_email_via_unimail(mailings, 'subject', 'venue', 'aamirbashir.ahangar@gmail.com', 'fromname', "Test email Body", 'aamirdev10@gmail.com', 'grant_id')
+#         # if not grant_id:
+#         #     WEB_HOST_IP = os.getenv("WEB_HOST_IP")
+#         #     subject = "Failed to test email"
+#         #     body = f'''<p> Please click the link below to connect your email.</p>
+#         #                 <a href="{WEB_HOST_IP}/connect_email" style="color: #1a73e8; text-decoration: none;">Connect Email</a>
+#         #             </p>'''
+#         #     send_email_via_mailtrap(subject , "Robotic Booking Agent", body,  current_user.email)
             
-        #     return {"success": False, "message": body}
+#         #     return {"success": False, "message": body}
         
-        # send_email_via_unimail(nylas, action.subject , "Servcie Name",  current_user.email, action.fromname,  mail_body, receiver, grant_id)
-        html=f"""
-            <html>
-  <body>
-    <p>Hi John,</p>
+#         # send_email_via_unimail(nylas, action.subject , "Servcie Name",  current_user.email, action.fromname,  mail_body, receiver, grant_id)
+# #         html=f"""
+# #             <html>
+# #   <body>
+# #     <p>Hi John,</p>
 
-    <p>
-      Thanks for signing up! Please check the details below.
-    </p>
+# #     <p>
+# #       Thanks for signing up! Please check the details below.
+# #     </p>
 
-    <p>
-      <a href="https://6746496e4ff8.ngrok-free.app/click/12345?redirect=https://6746496e4ff8.ngrok-free.app/welcome">
-        Click here to view your dashboard
-      </a>
-    </p>
+# #     <p>
+# #       <a href="https://6746496e4ff8.ngrok-free.app/click/12345?redirect=https://6746496e4ff8.ngrok-free.app/welcome">
+# #         Click here to view your dashboard
+# #       </a>
+# #     </p>
 
-    <!-- Tracking Pixel -->
-    <img src="https://beunimail.raybitprojects.com/open/1988c41613029dfa.png" 
-         width="100" height="100" 
-         style="" 
-         alt="" />
-  </body>
-</html>
-        """
-        url = "https://beunimail.raybitprojects.com/send-email"
-        payload = {
-            "id": '517',
-            "to": 'huzuhuzair@gmail.com',
-            "subject": "Test",
-            "message": html,
-            "message_id":'1212'
-        }
+# #     <!-- Tracking Pixel -->
+# #     <img src="https://beunimail.raybitprojects.com/open/1988c41613029dfa.png" 
+# #          width="100" height="100" 
+# #          style="" 
+# #          alt="" />
+# #   </body>
+# # </html>
+# #         """
+# #         url = "https://beunimail.raybitprojects.com/send-email"
+# #         payload = {
+# #             "id": '517',
+# #             "to": 'huzuhuzair@gmail.com',
+# #             "subject": "Test",
+# #             "message": html,
+# #             "message_id":'1212'
+# #         }
 
-        try:
-            response = requests.post(url, json=payload)
-            print(response.json())
-            response.raise_for_status()
-            json_data = response.json()
+#         try:
+#             response = requests.post(url, json=payload)
+#             print(response.json())
+#             response.raise_for_status()
+#             json_data = response.json()
 
-            # Wrap into objects for dot notation
-            # data_obj = SimpleNamespace(id='1212')
-            # response_obj = SimpleNamespace(
-            #     success=json_data.get("success", False),
-            #     message=json_data.get("message", ""),
-            #     data=data_obj
-            # )
-            return {"success": json_data}
-        except requests.exceptions.RequestException as e:
-            print(f"Failed to send email: {e}")
-            return {"fail": e}
+#             # Wrap into objects for dot notation
+#             # data_obj = SimpleNamespace(id='1212')
+#             # response_obj = SimpleNamespace(
+#             #     success=json_data.get("success", False),
+#             #     message=json_data.get("message", ""),
+#             #     data=data_obj
+#             # )
+#             return {"success": json_data}
+#         except requests.exceptions.RequestException as e:
+#             print(f"Failed to send email: {e}")
+#             return {"fail": e}
         
-    except Exception as e:
-        print(repr(e))
-        if "No Grant found for this Grant ID." in str(e) or "Grant not found for given ID/Email" in str(e) or 'expired' in str(e).lower():
-            # Reset nylas token to none
-            current_user.nylas_access_token = None
-            db.session.commit()
-            return {"success": False, "message": "Please connect your email account."}
+#     except Exception as e:
+#         print(repr(e))
+#         if "No Grant found for this Grant ID." in str(e) or "Grant not found for given ID/Email" in str(e) or 'expired' in str(e).lower():
+#             # Reset nylas token to none
+#             current_user.nylas_access_token = None
+#             db.session.commit()
+#             return {"success": False, "message": "Please connect your email account."}
         
-        elif "Connection aborted" in str(e):
-            return {"success": False, "message": "Failed. Please try again later."}
+#         elif "Connection aborted" in str(e):
+#             return {"success": False, "message": "Failed. Please try again later."}
         
-        else:
-            return {"success": False, "message": str(e)}
+#         else:
+#             return {"success": False, "message": str(e)}
             
 @csrf.exempt
 @blueprint.route('/action/get', methods=['POST'])
