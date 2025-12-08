@@ -2294,8 +2294,8 @@ def action_test():
     
     jinja_temp = JT(action.message)
     mail_body = jinja_temp.render(test_service)
-    
-    if send_test_email(action.subject , action.fromname, mail_body, current_user.email, SENDER_MAIL):
+
+    if send_email_via_nylas(nylas, action.subject, 'Service Name', SENDER_MAIL, action.fromname, mail_body, current_user.email, current_user.nylas_access_token):
         return {"success": True}
     
     else:
