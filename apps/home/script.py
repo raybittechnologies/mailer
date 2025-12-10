@@ -184,11 +184,7 @@ def yelp_scraper_run(url, id, user_info):
                 continue
             
             if response.status_code == 200:
-                if "We're sorry, the page of results you requested is unavailable." in response.text:
-                    time.sleep(1)
-                    continue
-                else:
-                    break
+                break
             else:
                 time.sleep(1)
                 continue
