@@ -325,25 +325,10 @@ def job_check_automation_status():
             automation = record.Automation
             action = record.Action
             user = record.Users
-            if automation.action_datetime > datetime.now(timezone.utc).replace(tzinfo=None):
-                job = {
-                    "id" : automation.job_id,
-                    'trigger' : 'date',
-                    "run_date" : automation.action_datetime.strftime("%Y-%m-%d %H:%M:%S"),
-                    "func" : "jobs:email_automation_job",
-                    "args" : (nylas, action.id, automation.job_id, user.email, user.id)
-                }
 
-                if scheduler.get_job(automation.job_id) is None:
-                    try:
-                        scheduler.add_job(**job) # TODO: Uncomment this line
-                        print("Created job ", automation.job_id)
-                    except Exception as e:
-                        print("Failed to create job", str(e))
-            else:
-                # First Job start time is waitdays + 1 minutes
-                job_starttime = datetime.now() + timedelta(days=int(action.waitdays) + int(automation.group_number), minutes=1)
-                job_start_utctime = datetime.now(timezone.utc) + timedelta(days=int(action.waitdays) + int(automation.group_number), minutes=1)
+            if automation.action_datetime <= datetime.now(timezone.utc).replace(tzinfo=None):
+                job_starttime = datetime.now() + timedelta(minutes=1)
+                job_start_utctime = datetime.now(timezone.utc) + timedelta(minutes=1)
                 automation.action_datetime = job_start_utctime
                 job = {
                     "id" : automation.job_id,
@@ -353,13 +338,15 @@ def job_check_automation_status():
                     "args" : (nylas, action.id, automation.job_id, user.email, user.id)
                 }
 
-                if scheduler.get_job(automation.job_id) is None:
-                    try:
-                        scheduler.add_job(**job) # TODO: Uncomment this line
-                        print("Created job ", automation.job_id)
+                if scheduler.get_job(automation.job_id):
+                    scheduler.remove_job(automation.job_id)
 
-                        automation.status = "pending"
-                        automation.action_datetime = job_start_utctime
-                        db.session.commit()
-                    except Exception as e:
-                        print("Failed to create job", str(e))
+                try:
+                    scheduler.add_job(**job) # TODO: Uncomment this line
+                    print("Created job ", automation.job_id)
+
+                    automation.status = "pending"
+                    automation.action_datetime = job_start_utctime
+                    db.session.commit()
+                except Exception as e:
+                    print("Failed to create job", str(e))
