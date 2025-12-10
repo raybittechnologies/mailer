@@ -26,10 +26,10 @@ nylas = Client(
 
 
 def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
-    print("🔥 email_automation_job STARTED:", jobid)
-    print("Automation job started")
+    # print("🔥 email_automation_job STARTED:", jobid)
+    # print("Automation job started")
     with scheduler.app.app_context():
-        print("Automation job started", jobid)
+        # print("Automation job started", jobid)
         
         action = Action.query.filter_by(id=actionid).first()
 
@@ -39,7 +39,6 @@ def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
         subject = action.subject
         fromname = action.fromname
         message = action.message
-        jinja_temp = JT(message)
         
         emails = Email.query.filter_by(job_id=jobid, is_unsubscribed=0).all()
 
@@ -48,6 +47,14 @@ def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
         job = Automation.query.filter_by(job_id=jobid).first()
         
         if job is None:
+            return
+
+        try:
+            jinja_temp = JT(message)
+        except:
+            job.status = "failed"
+            job.subject = "There is an issue in message"
+            db.session.commit()
             return
         
         # Indicate job is running
@@ -85,7 +92,7 @@ def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
                 if email.is_unsubscribed == 1 or email.is_sent == 1: # if email is unsubscribed or sent, skip
                     continue
             except Exception as e:
-                print("Failed to check is_unsubscribed: ", email.email,  str(e))
+                # print("Failed to check is_unsubscribed: ", email.email,  str(e))
                 continue
 
             # if email is sent, skip : in case for resuming the job after stopping
@@ -93,18 +100,18 @@ def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
                 if email.is_sent == 1:
                     continue
             except Exception as e:
-                print("Failed to check is_sent: ", email.email, str(e))
+                # print("Failed to check is_sent: ", email.email, str(e))
                 continue
 
             unsubscribe_token = email.unsubscribe_token
             reciver = Uploadedservice.query.filter_by(unsubscribe_token=unsubscribe_token).first()
             if reciver is None:
-                print("No reciver email found")
-                return
+                # print("No reciver email found")
+                continue
             
             reciver_email = reciver.email # need to use this email from uploaded service because email might be changed in email table by user
 
-            print("Sending to", reciver_email)
+            # print("Sending to", reciver_email)
             
             unsubscribe_link = WEB_HOST_IP + "/unsubscribe/choose?token=" + str(unsubscribe_token) + "&_id=" + str(action.userid)
             # serv = Uploadedservice.query.filter_by(unsubscribe_token=email.unsubscribe_token).first()
@@ -132,7 +139,7 @@ def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
             try:
                 mail_body = jinja_temp.render(service)
             except Exception as e:
-                print("Failed rendering jinja template:", str(e))
+                # print("Failed rendering jinja template:", str(e))
                 continue
             
             is_sent = False
@@ -140,12 +147,12 @@ def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
                 try:
                     mailings=Mailing.query.filter_by(user_id=userId).first()
                     if mailings:
-                        print("Unimail---")
+                        # print("Unimail---")
                         response = send_email_via_unimail(mailings, subject, venue, useremail, fromname, mail_body, reciver_email, 'grant_id')
                     else:
-                        print("Nylas---")
+                        # print("Nylas---")
                         grant_id = user.nylas_access_token
-                        print("Grant ID:", grant_id)
+                        # print("Grant ID:", grant_id)
                         if grant_id is None:
                             job.status = "failed"
                             subject = "Campaign Failed - Please re-connect Email EMAIL"
@@ -161,7 +168,7 @@ def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
                         is_sent = False
                     break
                 except Exception as e:
-                    print("Failed", str(e))
+                    # print("Failed", str(e))
                     
                     if "No Grant found for this Grant ID." in str(e) or "Grant not found for given ID/Email" in str(e) or 'expired' in str(e).lower():
                         job.status = "failed"
@@ -180,10 +187,10 @@ def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
                     else:
                         time.sleep(5)
                         break
-            print(is_sent)
+            # print(is_sent)
             if is_sent:
                 email.is_sent = 1
-                message_id = response.data.id
+                message_id = '1'
                 email.mail_id = message_id
                 
                 db.session.commit()
