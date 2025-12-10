@@ -18,6 +18,7 @@ from apps.authentication.models import Users
 from apps.home.emailler import send_email
 from dotenv import load_dotenv
 from apps.home.utils import extract_first_name
+from jobs import job_check_automation_status
 
 load_dotenv()
 
@@ -90,33 +91,6 @@ else:
     except Exception as e:
         print("Failed to create job", str(e))
 
-# Automation status check job
-automation_job_id = 'job_check_automation_status'
-job = {
-    "id": automation_job_id,
-    'trigger': 'cron',
-    'hour': 0,
-    'minute': 0,  # Once per day at midnight
-    "func": "jobs:job_check_automation_status",
-    "args": ()
-}
-    
-    
-if scheduler.get_job(automation_job_id) is None:
-    try:
-        scheduler.add_job(**job) # TODO: Uncomment this line
-        print("Created Automation Status Check job ", automation_job_id)
-    except Exception as e:
-        print("Failed to create job", str(e))
-else:
-    print("Automation Status Check job already exists")
-    try:
-        scheduler.remove_job(automation_job_id)
-        scheduler.add_job(**job) # TODO: Uncomment this line
-        print("Created Automation Status Check job ", automation_job_id)
-    except Exception as e:
-        print("Failed to create job", str(e))
-
 #  Create a job to send email fro users which has past active reminders, start is eveny Monday, 2 pm in local time
 remind_job_id = 'job_send_reminder_email_past_due'
 job = {
@@ -144,6 +118,8 @@ else:
         print("Created Reminder job ", remind_job_id)
     except Exception as e:
         print("Failed to create job", str(e))
+
+job_check_automation_status()
 
 @csrf.exempt
 @app.route('/msg', methods=['POST'])
