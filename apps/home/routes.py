@@ -4167,3 +4167,158 @@ def get_service_with_userid_bizid():
                         
     # convert service model to dict
     return jsonify({"service": final_service, "is_exist": is_exist, "user_id": user_id}) 
+
+@blueprint.route('/admin/users/bulk/update-plan', methods=['POST'])
+@login_required
+@role_required('admin')
+def bulk_update_plan():
+    """Update plan for multiple users"""
+    try:
+        # Get data from form (array of user_ids)
+        user_ids = request.form.getlist('user_ids[]')
+        plan = request.form.get('plan')
+        
+        if not user_ids or not plan:
+            return jsonify({'success': False, 'message': 'Missing parameters'}), 400
+        
+        # Validate plan
+        valid_plans = ['lite', 'normal', 'premium']
+        if plan not in valid_plans:
+            return jsonify({'success': False, 'message': 'Invalid plan type'}), 400
+        
+        updated_count = 0
+        for user_id in user_ids:
+            user = Users.query.get(user_id)
+            if user and user.role != 'admin':  # Don't update admin users
+                if plan == 'normal':
+                    user.role = 'user'
+                else:
+                    user.role = plan
+                
+                # If it's lite plan, add initial credit
+                if plan == 'lite':
+                    user_credit = UserCredit.query.filter_by(userid=user_id).first()
+                    user_initial_credit = 10
+                    if user_credit:
+                        user_credit.credit = user_initial_credit
+                    else:
+                        user_credit = UserCredit(userid=user_id, credit=user_initial_credit)
+                        db.session.add(user_credit)
+                
+                updated_count += 1
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Plan updated for {updated_count} user(s)'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
+
+@blueprint.route('/admin/users/bulk/update-status', methods=['POST'])
+@login_required
+@role_required('admin')
+def bulk_update_status():
+    """Update status for multiple users"""
+    try:
+        user_ids = request.form.getlist('user_ids[]')
+        status = request.form.get('status')
+        
+        if not user_ids or not status:
+            return jsonify({'success': False, 'message': 'Missing parameters'}), 400
+        
+        # Validate status
+        valid_statuses = ['approve', 'inactive']
+        if status not in valid_statuses:
+            return jsonify({'success': False, 'message': 'Invalid status type'}), 400
+        
+        updated_count = 0
+        for user_id in user_ids:
+            user = Users.query.get(user_id)
+            if user and user.role != 'admin':  # Don't update admin users
+                if status == 'approve':
+                    user.state = 'approved'
+                elif status == 'inactive':
+                    user.state = 'pending'
+                updated_count += 1
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Status updated for {updated_count} user(s)'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
+
+@blueprint.route('/admin/users/bulk/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+def bulk_delete_users():
+    """Delete multiple users"""
+    try:
+        user_ids = request.form.getlist('user_ids[]')
+        
+        if not user_ids:
+            return jsonify({'success': False, 'message': 'No users selected'}), 400
+        
+        deleted_count = 0
+        for user_id in user_ids:
+            user = Users.query.get(int(user_id))
+            if user and user.role != 'admin':  # Don't delete admin users
+                # Delete associated data
+                Service.query.filter_by(user_id=user_id).delete()
+                Yelpurl.query.filter_by(userid=user_id).delete()
+                Uploadedservice.query.filter_by(user_id=user_id).delete()
+                Uploadedcontactfile.query.filter_by(user_id=user_id).delete()
+                Template.query.filter_by(userid=user_id).delete()
+                
+                # Delete automations and emails
+                jobs = Automation.query.filter_by(userid=user_id).all()
+                for job in jobs:
+                    Email.query.filter_by(job_id=job.job_id).delete()
+                    db.session.delete(job)
+                
+                # Delete other related data
+                Action.query.filter_by(userid=user_id).delete()
+                Campaign.query.filter_by(userid=user_id).delete()
+                UserCredit.query.filter_by(userid=user_id).delete()
+                UserCampaignSetting.query.filter_by(userid=user_id).delete()
+                Reminder.query.filter_by(userid=user_id).delete()
+                PushNotificationInfo.query.filter_by(userid=user_id).delete()
+                
+                # Delete the user
+                db.session.delete(user)
+                deleted_count += 1
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'{deleted_count} user(s) deleted successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+
+
+@blueprint.route('/admin/users/bulk/reset-token', methods=['POST'])
+@login_required
+@role_required('admin')
+def bulk_reset_tokens():
+    """Reset Nylas tokens for multiple users"""
+    try:
+        user_ids = request.form.getlist('user_ids[]')
+        
+        if not user_ids:
+            return jsonify({'success': False, 'message': 'No users selected'}), 400
+        
+        reset_count = 0
+        for user_id in user_ids:
+            user = Users.query.get(int(user_id))
+            if user and user.role != 'admin' and user.nylas_access_token:  # Only reset if token exists
+                user.nylas_access_token = None
+                reset_count += 1
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Tokens reset for {reset_count} user(s)'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
