@@ -14,6 +14,7 @@ from flask import current_app, jsonify
 from sqlalchemy import func
 from sqlalchemy import or_ , and_
 from random import randint
+from math import ceil
 
 load_dotenv()
 
@@ -360,3 +361,53 @@ def job_check_automation_status():
                     print("Failed to create job", str(e))
 
         db.session.commit()
+
+def job_send_daily_reminding_campaign_end():
+    with scheduler.app.app_context():
+        # Calculate time ranges
+        current_utctime = datetime.now(timezone.utc).replace(tzinfo=None)
+        end_limit_before = current_utctime + timedelta(days=7)
+
+        # Subquery to get latest action_datetime per campaignid
+        latest_datetimes_subq = db.session.query(
+            Automation.campaignid,
+            func.max(Automation.action_datetime).label('latest_datetime')
+        ).group_by(Automation.campaignid).subquery()
+
+        # Main query with user email join
+        results = db.session.query(
+            Automation,
+            Users.email.label('user_email')
+        ).join(
+            Users, Automation.userid == Users.id
+        ).join(
+            latest_datetimes_subq,
+            db.and_(
+                Automation.campaignid == latest_datetimes_subq.c.campaignid,
+                Automation.action_datetime == latest_datetimes_subq.c.latest_datetime
+            )
+        ).filter(
+            Automation.action_datetime.between(current_utctime, end_limit_before),
+            Automation.is_archived == 0
+        ).all()
+
+        for automation, user_email in results:
+            seconds = (automation.action_datetime - current_utctime).total_seconds()
+            days = ceil(seconds / 3600 / 24)
+
+            subject = "Important: Your campaign is about to expire"
+            fromname = "Robotic Booking Agent"
+            
+            body = f"""
+                <p>Hi,</p>
+                <p>This is a reminder that your campaign will expire soon.</p>
+                <b>Time Remaining: {days} day(s).</b>
+                <p>Once it expires, it will no longer be active or visible to your audience.</p>
+                <p>If you'd like to keep it running, please renew it before the expiration date.</p>
+                <p>You can manage or renew your campaign here: <a href="https://roboticbookingagent.com/campaign/view/{ automation.campaignid }">https://roboticbookingagent.com/campaign/view/{ automation.campaignid }</a></p>
+                <p>Sincerely,</p>
+                <p>Team Soundheart Music (Robotic Booking Agent)</p>
+            """
+            receiver = user_email
+            response = send_email_via_mailtrap(subject, fromname, body, receiver)
+
