@@ -1271,7 +1271,22 @@ def url_view(id):
         yelpurl = Yelpurl.query.get(id)
         return render_template('home/view_url_data.html', segment='history', current_url=yelpurl)
     
-    
+@blueprint.route('/user/disconnect_unimail', methods=['POST'])
+@login_required
+@user_approved_required
+def disconnect_unimail():
+    user_id=request.form['user_id']
+    url=request.form['url']
+    mailing = Mailing.query.filter_by(user_id=user_id).first()
+    if mailing:
+        db.session.delete(mailing)
+        db.session.commit()
+        print(f"Mailing for user_id={user_id} deleted successfully.")
+    else:
+        print(f"No mailing found for user_id={user_id}.")
+    return redirect(url)
+
+
 @blueprint.route('/url/delete', methods=['POST'])
 @login_required
 @user_approved_required
@@ -1289,12 +1304,13 @@ def url_delete():
 @login_required
 def profile():
     user_credit = db.session.query(UserCredit).filter_by(userid=current_user.id).first()
+    mailings=Mailing.query.filter_by(user_id=current_user.id).first()
     is_auto_unsub = current_user.is_auto_unsub
     if user_credit:
         credit  = user_credit.credit
     else:
         credit = None
-    return render_template('home/profile.html', segment='profile', user_credit=credit, is_auto_unsub=is_auto_unsub)
+    return render_template('home/profile.html', segment='profile', user_credit=credit, is_auto_unsub=is_auto_unsub,mailings=mailings)
 
 
 @blueprint.route('/how-to')
@@ -1481,10 +1497,12 @@ def admin():
 def admin_users():
     page_data = get_admin_data()
     users = Users.query.filter(Users.role != "admin").join(UserCredit, UserCredit.userid == Users.id, isouter=True).all()
+    mailing_user_ids = [m.user_id for m in Mailing.query.with_entities(Mailing.user_id).all()]
     return render_template("home/admin_users.html",
                            segment='users', API_GENERATOR=len(API_GENERATOR),
                            page_data=page_data,
-                           users=users
+                           users=users,
+                           mailing_user_ids=mailing_user_ids
                            )
 
 
