@@ -13,6 +13,7 @@ import urllib.parse
 from flask import current_app, jsonify
 from sqlalchemy import func
 from sqlalchemy import or_ , and_
+from random import randint
 
 load_dotenv()
 
@@ -26,7 +27,7 @@ nylas = Client(
 
 
 def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
-    print("🔥 email_automation_job STARTED:", jobid)
+    print("?? email_automation_job STARTED:", jobid)
     print("Automation job started")
     with scheduler.app.app_context():
         print("Automation job started", jobid)
@@ -190,7 +191,7 @@ def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
             print(is_sent)
             if is_sent:
                 email.is_sent = 1
-                message_id = '1'
+                message_id = response.data.id
                 email.mail_id = message_id
                 
                 db.session.commit()
@@ -334,8 +335,9 @@ def job_check_automation_status():
             user = record.Users
 
             if automation.action_datetime <= datetime.now(timezone.utc).replace(tzinfo=None):
-                job_starttime = datetime.now() + timedelta(minutes=1)
-                job_start_utctime = datetime.now(timezone.utc) + timedelta(minutes=1)
+                delta = randint(60, 7200)
+                job_starttime = datetime.now() + timedelta(seconds=delta)
+                job_start_utctime = datetime.now(timezone.utc) + timedelta(seconds=delta)
                 automation.action_datetime = job_start_utctime
                 job = {
                     "id" : automation.job_id,

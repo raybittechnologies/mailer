@@ -1,6 +1,7 @@
 .env
 info.txt
 /venv
+env/
 *.csv
 *.zip
 __pycache__/
