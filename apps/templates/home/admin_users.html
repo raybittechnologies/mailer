@@ -164,7 +164,8 @@
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
                                         style="width: 50px;">
                                         <div class="form-check mb-0 d-flex justify-content-center">
-                                            <input class="form-check-input" type="checkbox" id="select-all-checkbox" style="border-radius: 0;">
+                                            <input class="form-check-input" type="checkbox" id="select-all-checkbox"
+                                                style="border-radius: 0;">
                                         </div>
                                     </th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
@@ -190,6 +191,10 @@
                                         class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                                         Reset Token
                                     </th>
+                                    <th
+                                        class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                                        Reset Unimail
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -198,7 +203,8 @@
                                     <td>
                                         <div class="form-check mb-0 d-flex justify-content-center">
                                             <input class="form-check-input user-checkbox" type="checkbox"
-                                                value="{{ user.id }}" data-user-id="{{ user.id }}" style="border-radius: 0%;">
+                                                value="{{ user.id }}" data-user-id="{{ user.id }}"
+                                                style="border-radius: 0%;">
                                         </div>
                                     </td>
                                     <td>
@@ -267,6 +273,20 @@
                                         <button data-bs-toggle="modal" data-bs-target="#resetUserTokenModal"
                                             onclick="resetToken('{{ user.id }}')"
                                             class="btn btn-sm btn-danger">Reset</button>
+                                        {% endif %}
+                                    </td>
+                                    <td class="align-middle text-center text-sm">
+                                        {% if user.id in mailing_user_ids %}
+                                        <form action="/user/disconnect_unimail" style="display: contents" method="post">
+                                            <input type="hidden" name="csrf_token" id="csrf_token"
+                                                value="{{ csrf_token() }}">
+                                            <input type="hidden" name="user_id" id="user_id" value="{{ user.id }}">
+                                            <input type="hidden" name="url" id="url" value="/admin/users">
+                                            <div class="modal-footer">
+                                                <input class="btn btn-danger" type="submit" value="Disconnect Unimail">
+                                            </div>
+                                        </form>
+
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -392,12 +412,12 @@
         height: 1rem;
         border-width: 0.2em;
     }
-    
+
     .btn-loading {
         position: relative;
         color: transparent !important;
     }
-    
+
     .btn-loading::after {
         content: '';
         position: absolute;
@@ -411,11 +431,13 @@
         border-top-color: white;
         animation: spin 1s ease-in-out infinite;
     }
-    
+
     @keyframes spin {
-        to { transform: translate(-50%, -50%) rotate(360deg); }
+        to {
+            transform: translate(-50%, -50%) rotate(360deg);
+        }
     }
-    
+
     /* Make checkboxes square */
     .form-check-input {
         border-radius: 0 !important;
@@ -446,7 +468,7 @@
             $('#bulkPlanDropdown').prop('disabled', true);
             $('#select-all-checkbox').prop('disabled', true);
             $('.user-checkbox').prop('disabled', true);
-            
+
             // Add overlay to prevent interaction
             $('body').append('<div class="processing-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;"><div class="spinner-border text-primary" style="width:3rem;height:3rem;"></div></div>');
         }
@@ -458,7 +480,7 @@
             $('#bulkPlanDropdown').prop('disabled', selectedUsers.length === 0);
             $('#select-all-checkbox').prop('disabled', false);
             $('.user-checkbox').prop('disabled', false);
-            
+
             // Remove overlay
             $('.processing-overlay').remove();
         }
@@ -466,7 +488,7 @@
         // Select All checkbox functionality
         $('#select-all-checkbox').on('change', function () {
             if (isProcessing) return;
-            
+
             const isChecked = $(this).prop('checked');
             $('.user-checkbox').prop('checked', isChecked);
 
@@ -486,7 +508,7 @@
         // Individual checkbox functionality
         $('.user-checkbox').on('change', function () {
             if (isProcessing) return;
-            
+
             const userId = $(this).val();
 
             if ($(this).prop('checked')) {
@@ -562,27 +584,27 @@
         // Confirm bulk delete
         $('#confirm-bulk-delete').on('click', function () {
             if (isProcessing) return;
-            
+
             // Add loading to delete button
             $(this).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...').prop('disabled', true);
-            
+
             bulkDeleteUsers();
         });
 
         // Confirm bulk reset
         $('#confirm-bulk-reset').on('click', function () {
             if (isProcessing) return;
-            
+
             // Add loading to reset button
             $(this).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...').prop('disabled', true);
-            
+
             bulkResetTokens();
         });
 
         // Bulk API calls
         function bulkUpdatePlan(plan) {
             showLoading();
-            
+
             $.ajax({
                 url: '/admin/users/bulk/update-plan',
                 method: 'POST',
@@ -609,7 +631,7 @@
 
         function bulkUpdateStatus(status) {
             showLoading();
-            
+
             $.ajax({
                 url: '/admin/users/bulk/update-status',
                 method: 'POST',
@@ -636,7 +658,7 @@
 
         function bulkDeleteUsers() {
             showLoading();
-            
+
             $.ajax({
                 url: '/admin/users/bulk/delete',
                 method: 'POST',
@@ -667,7 +689,7 @@
 
         function bulkResetTokens() {
             showLoading();
-            
+
             $.ajax({
                 url: '/admin/users/bulk/reset-token',
                 method: 'POST',
