@@ -119,6 +119,32 @@ else:
     except Exception as e:
         print("Failed to create job", str(e))
 
+campaign_end_job_id = 'job_send_reminder_campaign_end'
+job = {
+        "id" : campaign_end_job_id,
+        'trigger' : 'cron',
+        'hour' : 0,
+        'minute' : 0,
+        "func" : "jobs:job_send_daily_reminding_campaign_end",
+        "args" : ()
+    }
+
+if scheduler.get_job(campaign_end_job_id) is None:
+    try:
+        scheduler.add_job(**job) # TODO: Uncomment this line
+        print("Created Campaign End job ", campaign_end_job_id)
+    except Exception as e:
+        print("Failed to create job", str(e))
+
+else:
+    print("Campaign End job already exists")
+    try:
+        scheduler.remove_job(campaign_end_job_id)
+        scheduler.add_job(**job) # TODO: Uncomment this line
+        print("Created Campaign End job ", campaign_end_job_id)
+    except Exception as e:
+        print("Failed to create job", str(e))
+
 job_check_automation_status()
 
 @csrf.exempt
