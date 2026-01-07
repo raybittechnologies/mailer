@@ -123,7 +123,6 @@ campaign_end_job_id = 'job_send_reminder_campaign_end'
 job = {
         "id" : campaign_end_job_id,
         'trigger' : 'cron',
-        'hour' : 0,
         'minute' : 0,
         "func" : "jobs:job_send_daily_reminding_campaign_end",
         "args" : ()
