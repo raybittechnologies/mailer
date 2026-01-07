@@ -366,7 +366,6 @@ def job_send_daily_reminding_campaign_end():
     with scheduler.app.app_context():
         # Calculate time ranges
         current_utctime = datetime.now(timezone.utc).replace(tzinfo=None)
-        end_limit_before = current_utctime + timedelta(days=7)
 
         # Subquery to get latest action_datetime per campaignid
         latest_datetimes_subq = db.session.query(
@@ -387,27 +386,56 @@ def job_send_daily_reminding_campaign_end():
                 Automation.action_datetime == latest_datetimes_subq.c.latest_datetime
             )
         ).filter(
-            Automation.action_datetime.between(current_utctime, end_limit_before),
             Automation.is_archived == 0
         ).all()
 
         for automation, user_email in results:
             seconds = (automation.action_datetime - current_utctime).total_seconds()
-            days = ceil(seconds / 3600 / 24)
+            hours = int(seconds / 3600)
 
-            subject = "Important: Your campaign is about to expire"
+            subject = "Important: Your campaign is expired"
             fromname = "Robotic Booking Agent"
-            
-            body = f"""
-                <p>Hi,</p>
-                <p>This is a reminder that your campaign will expire soon.</p>
-                <b>Time Remaining: {days} day(s).</b>
-                <p>Once it expires, it will no longer be active or visible to your audience.</p>
-                <p>If you'd like to keep it running, please renew it before the expiration date.</p>
-                <p>You can manage or renew your campaign here: <a href="https://roboticbookingagent.com/campaign/view/{ automation.campaignid }">https://roboticbookingagent.com/campaign/view/{ automation.campaignid }</a></p>
-                <p>Sincerely,</p>
-                <p>Team Soundheart Music (Robotic Booking Agent)</p>
+            body = """
+                <p>Hi there,</p>
+                <br/>
+                %s
+                <br/>
+                <p>Please login</p>
+                <p><a href="https://soundheartmusic.com">soundheartmusic.com</a></p>
+                <p>and navigate to "Campaigns" Tab </p>
+                <p>While noting the campaigns you already have running, and also the ones launched in the past by clicking the "Archive View" Button</p>
+                <p>Click "Create Campaign" button</p>
+                <p>Launch a new campaign with no more than 315 emails per week TOTAL (That's GENERALLY 3 batches, some may have less, but you can see how many emails there by clicking the drop down menu, and the number next to the Contact List is the amount per week</p>
+                <br/>
+                <p>Happy Gig-Hunting!</p>
+                <br/>
+                <p>Thank you,</p>
+                <br/>
+                <p>PS - Please contact us if you'd like to add an additional email for your campaign (8 per mo more)</p>
             """
             receiver = user_email
-            response = send_email_via_mailtrap(subject, fromname, body, receiver)
+            
+            if hours == 0:
+                subject = "Important: Your campaign is about to expire"
+                body = body % "<p>It's Soundheart Music - Your campaign will be expired in 24 hours, and it's time to start the new ones</p>"
+                response = send_email_via_mailtrap(subject, fromname, body, receiver)
 
+            if hours == -24:
+                body = body % "<p>It's Soundheart Music - Your campaign is expired just now, and it's time to start the new ones</p>"
+                response = send_email_via_mailtrap(subject, fromname, body, receiver)
+
+            if hours == -48:
+                body = body % "<p>It's Soundheart Music - Your campaign was expired 24 hours ago, and it's time to start the new ones</p>"
+                response = send_email_via_mailtrap(subject, fromname, body, receiver)
+
+            if hours == -60:
+                body = body % "<p>It's Soundheart Music - Your campaign was expired 32 hours ago, and it's time to start the new ones</p>"
+                response = send_email_via_mailtrap(subject, fromname, body, receiver)
+
+            if hours == -96:
+                body = body % "<p>It's Soundheart Music - Your campaign was expired 72 hours ago, and it's time to start the new ones</p>"
+                response = send_email_via_mailtrap(subject, fromname, body, receiver)
+
+            if hours < 0 and hours % 168 == 0:
+                body = body % f"<p>It's Soundheart Music - Your campaign was expired {int(hours) / 168} weeks ago, and it's time to start the new ones</p>"
+                response = send_email_via_mailtrap(subject, fromname, body, receiver)
