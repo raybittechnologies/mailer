@@ -50,6 +50,10 @@
                             <button class="btn bg-gradient-warning bulk-action-btn" data-action="reset" disabled>
                                 Reset Token
                             </button>
+                            <!-- Add Unimail Reset Button -->
+                            <button class="btn bg-gradient-dark bulk-action-btn" data-action="reset-unimail" disabled>
+                                Reset Unimail
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -398,6 +402,31 @@
         </div>
     </div>
 
+    <!-- Bulk Reset Unimail Confirmation Modal -->
+    <div class="modal fade" id="bulkResetUnimailModal" tabindex="-1" role="dialog"
+        aria-labelledby="bulkResetUnimailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bulkResetUnimailModalLabel">Confirm Bulk Reset Unimail</h5>
+                    <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to reset Unimail for <span id="reset-unimail-count">0</span> selected
+                        users?</p>
+                    <p class="text-warning"><small>This will disconnect Unimail integration for selected users.</small>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn bg-gradient-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-dark" id="confirm-bulk-reset-unimail">Reset Unimail</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 {% endblock content %}
@@ -578,7 +607,22 @@
                     $('#reset-count').text(selectedUsers.length);
                     $('#bulkResetModal').modal('show');
                     break;
+
+                case 'reset-unimail':
+                    $('#reset-unimail-count').text(selectedUsers.length);
+                    $('#bulkResetUnimailModal').modal('show');
+                    break;
             }
+        });
+
+        // Add confirm bulk reset unimail handler
+        $('#confirm-bulk-reset-unimail').on('click', function () {
+            if (isProcessing) return;
+
+            // Add loading to reset unimail button
+            $(this).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...').prop('disabled', true);
+
+            bulkResetUnimail();
         });
 
         // Confirm bulk delete
@@ -602,6 +646,39 @@
         });
 
         // Bulk API calls
+
+        // Add bulkResetUnimail function
+        function bulkResetUnimail() {
+            showLoading();
+
+            $.ajax({
+                url: '/admin/users/bulk/reset-unimail',
+                method: 'POST',
+                data: {
+                    csrf_token: $('#csrf_token').val(),
+                    'user_ids[]': selectedUsers
+                },
+                success: function (response) {
+                    hideLoading();
+                    if (response.success) {
+                        $('#bulkResetUnimailModal').modal('hide');
+                        alert(response.message);
+                        location.reload();
+                    } else {
+                        alert('Error: ' + response.message);
+                        // Reset modal button
+                        $('#confirm-bulk-reset-unimail').html('Reset Unimail').prop('disabled', false);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    hideLoading();
+                    alert('An error occurred. Please try again.');
+                    // Reset modal button
+                    $('#confirm-bulk-reset-unimail').html('Reset Unimail').prop('disabled', false);
+                }
+            });
+        }
+
         function bulkUpdatePlan(plan) {
             showLoading();
 
@@ -719,9 +796,10 @@
         }
 
         // Reset modal buttons when modal is hidden
-        $('#bulkDeleteModal, #bulkResetModal').on('hidden.bs.modal', function () {
+        $('#bulkDeleteModal, #bulkResetModal, #bulkResetUnimailModal').on('hidden.bs.modal', function () {
             $('#confirm-bulk-delete').html('Delete Selected').prop('disabled', false);
             $('#confirm-bulk-reset').html('Reset Tokens').prop('disabled', false);
+            $('#confirm-bulk-reset-unimail').html('Reset Unimail').prop('disabled', false);
         });
     });
 </script>

@@ -4340,3 +4340,31 @@ def bulk_reset_tokens():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+    
+@blueprint.route('/admin/users/bulk/reset-unimail', methods=['POST'])
+@login_required
+@role_required('admin')
+def bulk_reset_unimail():
+    """Reset Unimail for multiple users"""
+    try:
+        user_ids = request.form.getlist('user_ids[]')
+        
+        if not user_ids:
+            return jsonify({'success': False, 'message': 'No users selected'}), 400
+        
+        reset_count = 0
+        for user_id in user_ids:
+            user = Users.query.get(int(user_id))
+            if user and user.role != 'admin':  # Don't reset admin users
+                # Delete Mailing record for this user if exists
+                mailing = Mailing.query.filter_by(user_id=user_id).first()
+                if mailing:
+                    db.session.delete(mailing)
+                    reset_count += 1
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': f'Unimail disconnected for {reset_count} user(s)'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
