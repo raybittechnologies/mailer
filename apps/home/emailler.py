@@ -10,6 +10,7 @@ load_dotenv()
 import requests
 import uuid
 from flask import request
+from bs4 import BeautifulSoup
 
 NYLAS_API_KEY = os.getenv('NYLAS_API_KEY')
 NYLAS_API_URI = os.getenv('NYLAS_API_URI')
@@ -214,7 +215,7 @@ def send_reconnect_email_via_mailtrap(subject, fromname, receiver):
 
 
 def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, receiver, grant_id):
-    html=f"""
+    html_content =f"""
         <!doctype html>
         <html>
         <head>
@@ -231,23 +232,41 @@ def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, rece
             </body>
         </html>
     """
-    message = nylas.messages.send(
-        grant_id,
-        request_body={
-            "to": [{ "name": toname, "email": receiver }],
-            "from": [{ "name": fromname, "email": fromemail }],
-            "subject": subject,
-            "body": html,
-            "tracking_options": {
-                "opens": True,
-                "links": True,
-                "thread_replies": True,
-                "label": "Use this string to describe the message you're enabling tracking for. It's included in notifications about tracked events."
-            }
-        }
-        )
-    # print(message.data)
-    return message
+
+    plain_text = BeautifulSoup(html_content, 'html.parser').get_text("\n")
+    # Nylas API endpoint
+    url = f"https://api.us.nylas.com/v3/grants/{grant_id}/messages/send?type=mime"
+    headers = {
+        "Authorization": f"Bearer {NYLAS_API_KEY}"
+    }
+
+    # Note the triple quotes and escaping - exactly like curl
+    mime_content = f'''MIME-Version: 1.0
+Subject: {subject}
+From: {fromname} <{fromemail}>
+To: {toname} <{receiver}>
+Content-Type: multipart/alternative; boundary="000000000000fda5260624af9e86"
+
+--000000000000fda5260624af9e86
+Content-Type: text/plain; charset="UTF-8"
+
+{plain_text}
+
+--000000000000fda5260624af9e86
+Content-Type: text/html; charset="UTF-8"
+
+{html_content}
+
+--000000000000fda5260624af9e86--'''
+
+    # Using files parameter exactly as curl would
+    files = {
+        'mime': (None, mime_content, 'text/plain')
+    }
+
+    response = requests.post(url, headers=headers, files=files)
+
+    return response.json()
 
 def send_email_via_unimail(mailings, subject, toname, fromemail, fromname, body, receiver, grant_id):
     message_id = str(uuid.uuid4())
