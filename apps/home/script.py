@@ -244,11 +244,14 @@ def yelp_scraper_run(url, id, user_info):
 
                     venue_type = ", ".join(venue_types)
 
-                    if business['searchResultBusiness']['website']:
-                        website = business['searchResultBusiness']['website']['href']
-                        if "http" != website[:4]:
+                    try:
+                        if business['searchResultBusiness']['website']:
+                            website = business['searchResultBusiness']['website']['href']
+                            if "http" != website[:4]:
+                                website = ""
+                        else:
                             website = ""
-                    else:
+                    except:
                         website = ""
                         
                     businessUrl = "https://www.yelp.com" + business['searchResultBusiness']['businessUrl']
