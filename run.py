@@ -144,7 +144,7 @@ else:
     except Exception as e:
         print("Failed to create job", str(e))
 
-# job_check_automation_status()
+job_check_automation_status()
 
 @csrf.exempt
 @app.route('/msg', methods=['POST'])
