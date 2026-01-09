@@ -248,6 +248,7 @@ def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, rece
 
     # Note the triple quotes and escaping - exactly like curl
     mime_content = f'''MIME-Version: 1.0
+x-nylas-send-v3: true
 Subject: {subject}
 From: {fromname} <{fromemail}>
 To: {toname} <{receiver}>
