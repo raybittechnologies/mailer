@@ -176,7 +176,12 @@
                     {data : "customtext", defaultContent : ""},
                     {data : "originalemail", defaultContent : ""},
                     {data: 'venue_type', defaultContent : ""},
-                    {data: 'phone', defaultContent : ""},
+                    {
+                        data: 'phone',
+                        render: function (phone, type, row) {
+                            return phone ? '<a href="tel:' + phone + '">' + phone + '</a>' : ''
+                        },
+                    },
                     {data: 'address', defaultContent : ""},
                     {data: 'city', defaultContent : ""},
                     {data: 'state', defaultContent : ""},
