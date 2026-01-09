@@ -163,7 +163,7 @@ def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
                             db.session.commit()
                             return
                         response = send_email_via_nylas(nylas_client, subject, venue, useremail, fromname, mail_body, reciver_email, grant_id)
-                        print(response)
+                        
                     if response:
                         is_sent = True
                     else:
@@ -192,7 +192,7 @@ def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
             print(is_sent)
             if is_sent:
                 email.is_sent = 1
-                message_id = response.data.id
+                message_id = response['data']['id']
                 email.mail_id = message_id
                 
                 db.session.commit()

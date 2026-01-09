@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 import requests
 import uuid
+import base64
 from flask import request
 from bs4 import BeautifulSoup
 
@@ -240,31 +241,57 @@ def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, rece
         "Authorization": f"Bearer {NYLAS_API_KEY}"
     }
 
+    # Generate boundary strings (similar to the example)
+    main_boundary = str(uuid.uuid4().hex)
+    related_boundary = str(uuid.uuid4().hex)
+    alt_boundary = f"altpart-{related_boundary}"
+
     # Note the triple quotes and escaping - exactly like curl
     mime_content = f'''MIME-Version: 1.0
 Subject: {subject}
 From: {fromname} <{fromemail}>
 To: {toname} <{receiver}>
-Content-Type: multipart/alternative; boundary="000000000000fda5260624af9e86"
+Message-id: <{str(uuid.uuid4()).upper()}@{fromemail.split('@')[1]}>
+Content-Type: multipart/mixed; boundary={main_boundary}
 
---000000000000fda5260624af9e86
-Content-Type: text/plain; charset="UTF-8"
+--{main_boundary}
+Content-Type: multipart/related; boundary="{related_boundary}"
 
-{plain_text}
+--{related_boundary}
+Content-Type: multipart/alternative; boundary="{alt_boundary}"
 
---000000000000fda5260624af9e86
-Content-Type: text/html; charset="UTF-8"
+--{alt_boundary}
+Content-Transfer-Encoding: base64
+Content-Type: text/plain; charset=UTF-8
 
-{html_content}
+{base64.b64encode(plain_text.encode('utf-8')).decode('utf-8')}
 
---000000000000fda5260624af9e86--'''
+--{alt_boundary}
+Content-Transfer-Encoding: base64
+Content-Type: text/html; charset=UTF-8
+
+{base64.b64encode(html_content.encode('utf-8')).decode('utf-8')}
+
+--{alt_boundary}--
+
+--{related_boundary}--
+
+--{main_boundary}--'''
 
     # Using files parameter exactly as curl would
     files = {
         'mime': (None, mime_content, 'text/plain')
     }
+    data = {
+        "tracking_options": {
+            "opens": True,
+            "links": True,
+            "thread_replies": True,
+            "label": "Use this string to describe the message you're enabling tracking for. It's included in notifications about tracked events."
+        }
+    }
 
-    response = requests.post(url, headers=headers, files=files)
+    response = requests.post(url, headers=headers, files=files, data=data)
 
     return response.json()
 
