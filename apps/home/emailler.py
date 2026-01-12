@@ -235,18 +235,30 @@ def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, rece
     """
 
     plain_text = BeautifulSoup(html_content, 'html.parser').get_text("\n")
+    
+    # Encode content and wrap lines to ensure they don't exceed limits
+    plain_text_encoded = base64.b64encode(plain_text.encode('utf-8')).decode('utf-8')
+    html_content_encoded = base64.b64encode(html_content.encode('utf-8')).decode('utf-8')
+    
+    # Wrap base64 content to 76 characters per line (RFC 2045 standard)
+    def wrap_base64(content, line_length=76):
+        return '\n'.join([content[i:i+line_length] for i in range(0, len(content), line_length)])
+    
+    plain_text_wrapped = wrap_base64(plain_text_encoded)
+    html_content_wrapped = wrap_base64(html_content_encoded)
+    
     # Nylas API endpoint
     url = f"https://api.us.nylas.com/v3/grants/{grant_id}/messages/send?type=mime"
     headers = {
         "Authorization": f"Bearer {NYLAS_API_KEY}"
     }
 
-    # Generate boundary strings (similar to the example)
+    # Generate boundary strings
     main_boundary = str(uuid.uuid4().hex)
     related_boundary = str(uuid.uuid4().hex)
     alt_boundary = f"altpart-{related_boundary}"
 
-    # Note the triple quotes and escaping - exactly like curl
+    # Construct MIME content with proper line wrapping
     mime_content = f'''MIME-Version: 1.0
 x-nylas-send-v3: true
 Subject: {subject}
@@ -265,13 +277,13 @@ Content-Type: multipart/alternative; boundary="{alt_boundary}"
 Content-Transfer-Encoding: base64
 Content-Type: text/plain; charset=UTF-8
 
-{base64.b64encode(plain_text.encode('utf-8')).decode('utf-8')}
+{plain_text_wrapped}
 
 --{alt_boundary}
 Content-Transfer-Encoding: base64
 Content-Type: text/html; charset=UTF-8
 
-{base64.b64encode(html_content.encode('utf-8')).decode('utf-8')}
+{html_content_wrapped}
 
 --{alt_boundary}--
 
@@ -279,6 +291,27 @@ Content-Type: text/html; charset=UTF-8
 
 --{main_boundary}--'''
 
+    # Ensure the entire MIME content doesn't have lines longer than 2048 characters
+    # Split on newlines and then split any remaining long lines
+    def ensure_line_length_limit(content, max_length=2048):
+        lines = content.split('\n')
+        result_lines = []
+        for line in lines:
+            while len(line) > max_length:
+                # Try to split at a natural boundary if possible
+                split_point = max_length
+                # Look for a space or boundary marker to split at
+                for i in range(max_length-100, max_length):
+                    if line[i] in [' ', '-', '/', ';']:
+                        split_point = i + 1
+                        break
+                result_lines.append(line[:split_point])
+                line = line[split_point:]
+            result_lines.append(line)
+        return '\n'.join(result_lines)
+    
+    mime_content = ensure_line_length_limit(mime_content)
+    
     # Using files parameter exactly as curl would
     files = {
         'mime': (None, mime_content, 'text/plain')
