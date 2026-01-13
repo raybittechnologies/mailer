@@ -192,7 +192,12 @@ def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
             print(is_sent)
             if is_sent:
                 email.is_sent = 1
-                message_id = response['data']['id']
+
+                try:
+                    message_id = response['data']['id']
+                except:
+                    message_id = response.data.id
+                    
                 email.mail_id = message_id
                 
                 db.session.commit()
