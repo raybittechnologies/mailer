@@ -236,17 +236,6 @@ def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, rece
 
     plain_text = BeautifulSoup(html_content, 'html.parser').get_text("\n")
     
-    # Encode content and wrap lines to ensure they don't exceed limits
-    plain_text_encoded = base64.b64encode(plain_text.encode('utf-8')).decode('utf-8')
-    html_content_encoded = base64.b64encode(html_content.encode('utf-8')).decode('utf-8')
-    
-    # Wrap base64 content to 76 characters per line (RFC 2045 standard)
-    def wrap_base64(content, line_length=76):
-        return '\n'.join([content[i:i+line_length] for i in range(0, len(content), line_length)])
-    
-    plain_text_wrapped = wrap_base64(plain_text_encoded)
-    html_content_wrapped = wrap_base64(html_content_encoded)
-    
     # Nylas API endpoint
     url = f"https://api.us.nylas.com/v3/grants/{grant_id}/messages/send?type=mime"
     headers = {
@@ -258,7 +247,7 @@ def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, rece
     related_boundary = str(uuid.uuid4().hex)
     alt_boundary = f"altpart-{related_boundary}"
 
-    # Construct MIME content with proper line wrapping
+    # Construct MIME content
     mime_content = f'''MIME-Version: 1.0
 x-nylas-send-v3: true
 Subject: {subject}
@@ -274,16 +263,14 @@ Content-Type: multipart/related; boundary="{related_boundary}"
 Content-Type: multipart/alternative; boundary="{alt_boundary}"
 
 --{alt_boundary}
-Content-Transfer-Encoding: base64
 Content-Type: text/plain; charset=UTF-8
 
-{plain_text_wrapped}
+{plain_text}
 
 --{alt_boundary}
-Content-Transfer-Encoding: base64
 Content-Type: text/html; charset=UTF-8
 
-{html_content_wrapped}
+{html_content}
 
 --{alt_boundary}--
 
@@ -292,7 +279,6 @@ Content-Type: text/html; charset=UTF-8
 --{main_boundary}--'''
 
     # Ensure the entire MIME content doesn't have lines longer than 2048 characters
-    # Split on newlines and then split any remaining long lines
     def ensure_line_length_limit(content, max_length=2048):
         lines = content.split('\n')
         result_lines = []
