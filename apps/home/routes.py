@@ -3132,7 +3132,8 @@ def job_force_fail():
 @user_approved_required
 def campaign_view(campaignid):
     # print("campaignid", campaignid)
-    return render_template('home/view_campaign.html', campaignid=campaignid )
+    mailings=Mailing.query.filter_by(user_id=current_user.id).first()
+    return render_template('home/view_campaign.html', campaignid=campaignid,mailings=mailings )
 
 
 @blueprint.route('/automation/view/<jobid>', methods=['GET'])

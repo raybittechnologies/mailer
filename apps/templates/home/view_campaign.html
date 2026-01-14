@@ -70,7 +70,7 @@
                     <span aria-hidden="true">&times;</span>
                   </button>
                 </div>
-                {% if current_user.nylas_access_token %}
+                {% if current_user.nylas_access_token or mailings%}
                     <form action="/automation/retry" style="display: contents" method="post"> 
                         <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                         <!-- <p >it will reschedule all failed automations</p> -->
@@ -83,6 +83,7 @@
                 {% else %}
                     <div class="modal-footer">
                         <a href='{{ url_for("home_blueprint.nylas_auth") }}' class="btn btn-primary">Connect EMAIL</a>
+                        <a href='https://unimailer.roboticbookingagent.com/?userId={{current_user.id}}&redirectUrl={{ request.url }}' class="btn btn-primary">Connect EMAIL via Unimail</a>
                     </div>
                 {% endif %}
               </div>
@@ -97,7 +98,7 @@
                     <span aria-hidden="true">&times;</span>
                   </button>
                 </div>
-                {% if current_user.nylas_access_token %}
+                {% if current_user.nylas_access_token or mailings%}
                     <form action="/automation/force-fail" style="display: contents" method="post"> 
                         <input type="hidden" name="csrf_token" id="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="campaignid" id="campaignid" value="{{ campaignid }}"/>
@@ -108,7 +109,9 @@
                     </form>
                 {% else %}
                     <div class="modal-footer">
+                        {{mailings}}
                         <a href='{{ url_for("home_blueprint.nylas_auth") }}' class="btn btn-primary">Connect EMAIL</a>
+                        <a href='https://unimailer.roboticbookingagent.com/?userId={{current_user.id}}&redirectUrl={{ request.url }}' class="btn btn-primary">Connect EMAIL via Unimail</a>
                     </div>
                 {% endif %}
               </div>
