@@ -216,7 +216,7 @@ def send_reconnect_email_via_mailtrap(subject, fromname, receiver):
 
 
 def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, receiver, grant_id):
-    html_content =f"""
+    html=f"""
         <!doctype html>
         <html>
         <head>
@@ -233,87 +233,23 @@ def send_email_via_nylas(nylas, subject, toname, fromemail, fromname, body, rece
             </body>
         </html>
     """
-
-    plain_text = BeautifulSoup(html_content, 'html.parser').get_text("\n")
-    
-    # Nylas API endpoint
-    url = f"https://api.us.nylas.com/v3/grants/{grant_id}/messages/send?type=mime"
-    headers = {
-        "Authorization": f"Bearer {NYLAS_API_KEY}"
-    }
-
-    # Generate boundary strings
-    main_boundary = str(uuid.uuid4().hex)
-    related_boundary = str(uuid.uuid4().hex)
-    alt_boundary = f"altpart-{related_boundary}"
-
-    # Construct MIME content
-    mime_content = f'''MIME-Version: 1.0
-x-nylas-send-v3: true
-Subject: {subject}
-From: {fromname} <{fromemail}>
-To: {toname} <{receiver}>
-Message-id: <{str(uuid.uuid4()).upper()}@{fromemail.split('@')[1]}>
-Content-Type: multipart/mixed; boundary={main_boundary}
-
---{main_boundary}
-Content-Type: multipart/related; boundary="{related_boundary}"
-
---{related_boundary}
-Content-Type: multipart/alternative; boundary="{alt_boundary}"
-
---{alt_boundary}
-Content-Type: text/plain; charset=UTF-8
-
-{plain_text}
-
---{alt_boundary}
-Content-Type: text/html; charset=UTF-8
-
-{html_content}
-
---{alt_boundary}--
-
---{related_boundary}--
-
---{main_boundary}--'''
-
-    # Ensure the entire MIME content doesn't have lines longer than 2048 characters
-    def ensure_line_length_limit(content, max_length=2048):
-        lines = content.split('\n')
-        result_lines = []
-        for line in lines:
-            while len(line) > max_length:
-                # Try to split at a natural boundary if possible
-                split_point = max_length
-                # Look for a space or boundary marker to split at
-                for i in range(max_length-100, max_length):
-                    if line[i] in [' ', '-', '/', ';']:
-                        split_point = i + 1
-                        break
-                result_lines.append(line[:split_point])
-                line = line[split_point:]
-            result_lines.append(line)
-        return '\n'.join(result_lines)
-    
-    mime_content = ensure_line_length_limit(mime_content)
-    
-    # Using files parameter exactly as curl would
-    files = {
-        'mime': (None, mime_content, 'text/plain')
-    }
-    data = {
-        "tracking_options": {
-            "opens": True,
-            "links": True,
-            "thread_replies": True,
-            "label": "Use this string to describe the message you're enabling tracking for. It's included in notifications about tracked events."
+    message = nylas.messages.send(
+        grant_id,
+        request_body={
+            "to": [{ "name": toname, "email": receiver }],
+            "from": [{ "name": fromname, "email": fromemail }],
+            "subject": subject,
+            "body": html,
+            "tracking_options": {
+                "opens": True,
+                "links": True,
+                "thread_replies": True,
+                "label": "Use this string to describe the message you're enabling tracking for. It's included in notifications about tracked events."
+            }
         }
-    }
-
-    response = requests.post(url, headers=headers, files=files, data=data)
-
-    return response.json()
+        )
+    # print(message.data)
+    return message
 
 def send_email_via_unimail(mailings, subject, toname, fromemail, fromname, body, receiver, grant_id):
     message_id = str(uuid.uuid4())

@@ -193,10 +193,7 @@ def email_automation_job(nylas_client, actionid, jobid, useremail,userId):
             if is_sent:
                 email.is_sent = 1
 
-                try:
-                    message_id = response['data']['id']
-                except:
-                    message_id = response.data.id
+                message_id = response.data.id
                     
                 email.mail_id = message_id
                 
