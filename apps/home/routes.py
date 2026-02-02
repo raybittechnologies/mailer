@@ -893,13 +893,11 @@ def upload_contact():
 
                 emailables = []
                 for service in sub_batch:
-                    if service['email'].strip() == '':
-                        continue
-                    
-                    results = Uploadedservice.query.filter(Uploadedservice.email == service['email'], Uploadedservice.user_id == current_user.id).all()
+                    if service['email'].strip() != '':
+                        results = Uploadedservice.query.filter(Uploadedservice.email == service['email'], Uploadedservice.user_id == current_user.id).all()
 
-                    if len(results) > 0:
-                        continue
+                        if len(results) > 0:
+                            continue
 
                     uservice = Uploadedservice(name=service['venue'], venue_type=service['venue_type'], email=service['email'], user_id = current_user.id, file_id=file_id)
                     uservice.website = service['website']
