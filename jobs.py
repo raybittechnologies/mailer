@@ -295,6 +295,9 @@ def job_send_weekly_reminding_past_reminder_email():
                 db.session.commit()
                 continue
 
+            if user.state == 'pending':
+                continue
+
             user_email = user.email
 
             subject = "PAST due reminders on Robotic Booking Agent"
@@ -378,6 +381,7 @@ def job_send_daily_reminding_campaign_end():
         # Main query with user email join
         results = db.session.query(
             Automation,
+            Users.state.label('user_state'),
             Users.email.label('user_email')
         ).join(
             Users, Automation.userid == Users.id
@@ -391,7 +395,10 @@ def job_send_daily_reminding_campaign_end():
             Automation.is_archived == 0
         ).all()
 
-        for automation, user_email in results:
+        for automation, user_state, user_email in results:
+            if user_state == 'pending':
+                continue
+            
             seconds = (automation.action_datetime - current_utctime).total_seconds()
             hours = int(seconds / 3600)
 
