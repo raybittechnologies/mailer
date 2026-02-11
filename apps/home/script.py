@@ -174,6 +174,7 @@ def yelp_scraper_run(url, id, user_info):
         params = {
             'js_render': 'true',
             'premium_proxy': 'true',
+            "proxy_country":"us",
         }
         
         while True:
@@ -243,16 +244,6 @@ def yelp_scraper_run(url, id, user_info):
                         continue
 
                     venue_type = ", ".join(venue_types)
-
-                    try:
-                        if business['searchResultBusiness']['website']:
-                            website = business['searchResultBusiness']['website']['href']
-                            if "http" != website[:4]:
-                                website = ""
-                        else:
-                            website = ""
-                    except:
-                        website = ""
                         
                     businessUrl = "https://www.yelp.com" + business['searchResultBusiness']['businessUrl']
                     if "/biz" not in businessUrl:
@@ -278,24 +269,24 @@ def yelp_scraper_run(url, id, user_info):
                     latitude = service.get('latitude') if service.get('latitude') else ''
                     longitude = service.get('longitude') if service.get('longitude') else ''
 
-                    if full_address == "":
-                        try:
-                            addresses = get_addresses(client, businessUrl)
-                        except Exception as e:
-                            print("Failed to get address", str(e), businessUrl)
-                            addresses = {}
+                    try:
+                        addresses = get_addresses(client, businessUrl)
+                    except Exception as e:
+                        print("Failed to get address", str(e), businessUrl)
+                        addresses = {}
 
-                        full_address = ''
-                        city = addresses.get('addressLocality', '')
-                        state = addresses.get('addressRegion', '')
-                        zip = addresses.get('postalCode', '')
-                        country = addresses.get('addressCountry', '')
-                        address = addresses.get('streetAddress', '')
-                        
-                        # if address, city and state, zip , country is empty then skip this record
-                        full_address = f"{address}, {city}, {state}, {zip} {country}"
-                        if full_address == ", , ,  ":
-                            full_address = ""
+                    full_address = ''
+                    city = addresses.get('addressLocality', '')
+                    state = addresses.get('addressRegion', '')
+                    zip = addresses.get('postalCode', '')
+                    country = addresses.get('addressCountry', '')
+                    address = addresses.get('streetAddress', '')
+                    website = addresses.get('homepage', '')
+                    
+                    # if address, city and state, zip , country is empty then skip this record
+                    full_address = f"{address}, {city}, {state}, {zip} {country}"
+                    if full_address == ", , ,  ":
+                        full_address = ""
                     
                     
                     if full_address and latitude == "" and longitude == "":
@@ -355,13 +346,13 @@ def yelp_scraper_run(url, id, user_info):
         
         page += 1
 
-
 def get_addresses(client, url):
     
     while True:
         params = {
             'js_render': 'true',
             'premium_proxy': 'true',
+            "proxy_country":"us",
         }
         try:
             response = client.get(url, params=params)
@@ -375,6 +366,13 @@ def get_addresses(client, url):
                 # text = b64decode(response.json()["browserHtml"]).decode("utf-8")
                 # text = response.json()["browserHtml"]
                 text = response.text
+                soup = BS(text, 'html.parser')
+
+                try:
+                    website = soup.find('span', attrs={'alt': 'Business website'}).find_parent('a').get('href')
+                    homepage = urllib.parse.parse_qs(urllib.parse.urlparse(website).query)['url'][0]
+                except:
+                    homepage = None
                 
                 # Regex patterns to capture the content of each field
                 street_pattern = r'"streetAddress"\s*:\s*"([^"]+)"'
@@ -394,7 +392,8 @@ def get_addresses(client, url):
                     "addressLocality": addressLocality.group(1) if addressLocality else '',
                     "addressRegion": addressRegion.group(1) if addressRegion else '',
                     "postalCode": postalCode.group(1) if postalCode else '',
-                    "addressCountry": addressCountry.group(1) if addressCountry else ''
+                    "addressCountry": addressCountry.group(1) if addressCountry else '',
+                    "homepage": homepage if homepage else '',
                 }
             except Exception as e:
                 print("Failed to parse address", url, str(e))
