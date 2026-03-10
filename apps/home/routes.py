@@ -30,6 +30,7 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql import Insert
 
 from concurrent.futures import ThreadPoolExecutor
+from threading import Thread
 from apps.authentication.forms import LoginForm, CreateAccountForm
 from apps.home.emailler import *
 from apps.authentication.util import generate_job_id
@@ -58,10 +59,11 @@ nylas = Client(
     api_uri = NYLAS_API_URI,
 )
 
-# calculate the number of workers to use - reduced to prevent DB connection overflow
-workers = min(20, multiprocessing.cpu_count() + 1)  # Cap at 20 workers
-print("Number of workers: ", workers)
-executor = ThreadPoolExecutor(max_workers=workers)
+# Executor only runs lets_start() (start scrape process + daemon thread, then return). No DB or heavy work.
+# Max concurrent /fetch requests we accept; each task returns immediately. Not tied to CPU count.
+WORKERS = 20
+print("Number of workers: ", WORKERS)
+executor = ThreadPoolExecutor(max_workers=WORKERS)
 
 processes = {}
 
@@ -573,9 +575,11 @@ def fetch(id):
         }
         try:
             executor.submit(lets_start, urls, id, user_info)
-        except:
-            print("something went wrong")
-        
+        except Exception as e:
+            print("fetch: failed to start scraper", e)
+            obj.state = "pending"  # or keep running and let user retry
+            db.session.commit()
+
     return redirect(url_for('home_blueprint.fetching', id=id))
 
 @csrf.exempt
@@ -1406,12 +1410,18 @@ def get_admin_data():
     return page_data
 
 
-def lets_start(urls, id, user_info):
-    process = multiprocessing.Process(target=starting,
-                                      args=(urls, id, user_info))
+def _run_process_in_thread(process):
+    """Run process.start() and process.join() in a daemon thread so we don't block the executor."""
     process.start()
-
     process.join()
+
+
+def lets_start(urls, id, user_info):
+    process = multiprocessing.Process(target=starting, args=(urls, id, user_info))
+    # Run start+join in a daemon thread so the executor thread is freed immediately.
+    # Otherwise one executor worker would be blocked for the entire scrape (hours).
+    thread = Thread(target=_run_process_in_thread, args=(process,), daemon=True)
+    thread.start()
 
 
 def is_scraper_completed(id):
