@@ -11,8 +11,7 @@ from bs4 import BeautifulSoup as BS
 from zenrows import ZenRowsClient
 import cloudscraper
 
-from threading import Thread
-import queue
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 from dotenv import load_dotenv
 
@@ -213,138 +212,154 @@ def yelp_scraper_run(url, id, user_info):
                 # page += 1
                 continue
             
-            for business in response_json['legacyProps']['searchAppProps']['searchPageProps']['mainContentComponentsListProps']:
-                if "bizId" in business:
-                    bizId = business['bizId']
-                    try:
-                        venue_name = business['searchResultBusiness']['name'].replace("&amp;", "&")
-                    except Exception as e:
-                        print("Failed to get venue name", str(e))
-                        print("Business data:", business)
-                        continue
-                    
-                    venue_types = [i['title'].replace("&amp;", "&") for i in business['searchResultBusiness']['categories']]
-                    phone = business['searchResultBusiness']['phone']
-                    
-                    if is_scraper_completed(id):
-                        return
-                    
-                    if is_opt_musicians :
-                        if is_blacklisted_venue(venue_name):
-                            continue
-
-                        if is_blackeslisted_venue_type(venue_types):
-                            continue
-                        
-                        # if phone start with - or has wrong format then skip this record
-                        if phone and phone.startswith("-") or len(phone) < 10:
-                            continue
-
-                    if "temp. closed" in venue_name.lower() or "closed" in venue_name.lower():
-                        continue
-
-                    venue_type = ", ".join(venue_types)
-                        
-                    businessUrl = "https://www.yelp.com" + business['searchResultBusiness']['businessUrl']
-                    if "/biz" not in businessUrl:
-                        businessUrl = "https://www.yelp.com/biz/" + business['searchResultBusiness']['alias']
-
-                    photoList = business['scrollablePhotos']['photoList'][0] if len(business['scrollablePhotos']['photoList']) > 0 else {}
-                    thumbnail_url = photoList.get('src') if photoList else ''
-                    
-                    service_data = get_service_with_bizId(bizId, user_id)
-
-                    if is_allow_deduplicate and service_data['is_exist']:
-                        # if service is not empty then skip this record
-                        print("Service already exists for bizId", bizId, "skipping")
-                        continue
-
-                    service = service_data.get('service', {})
-
-                    full_address = service.get('address', '')
-                    city = service.get('city') if service.get('city') else ''
-                    state = service.get('state') if service.get('state') else ''
-                    zip = service.get('zip') if service.get('zip') else ''
-                    country = service.get('country') if service.get('country') else ''
-                    latitude = service.get('latitude') if service.get('latitude') else ''
-                    longitude = service.get('longitude') if service.get('longitude') else ''
-
-                    try:
-                        addresses = get_addresses(client, businessUrl)
-                    except Exception as e:
-                        print("Failed to get address", str(e), businessUrl)
-                        addresses = {}
-
-                    full_address = ''
-                    city = addresses.get('addressLocality', '')
-                    state = addresses.get('addressRegion', '')
-                    zip = addresses.get('postalCode', '')
-                    country = addresses.get('addressCountry', '')
-                    address = addresses.get('streetAddress', '')
-                    website = addresses.get('homepage', '')
-                    
-                    # if address, city and state, zip , country is empty then skip this record
-                    full_address = f"{address}, {city}, {state}, {zip} {country}"
-                    if full_address == ", , ,  ":
-                        full_address = ""
-                    
-                    
-                    if full_address and latitude == "" and longitude == "":
-                        location = get_geo_location(full_address)
-                        if location:
-                            latitude = location['lat']
-                            longitude = location['lng']
-
-                    if  full_address and (city == "" or state == ""):
-                        city, state = extract_city_state(full_address)
-
-                    print("<Venue>", venue_name, "<Address>", full_address)
-                    
-                    data = dict()
-                    data['url'] = url
-                    data['venue'] = venue_name
-                    data['venuetype'] = venue_type
-                    data['website'] = website
-                    data['Phone'] = phone
-                    data['address'] = full_address
-                    data['facebook'] = service.get('facebook', '')
-                    data['instagram'] = service.get('instagram', '')
-                    data['twitter'] = service.get('twitter', '')
-                    data['Email1'] = service.get('email1', '') if check_blacklisted(service.get('email1', '')) else ''
-                    data['Email2'] = service.get('email2', '') if check_blacklisted(service.get('email2', '')) else ''
-                    data['Email3'] = service.get('email3', '') if check_blacklisted(service.get('email3', '')) else ''
-                    data['Email4'] = service.get('email4', '') if check_blacklisted(service.get('email4', '')) else ''
-                    data['FacebookEmail1'] = service.get('fbemail1', '') if check_blacklisted(service.get('fbemail1', '')) else ''
-                    data['FacebookEmail2'] = service.get('fbemail2', '') if check_blacklisted(service.get('fbemail2', '')) else ''
-                    data['url_id'] = id
-                    data['user_id'] = user_id
-                    data['bizId'] = bizId
-                    data['city'] = city
-                    data['state'] = state
-                    data['zip'] = zip
-                    data['country'] = country
-                    data['latitude'] = latitude
-                    data['longitude'] = longitude
-                    data['thumnailurl'] = thumbnail_url
-                    search_data.append(data)
-                    
-            if len(search_data) == 0:
+            businesses = [
+                b for b in response_json["legacyProps"]["searchAppProps"]["searchPageProps"]["mainContentComponentsListProps"]
+                if "bizId" in b
+            ]
+            if not businesses:
                 break
-            
-            threads = []
-            for data in search_data:
-                thread = Thread(target=thread_runner, daemon=True, args=(data, ))
-                thread.start()
-                threads.append(thread)
-                
-            for th in threads:
-                th.join()
+
+            # Parallelize slow per-business work: get_service_with_bizId, get_addresses, get_geo_location
+            search_data = []
+            with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+                futures = {
+                    executor.submit(
+                        build_one_business_data,
+                        business,
+                        client,
+                        url,
+                        id,
+                        user_id,
+                        is_opt_musicians,
+                        is_allow_deduplicate,
+                    ): business
+                    for business in businesses
+                }
+                for future in as_completed(futures):
+                    if is_scraper_completed(id):
+                        break
+                    try:
+                        data = future.result()
+                        if data:
+                            print("<Venue>", data["venue"], "<Address>", data["address"])
+                            search_data.append(data)
+                    except Exception as e:
+                        print("build_one_business_data error", str(e))
+
+            if not search_data:
+                break
+
+            # Bounded concurrency for thread_runner (get_fb_info + pass_data)
+            with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+                list(executor.map(thread_runner, search_data))
             
         else:
             print("Status Code: ", response.status_code, base_url)
             break
         
         page += 1
+
+# Max concurrent workers for I/O (API calls, scraping). Prevents overwhelming APIs and connection limits.
+MAX_WORKERS = 8
+
+
+def build_one_business_data(business, client, url, id, user_id, is_opt_musicians, is_allow_deduplicate):
+    """Build data dict for one business. Runs in thread pool to parallelize get_addresses/get_service_with_bizId."""
+    if "bizId" not in business:
+        return None
+    bizId = business["bizId"]
+    try:
+        venue_name = business["searchResultBusiness"]["name"].replace("&amp;", "&")
+    except Exception as e:
+        print("Failed to get venue name", str(e))
+        return None
+
+    venue_types = [i["title"].replace("&amp;", "&") for i in business["searchResultBusiness"]["categories"]]
+    phone = business["searchResultBusiness"]["phone"]
+
+    if is_opt_musicians:
+        if is_blacklisted_venue(venue_name):
+            return None
+        if is_blackeslisted_venue_type(venue_types):
+            return None
+        if phone and (phone.startswith("-") or len(phone) < 10):
+            return None
+
+    if "temp. closed" in venue_name.lower() or "closed" in venue_name.lower():
+        return None
+
+    venue_type = ", ".join(venue_types)
+    businessUrl = "https://www.yelp.com" + business["searchResultBusiness"]["businessUrl"]
+    if "/biz" not in businessUrl:
+        businessUrl = "https://www.yelp.com/biz/" + business["searchResultBusiness"]["alias"]
+
+    photoList = business["scrollablePhotos"]["photoList"][0] if len(business["scrollablePhotos"]["photoList"]) > 0 else {}
+    thumbnail_url = photoList.get("src") if photoList else ""
+
+    service_data = get_service_with_bizId(bizId, user_id)
+    if is_allow_deduplicate and service_data.get("is_exist"):
+        return None
+    service = service_data.get("service", {})
+
+    full_address = service.get("address", "") or ""
+    city = service.get("city") or ""
+    state = service.get("state") or ""
+    zip = service.get("zip") or ""
+    country = service.get("country") or ""
+    latitude = service.get("latitude") or ""
+    longitude = service.get("longitude") or ""
+
+    try:
+        addresses = get_addresses(client, businessUrl)
+    except Exception as e:
+        print("Failed to get address", str(e), businessUrl)
+        addresses = {}
+
+    address = addresses.get("streetAddress", "")
+    city = addresses.get("addressLocality", "") or city
+    state = addresses.get("addressRegion", "") or state
+    zip = addresses.get("postalCode", "") or zip
+    country = addresses.get("addressCountry", "") or country
+    website = addresses.get("homepage", "")
+    full_address = f"{address}, {city}, {state}, {zip} {country}".strip(" ,") or ""
+
+    if full_address and not latitude and not longitude:
+        location = get_geo_location(full_address)
+        if location:
+            latitude = location["lat"]
+            longitude = location["lng"]
+    if full_address and (not city or not state):
+        city, state = extract_city_state(full_address)
+
+    data = {
+        "url": url,
+        "venue": venue_name,
+        "venuetype": venue_type,
+        "website": website,
+        "Phone": phone,
+        "address": full_address,
+        "facebook": service.get("facebook", ""),
+        "instagram": service.get("instagram", ""),
+        "twitter": service.get("twitter", ""),
+        "Email1": service.get("email1", "") if check_blacklisted(service.get("email1", "")) else "",
+        "Email2": service.get("email2", "") if check_blacklisted(service.get("email2", "")) else "",
+        "Email3": service.get("email3", "") if check_blacklisted(service.get("email3", "")) else "",
+        "Email4": service.get("email4", "") if check_blacklisted(service.get("email4", "")) else "",
+        "FacebookEmail1": service.get("fbemail1", "") if check_blacklisted(service.get("fbemail1", "")) else "",
+        "FacebookEmail2": service.get("fbemail2", "") if check_blacklisted(service.get("fbemail2", "")) else "",
+        "url_id": id,
+        "user_id": user_id,
+        "bizId": bizId,
+        "city": city,
+        "state": state,
+        "zip": zip,
+        "country": country,
+        "latitude": latitude,
+        "longitude": longitude,
+        "thumnailurl": thumbnail_url,
+    }
+    return data
+
 
 def get_addresses(client, url):
     
