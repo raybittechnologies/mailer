@@ -2368,14 +2368,14 @@ def action_test():
 # #     </p>
 
 # #     <!-- Tracking Pixel -->
-# #     <img src="https://beunimail.raybitprojects.com/open/1988c41613029dfa.png" 
+# #     <img src="https://beunimailer.roboticbookingagent.com/open/1988c41613029dfa.png" 
 # #          width="100" height="100" 
 # #          style="" 
 # #          alt="" />
 # #   </body>
 # # </html>
 # #         """
-# #         url = "https://beunimail.raybitprojects.com/send-email"
+# #         url = "https://beunimailer.roboticbookingagent.com/send-email"
 # #         payload = {
 # #             "id": '517',
 # #             "to": 'huzuhuzair@gmail.com',
@@ -3148,7 +3148,7 @@ def campaign_view(campaignid):
 @login_required 
 @user_approved_required
 def automation_view(jobid):
-    url = "https://beunimail.raybitprojects.com"
+    url = "https://beunimailer.roboticbookingagent.com"
     
     emails = Email.query.filter_by(job_id=jobid, is_sent=1).all()
 
