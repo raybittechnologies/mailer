@@ -3171,6 +3171,9 @@ def automation_view(jobid):
 
                 email.is_bounced = data['is_bounced']
 
+                if email.is_bounced == 1:
+                    email.is_unsubscribed = 1
+
     db.session.commit()
 
     automation =Automation.query.filter_by(job_id = jobid).first()
