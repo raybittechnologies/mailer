@@ -3166,9 +3166,6 @@ def automation_view(jobid):
 
                 email.is_replied = data['is_replied']
 
-                if email.is_unsubscribed == 0:
-                    email.is_unsubscribed = data['is_unsubscribed']
-
                 email.is_bounced = data['is_bounced']
 
                 if email.is_bounced == 1:
