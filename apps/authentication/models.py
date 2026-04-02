@@ -32,6 +32,7 @@ class Users(db.Model, UserMixin):
     is_auto_unsub = db.Column(db.Integer, default=1) # 1: auto unsub, 0: manual unsub : default is auto unsub, for replied emails, it will be unsubscribed automatically
     is_opt_musicians= db.Column(db.Integer, default=1) # 1: opt music venue, 0: no opt music venue : default is opt music venue
     is_allow_deduplicate = db.Column(db.Integer, default=1) # 1: allow deduplicate, 0: no deduplicate : default is no deduplicate
+    is_allow_tracking = db.Column(db.Integer, default=1) # 1: allow tracking, 0: no tracking : default is allow tracking
 
     def __init__(self, **kwargs):
         for property, value in kwargs.items():

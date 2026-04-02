@@ -2435,16 +2435,16 @@ def get_action():
 
     return jsonify(action_data)
 
-@blueprint.route("/track.gif/<string:message_id>", methods=["GET"])
-def track_email_open(message_id):
-    email = Email.query.filter_by(mail_id=message_id).first()
-    if email and email.is_opened == 0:
-        email.is_opened = 1
-        db.session.commit()
+# @blueprint.route("/track.gif/<string:message_id>", methods=["GET"])
+# def track_email_open(message_id):
+#     email = Email.query.filter_by(mail_id=message_id).first()
+#     if email and email.is_opened == 0:
+#         email.is_opened = 1
+#         db.session.commit()
 
-    # Return a 1x1 transparent GIF
-    gif = b'R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
-    return Response(base64.b64decode(gif), mimetype='image/gif')
+#     # Return a 1x1 transparent GIF
+#     gif = b'R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
+#     return Response(base64.b64decode(gif), mimetype='image/gif')
    
 @csrf.exempt
 @blueprint.route('/webhooks', methods=['POST', "GET"])
@@ -3148,30 +3148,31 @@ def campaign_view(campaignid):
 @login_required 
 @user_approved_required
 def automation_view(jobid):
-    url = "https://beunimailer.roboticbookingagent.com"
-    
-    emails = Email.query.filter_by(job_id=jobid, is_sent=1).all()
+    if current_user.is_allow_tracking == 1:
+        url = "https://beunimailer.roboticbookingagent.com"
+        
+        emails = Email.query.filter_by(job_id=jobid, is_sent=1).all()
 
-    for email in emails:
-        message_id = email.mail_id
+        for email in emails:
+            message_id = email.mail_id
 
-        if message_id:
-            response = requests.get(f"{url}/email-status/{message_id}")
+            if message_id:
+                response = requests.get(f"{url}/email-status/{message_id}")
 
-            if response.status_code == 200:
-                data = response.json()['data']['status']
+                if response.status_code == 200:
+                    data = response.json()['data']['status']
 
-                if email.is_opened == 0:
-                    email.is_opened = data['is_opened']
+                    if email.is_opened == 0:
+                        email.is_opened = data['is_opened']
 
-                email.is_replied = data['is_replied']
+                    email.is_replied = data['is_replied']
 
-                email.is_bounced = data['is_bounced']
+                    email.is_bounced = data['is_bounced']
 
-                if email.is_bounced == 1:
-                    email.is_unsubscribed = 1
+                    if email.is_bounced == 1:
+                        email.is_unsubscribed = 1
 
-    db.session.commit()
+        db.session.commit()
 
     automation =Automation.query.filter_by(job_id = jobid).first()
     job = {
@@ -3193,10 +3194,10 @@ def get_emails(jobid):
             'id': email.id,
             'email': email.email,
             'is_sent': email.is_sent,
-            'is_opened': email.is_opened,
-            'is_unsubscribed' : email.is_unsubscribed,
-            'is_replied' : email.is_replied,
-            'is_bounced' : email.is_bounced,
+            'is_opened': current_user.is_allow_tracking == 1 and email.is_opened,
+            'is_unsubscribed' : current_user.is_allow_tracking == 1 and email.is_unsubscribed,
+            'is_replied' : current_user.is_allow_tracking == 1 and email.is_replied,
+            'is_bounced' : current_user.is_allow_tracking == 1 and email.is_bounced,
             'updated_datetime' : email.updated_datetime,
             'unsubscribe_token' : email.unsubscribe_token,
             'mail_id' : email.mail_id,
@@ -4186,6 +4187,17 @@ def update_allow_deduplication():
     user.is_allow_deduplicate = is_allow_deduplicate
     db.session.commit()
     return jsonify({"success": True, "message": "Allow Deduplication updated successfully."})
+
+# update /update_allow_tracking
+@blueprint.route('/update_allow_tracking', methods=['POST'])
+@login_required
+@user_approved_required
+def update_allow_tracking():
+    user_id = current_user.id
+    is_allow_tracking = request.form.get('is_allow_tracking')
+    user = Users.query.filter_by(id=user_id).first()
+    user.is_allow_tracking = is_allow_tracking
+    db.session.commit()
 
 
 @blueprint.route('/get_service_with_userid_bizid', methods=['GET'])

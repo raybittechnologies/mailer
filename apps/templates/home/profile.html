@@ -202,6 +202,21 @@
                     </span>
                   </div>
                 </li>
+                <li class="list-group-item border-0 ps-0 text-sm">
+                  <div class="form-check form-switch">
+                    {% if current_user.is_allow_tracking %}
+                      {% set checked = 'checked' %}
+                    {% else %}
+                      {% set checked = '' %}
+                    {% endif %}
+                    <strong class="text-dark">Allow tracking for emails?</strong>
+                    <input class="form-check-input" type="checkbox" id="allow_tracking" {{ checked }}>
+                    <!-- add question mark for tooltip  -->
+                    <span class="form-text text-secondary">
+                      <i class="fas fa-question-circle" data-bs-toggle="tooltip" data-bs-placement="top" title="You will be able to track the emails that you send to the venues"></i>
+                    </span>
+                  </div>
+                </li>
               </ul>
             </div>  
           </div>
@@ -509,6 +524,31 @@
     });
 
   });
+
+  // Allow tracking for emails, catch switch event and submit to server
+  $('#allow_tracking').on('change', function() {
+    const is_allow_tracking = this.checked ? 1 : 0;
+    const formData = new FormData();
+    formData.append('is_allow_tracking', is_allow_tracking);
+    formData.append('csrf_token', document.getElementById("csrf_token").value);
+
+    fetch('/update_allow_tracking',{
+      method: 'POST',
+      body: formData
+    })
+    .then((response) => {
+      if(!response.ok)
+          return response.text().then(text => { throw new Error(text) })
+      else
+          return response.json()
+  })
+  .then((data) => {
+    console.log(data);
+  })
+  .catch((err) => {
+    console.log(err);
+  })
+});
 </script>
 
 
