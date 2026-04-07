@@ -3148,6 +3148,32 @@ def campaign_view(campaignid):
 @login_required 
 @user_approved_required
 def automation_view(jobid):
+    if current_user.is_allow_tracking == 1:
+        url = "https://beunimailer.roboticbookingagent.com"
+        
+        emails = Email.query.filter_by(job_id=jobid, is_sent=1).all()
+
+        for email in emails:
+            message_id = email.mail_id
+
+            if message_id:
+                response = requests.get(f"{url}/email-status/{message_id}")
+
+                if response.status_code == 200:
+                    data = response.json()['data']['status']
+
+                    if email.is_opened == 0:
+                        email.is_opened = data['is_opened']
+
+                    email.is_replied = data['is_replied']
+
+                    email.is_bounced = data['is_bounced']
+
+                    if email.is_bounced == 1:
+                        email.is_unsubscribed = 1
+
+        db.session.commit()
+
     automation =Automation.query.filter_by(job_id = jobid).first()
     job = {
         "name" : automation.action_name,
