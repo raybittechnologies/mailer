@@ -3162,7 +3162,7 @@ def automation_view(jobid):
                 if response.status_code == 200:
                     data = response.json()['data']['status']
 
-                    if data['is_opened'] == 1:
+                    if data['is_replied'] == 1:
                         print("Email replied", email.email, message_id)
                         email.is_replied = 1
                         
@@ -3307,7 +3307,7 @@ def automation_view(jobid):
                         db.session.add(reminder)
                         db.session.commit()
 
-                    email.is_replied = data['is_replied']
+                    email.is_opened = data['is_opened']
 
                     if data['is_bounced'] == 1:
                         # unsubscribe the email
