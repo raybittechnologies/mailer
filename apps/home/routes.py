@@ -3151,9 +3151,9 @@ def automation_view(jobid):
     if current_user.is_allow_tracking == 1:
         url = "https://beunimailer.roboticbookingagent.com"
         
-        emails = Email.query.filter_by(job_id=jobid, is_sent=1).all()
+        s_emails = Email.query.filter_by(job_id=jobid, is_sent=1).all()
 
-        for email in emails:
+        for email in s_emails:
             message_id = email.mail_id
 
             if message_id:
@@ -3162,15 +3162,166 @@ def automation_view(jobid):
                 if response.status_code == 200:
                     data = response.json()['data']['status']
 
-                    if email.is_opened == 0:
-                        email.is_opened = data['is_opened']
+                    if data['is_opened'] == 1:
+                        print("Email replied", email.email, message_id)
+                        email.is_replied = 1
+                        
+                        service = Uploadedservice.query.filter_by(unsubscribe_token=email.unsubscribe_token).first()
+                        # unsubscribe the email
+                        if service is None:
+                            print("No service found")
+                            return "OK"
+                        
+                        # Get user id
+                        user_id = service.user_id
+                        user = Users.query.get(user_id)
+
+                        if user.is_auto_unsub:
+                            service.is_unsubscribed = 1
+                        
+                            # update associated email
+                            emails = Email.query.filter_by(unsubscribe_token=email.unsubscribe_token).all()
+                            for email in emails:
+                                email.is_unsubscribed = 1
+                                
+                            service = Uploadedservice.query.filter_by(unsubscribe_token=email.unsubscribe_token).first()
+                            
+                            # unsubscribe all emails from this business : same business
+                            if service:
+                                service.is_unsubscribed = 1
+                                address = service.address
+                                biz_id = service.biz_id
+
+                                if biz_id:
+                                    # Unsubscribe all emails from this business : same business
+                                    services = Uploadedservice.query.filter_by(user_id = user_id, biz_id=biz_id).all()
+                                    for service in services:
+                                        # Unsubscribe all service with this business
+                                        service.is_unsubscribed = 1
+                                        
+                                        # Unsubscribe all emails from campaigns
+                                        unsubscribe_token = service.unsubscribe_token
+                                        email = Email.query.filter_by(unsubscribe_token=unsubscribe_token).first()
+                                        if email:
+                                            print("unsubscribed", email.email)
+                                            email.is_unsubscribed = 1
+                                        
+                                elif address:
+                                    # Unsubscribe all emails from this address : same business
+                                    services = Uploadedservice.query.filter_by(user_id = user_id, address=address).all()
+                                    for service in services:
+                                        # Unsubscribe all service with this address
+                                        service.is_unsubscribed = 1
+                                        
+                                        # Unsubscribe all emails from campaigns
+                                        unsubscribe_token = service.unsubscribe_token
+                                        email = Email.query.filter_by(unsubscribe_token=unsubscribe_token).first()
+                                        if email:
+                                            print("unsubscribed", email.email)
+                                            email.is_unsubscribed = 1
+
+                                else:
+                                    phone = service.phone
+                                    if phone:
+                                        # Unsubscribe all emails from this phone : same business
+                                        services = Uploadedservice.query.filter_by(user_id = user_id, phone=phone).all()
+                                        for service in services:
+                                            # Unsubscribe all service with this phone
+                                            service.is_unsubscribed = 1
+                                            
+                                            # Unsubscribe all emails from campaigns
+                                            unsubscribe_token = service.unsubscribe_token
+                                            email = Email.query.filter_by(unsubscribe_token=unsubscribe_token).first()
+                                            if email:
+                                                print("unsubscribed", email.email)
+                                                email.is_unsubscribed = 1
+                                            
+                                    else:
+                                        venue = service.name
+                                        if venue:
+                                            # Unsubscribe all emails from this venue : same business
+                                            services = Uploadedservice.query.filter_by(user_id = user_id, name=venue).all()
+                                            for service in services:
+                                                # Unsubscribe all service with this venue
+                                                service.is_unsubscribed = 1
+                                                
+                                                # Unsubscribe all emails from campaigns
+                                                unsubscribe_token = service.unsubscribe_token
+                                                email = Email.query.filter_by(unsubscribe_token=unsubscribe_token).first()
+                                                if email:
+                                                    print("unsubscribed", email.email)
+                                                    email.is_unsubscribed = 1
+
+                                                
+                        user_id = service.user_id
+
+                        # Create reminder after 7 days at 2pm
+                        current_time = datetime.datetime.now() # RBS Server time is UTC timezone
+                        utc_time = pytz.utc.localize(current_time)
+                        est = pytz.timezone('US/Eastern')
+                        est_time = utc_time.astimezone(est)
+                        reminder_est_time = est_time + timedelta(days=7) 
+                        reminder_est_time = reminder_est_time.replace(hour=14, minute=0, second=0)
+
+                        # convert est time to utc time
+                        reminder_utc_time = reminder_est_time.astimezone(pytz.utc)
+                        utc_time_iso_string = reminder_utc_time.strftime('%Y-%m-%d %H:%M:%S')
+
+                        reminder = Reminder.query.filter_by(userid=user_id, email=email.email).first()
+
+                        if reminder:
+                            job_id = reminder.job_id
+                            if scheduler.get_job(job_id):
+                                scheduler.remove_job(job_id)
+
+                            db.session.delete(reminder)
+                        
+                        job_id = "job_" + generate_job_id(32)
+                        job = {
+                            "id" : job_id,
+                            'trigger' : 'date',
+                            "run_date" : utc_time_iso_string,
+                            "func" : "jobs:job_push_notification_reminder",
+                            "args" : (job_id, user_id)
+                        }
+                        try:
+                            scheduler.add_job(**job) # TODO: Uncomment this line
+                            print("Auto created job for reminder", job_id)
+                        except Exception as e:
+                            print("Failed to create job", str(e))
+                            return {"success": False, "message": "Something went wrong. Please try again."}
+                        
+                        reminder_template = "Follow up w/ [name] @ [venue] **See email from [email] [phone]"
+                        reminder = Reminder()
+                        reminder.job_id = job_id
+                        reminder.note = ''
+                        reminder.name = service.firstname
+                        reminder.email = email.email
+                        reminder.phone = service.phone
+                        reminder.venue = service.name
+                        reminder.title = f"Follow up w/ {service.firstname} @ {service.name} **See email from {email.email} {service.phone}"
+                        reminder.note_template = reminder_template
+                        reminder.reminder_time = utc_time_iso_string  
+                        reminder.status = "active"
+                        reminder.userid = user_id
+                        db.session.add(reminder)
+                        db.session.commit()
 
                     email.is_replied = data['is_replied']
 
-                    email.is_bounced = data['is_bounced']
-
-                    if email.is_bounced == 1:
-                        email.is_unsubscribed = 1
+                    if data['is_bounced'] == 1:
+                        # unsubscribe the email
+                        unsub_token = email.unsubscribe_token
+                        if unsub_token:
+                            emails = Email.query.filter_by(unsubscribe_token=unsub_token).all()
+                            for email in emails:
+                                email.is_unsubscribed = 1
+                                email.is_bounced = 1
+                            
+                            service = Uploadedservice.query.filter_by(unsubscribe_token=unsub_token).first()
+                            if service:
+                                service.is_unsubscribed = 1
+                                service.is_bad = 1
 
         db.session.commit()
 
