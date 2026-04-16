@@ -266,7 +266,6 @@ def send_email_via_unimail(mailings, subject, toname, fromemail, fromname, body,
             </style>
         </head>
             <body style="font-family: sans-serif;">
-            <img src="https://beunimailer.roboticbookingagent.com/open/{message_id}" style="display:none;" width="1" height="1"/>
             {body}
             </body>
         </html>
