@@ -259,9 +259,9 @@ def send_email_via_unimail(mailings, subject, toname, fromemail, fromname, body,
         <head>
             <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
             <style> p {{
+                    font-size: 14px;
+                    margin: 5px 0;
                     line-height: 1.5;
-                    margin-bottom: -14px;
-                    font-size: 16px;
                 }}
             </style>
         </head>
