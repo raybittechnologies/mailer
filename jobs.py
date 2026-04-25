@@ -442,7 +442,7 @@ def job_email_tracking():
                         user_id = service.user_id
 
                         # Create reminder after 7 days at 2pm
-                        current_time = datetime.datetime.now() # RBS Server time is UTC timezone
+                        current_time = datetime.now() # RBS Server time is UTC timezone
                         utc_time = pytz.utc.localize(current_time)
                         est = pytz.timezone('US/Eastern')
                         est_time = utc_time.astimezone(est)

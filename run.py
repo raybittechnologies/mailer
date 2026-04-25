@@ -148,7 +148,7 @@ email_tracking_job_id = 'job_email_tracking'
 job = {
         "id" : email_tracking_job_id,
         'trigger' : 'cron',
-        'minute' : 30,
+        'minute' : 15,
         "func" : "jobs:job_email_tracking",
         "args" : ()
     }
