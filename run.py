@@ -146,12 +146,12 @@ else:
 
 email_tracking_job_id = 'job_email_tracking'
 job = {
-        "id" : email_tracking_job_id,
-        'trigger' : 'cron',
-        'minute' : 15,
-        "func" : "jobs:job_email_tracking",
-        "args" : ()
-    }
+    "id": email_tracking_job_id,
+    "trigger": "cron",
+    "minute": "*/15",  # every 15 minutes
+    "func": "jobs:job_email_tracking",
+    "args": ()
+}
 if scheduler.get_job(email_tracking_job_id) is None:
     try:
         scheduler.add_job(**job) # TODO: Uncomment this line
