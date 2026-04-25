@@ -144,6 +144,29 @@ else:
     except Exception as e:
         print("Failed to create job", str(e))
 
+email_tracking_job_id = 'job_email_tracking'
+job = {
+        "id" : email_tracking_job_id,
+        'trigger' : 'cron',
+        'minute' : 30,
+        "func" : "jobs:job_email_tracking",
+        "args" : ()
+    }
+if scheduler.get_job(email_tracking_job_id) is None:
+    try:
+        scheduler.add_job(**job) # TODO: Uncomment this line
+        print("Created Email Tracking job ", email_tracking_job_id)
+    except Exception as e:
+        print("Failed to create job", str(e))
+else:
+    print("Email Tracking job already exists")
+    try:
+        scheduler.remove_job(email_tracking_job_id)
+        scheduler.add_job(**job) # TODO: Uncomment this line
+        print("Created Email Tracking job ", email_tracking_job_id)
+    except Exception as e:
+        print("Failed to create job", str(e))
+
 job_check_automation_status()
 
 @csrf.exempt
