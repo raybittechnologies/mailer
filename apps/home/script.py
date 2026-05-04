@@ -292,9 +292,9 @@ def build_one_business_data(business, client, url, id, user_id, is_opt_musicians
         print("Failed to get address", str(e), businessUrl)
         addresses = {}
 
-    try:
-        venue_name = addresses.get("venue_name", "")
-    except Exception as e:
+    venue_name = addresses.get("venue_name", "")
+    
+    if venue_name is None or venue_name == '':
         print("Failed to get venue name", str(e))
         return None
 
