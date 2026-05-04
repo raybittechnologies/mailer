@@ -173,7 +173,6 @@ def yelp_scraper_run(url, id, user_info):
         params = {
             'js_render': 'true',
             'premium_proxy': 'true',
-            "proxy_country":"us",
         }
         
         while True:
@@ -268,30 +267,8 @@ def build_one_business_data(business, client, url, id, user_id, is_opt_musicians
     if "bizId" not in business:
         return None
     bizId = business["bizId"]
-    try:
-        venue_name = business["searchResultBusiness"]["name"].replace("&amp;", "&")
-    except Exception as e:
-        print("Failed to get venue name", str(e))
-        return None
-
-    venue_types = [i["title"].replace("&amp;", "&") for i in business["searchResultBusiness"]["categories"]]
-    phone = business["searchResultBusiness"]["phone"]
-
-    if is_opt_musicians:
-        if is_blacklisted_venue(venue_name):
-            return None
-        if is_blackeslisted_venue_type(venue_types):
-            return None
-        if phone and (phone.startswith("-") or len(phone) < 10):
-            return None
-
-    if "temp. closed" in venue_name.lower() or "closed" in venue_name.lower():
-        return None
-
-    venue_type = ", ".join(venue_types)
-    businessUrl = "https://www.yelp.com" + business["searchResultBusiness"]["businessUrl"]
-    if "/biz" not in businessUrl:
-        businessUrl = "https://www.yelp.com/biz/" + business["searchResultBusiness"]["alias"]
+    
+    businessUrl = "https://www.yelp.com" + business["businessUrl"]
 
     photoList = business["scrollablePhotos"]["photoList"][0] if len(business["scrollablePhotos"]["photoList"]) > 0 else {}
     thumbnail_url = photoList.get("src") if photoList else ""
@@ -314,6 +291,28 @@ def build_one_business_data(business, client, url, id, user_id, is_opt_musicians
     except Exception as e:
         print("Failed to get address", str(e), businessUrl)
         addresses = {}
+
+    try:
+        venue_name = addresses.get("venue_name", "")
+    except Exception as e:
+        print("Failed to get venue name", str(e))
+        return None
+
+    venue_types = addresses.get("venue_types", [])
+    phone = addresses.get("phone", "")
+
+    if is_opt_musicians:
+        if is_blacklisted_venue(venue_name):
+            return None
+        if is_blackeslisted_venue_type(venue_types):
+            return None
+        if phone and (phone.startswith("-") or len(phone) < 10):
+            return None
+
+    if "temp. closed" in venue_name.lower() or "closed" in venue_name.lower():
+        return None
+
+    venue_type = ", ".join(venue_types)
 
     address = addresses.get("streetAddress", "")
     city = addresses.get("addressLocality", "") or city
@@ -367,7 +366,6 @@ def get_addresses(client, url):
         params = {
             'js_render': 'true',
             'premium_proxy': 'true',
-            "proxy_country":"us",
         }
         try:
             response = client.get(url, params=params)
@@ -382,6 +380,14 @@ def get_addresses(client, url):
                 # text = response.json()["browserHtml"]
                 text = response.text
                 soup = BS(text, 'html.parser')
+
+                venue_name = soup.find('h1').text
+                venue_types = [i.find('a').text for i in soup.find_all('span', attrs={'data-testid': "BizHeaderCategory"})]
+
+                try:
+                    phone = soup.find('span', attrs={'alt': 'Business phone number'}).find_parent('div').find_next_sibling('div').text.replace('Phone number', '').strip()
+                except:
+                    phone = None
 
                 try:
                     website = soup.find('span', attrs={'alt': 'Business website'}).find_parent('a').get('href')
@@ -409,6 +415,9 @@ def get_addresses(client, url):
                     "postalCode": postalCode.group(1) if postalCode else '',
                     "addressCountry": addressCountry.group(1) if addressCountry else '',
                     "homepage": homepage if homepage else '',
+                    "venue_name": venue_name,
+                    "venue_types": venue_types,
+                    "phone": phone,
                 }
             except Exception as e:
                 print("Failed to parse address", url, str(e))
