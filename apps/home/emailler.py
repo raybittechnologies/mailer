@@ -270,7 +270,7 @@ def send_email_via_unimail(mailings, subject, toname, fromemail, fromname, body,
             </body>
         </html>
     """
-    url = "https://beunimailer.roboticbookingagent.com/send-email"
+    url = "https://unimail.raybitprojects.com//send-email"
     payload = {
         "id": mailings.user_id,
         "to": receiver,

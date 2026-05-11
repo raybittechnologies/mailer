@@ -329,7 +329,7 @@ def job_send_weekly_reminding_past_reminder_email():
 
 def job_email_tracking():
     with scheduler.app.app_context():
-        url = "https://beunimailer.roboticbookingagent.com"
+        url = "https://unimail.raybitprojects.com/"
         
         s_emails = Email.query.filter(
             Email.is_sent == 1,
